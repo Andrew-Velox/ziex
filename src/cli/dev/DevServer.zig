@@ -188,8 +188,18 @@ pub fn findFreePort() !u16 {
 fn serve(ds: *DevServer) void {
     while (true) {
         const connection = ds.tcp_server.?.accept() catch |err| {
-            log.err("failed to accept connection: {s}", .{@errorName(err)});
-            return;
+            switch (err) {
+                // Keep the dev proxy alive and retry.
+                error.Unexpected => {
+                    log.warn("accept() failed (transient): {s}", .{@errorName(err)});
+                    std.Thread.sleep(50 * std.time.ns_per_ms);
+                    continue;
+                },
+                else => {
+                    log.err("failed to accept connection: {s}", .{@errorName(err)});
+                    return;
+                },
+            }
         };
         _ = std.Thread.spawn(.{}, handleConnection, .{ ds, connection }) catch |err| {
             log.err("unable to spawn connection thread: {s}", .{@errorName(err)});
