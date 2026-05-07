@@ -31,7 +31,8 @@ fn AppInstance(comptime H: type) type {
 
         pub fn deinit(self: *Self) void {
             if (platform.role == .server and platform.os != .wasi) self.instance.deinit();
-            if (builtin.mode == .Debug) std.debug.assert(debug_allocator.deinit() == .ok);
+            if (builtin.mode == .Debug and platform.os != .freestanding)
+                std.debug.assert(debug_allocator.deinit() == .ok);
         }
 
         pub fn start(self: Self) !void {
