@@ -186,16 +186,34 @@ pub fn findFreePort() !u16 {
 }
 
 fn serve(ds: *DevServer) void {
+    var retry_count: u8 = 0;
+
     while (true) {
         const connection = ds.tcp_server.?.accept() catch |err| {
-            log.err("failed to accept connection: {s}", .{@errorName(err)});
-            return;
+            switch (err) {
+                error.Unexpected => {
+                    retry_count += 1;
+                    if (retry_count > 5) {
+                        log.err("accept() failed {d} times, giving up: {s}", .{ retry_count - 1, @errorName(err) });
+                        return;
+                    }
+                    log.warn("accept() failed (transient): {s}", .{@errorName(err)});
+                    std.Thread.sleep(50 * std.time.ns_per_ms);
+                    continue;
+                },
+                else => {
+                    log.err("failed to accept connection: {s}", .{@errorName(err)});
+                    return;
+                },
+            }
         };
-        _ = std.Thread.spawn(.{}, handleConnection, .{ ds, connection }) catch |err| {
+        retry_count = 0;
+        const thread = std.Thread.spawn(.{}, handleConnection, .{ ds, connection }) catch |err| {
             log.err("unable to spawn connection thread: {s}", .{@errorName(err)});
             connection.stream.close();
             continue;
         };
+        thread.detach();
     }
 }
 
