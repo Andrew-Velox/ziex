@@ -468,7 +468,13 @@ fn Interactivity(allocator: zx.Allocator, props: InteractivityProps) zx.Componen
             <h3>Binding state to events</h3>
             <p>To update component state in response to events, use <code>ctx.bind(handler)</code> and access state through the event handler:</p>
             <ExampleBlock id="onclick-state" zx_code={props.zx_onclick_state} html_code={props.html_onclick_state} filename="events.zig" preview_component={props.preview_onclick_state} />
-            <p>When you use <code>ctx.bind()</code>, the handler receives a <code>zx.server.Event.Stateful</code> which provides access to component state through <code>event.state(T)</code>.</p>
+            <p>When you use <code>ctx.bind()</code>, the handler receives a <code>zx.client.Event.Stateful</code> which provides access to component state through <code>event.state(T)</code>. Call <code>state(T)</code> in the same order as the <code>ctx.state()</code> calls in the component; the types must match.</p>
+            <div class="callout note">
+                <strong>Note:</strong>
+                 For event handlers to run in the browser,
+                <code>@rendering={"{.client}"}</code>
+                 must be set on the interactive component or a parent that wraps it. Without it, the component renders server-side only and event handlers are ignored.
+            </div>
 
             // <h3>State management patterns</h3>
             // <p>For complex applications, organize your state into structs and pass handlers for different operations:</p>

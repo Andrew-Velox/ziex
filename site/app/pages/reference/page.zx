@@ -116,6 +116,43 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
     // const setup_elapsed_ms = @as(f64, @floatFromInt(setup_elapsed_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     // std.log.info("\x1b[1;36m[DOCS PAGE] Setup phase completed: {d:.3}ms\x1b[0m", .{setup_elapsed_ms});
 
+    const csr_simple_handler_example =
+        \\fn handleInput(event: zx.client.Event) void {
+        \\    const value = event.value() orelse "";
+        \\    zx.log.info("Input: {s}", .{value});
+        \\}
+        \\// Attach: oninput={handleInput}
+    ;
+
+    const csr_stateful_handler_example =
+        \\pub fn Counter(ctx: *zx.ComponentCtx(void)) zx.Component {
+        \\    const count = ctx.state(i32, 0);
+        \\    return (
+        \\        <div @allocator={ctx.allocator}>
+        \\            <button onclick={ctx.bind(increment)}>{count}</button>
+        \\        </div>
+        \\    );
+        \\}
+        \\fn increment(e: *zx.client.Event.Stateful) void {
+        \\    const count = e.state(i32); // same order as ctx.state()
+        \\    count.set(count.get() + 1);
+        \\}
+    ;
+
+    const csr_state_bind_example =
+        \\pub fn Counter(ctx: *zx.ComponentCtx(void)) zx.Component {
+        \\    const count = ctx.state(i32, 0);
+        \\    return (
+        \\        <div @allocator={ctx.allocator}>
+        \\            <button onclick={count.bind(increment)}>{count}</button>
+        \\        </div>
+        \\    );
+        \\}
+        \\fn increment(value: i32) i32 {
+        \\    return value + 1;
+        \\}
+    ;
+
     // Allocate files on heap to avoid stack lifetime issues
     const layout_files = blk: {
         const files = allocator.alloc(File, 2) catch unreachable;
@@ -276,13 +313,45 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
                 <ExampleBlock id="escaping" zx_code={zx_example_escaping} zig_code={zig_example_escaping} html_code={html_example_escaping} filename="raw_html.zx" />
                 <p><strong>Warning:</strong> Only use <code>@escaping={"{.none}"}</code> for content you trust completely. User-provided content should always use the default escaping.</p>
                 <h3 id="rendering">@rendering</h3>
-                <p>The <code>@rendering</code> attribute enables client-side rendering for interactive components.</p>
+                <p>The <code>@rendering</code> attribute enables client-side rendering for interactive components. Without it, all components render server-side only and event handlers are not active in the browser.</p>
                 <p><strong>Values:</strong></p>
                 <ul>
+                    <li><code>.client</code> - Client-side render with Zig (compiles component to WebAssembly)</li>
                     <li><code>.react</code> - Client-side render with React (for imported React/TSX components)</li>
-                    <li><code>.client</code> - Client-side render with Zig (compile component to WebAssembly)</li>
                 </ul>
-                <ExampleBlock id="react" zx_code={zx_example_csr} zig_code={zig_example_csr} html_code={html_example_csr} filename="react_demo.zx" preview_component={preview_csr} />
+
+                <h4 id="rendering-client">Client-side Zig rendering</h4>
+                <p>Use <code>@rendering={"{.client}"}</code> to make a component interactive. The component is server-rendered for the initial HTML, then hydrated and re-rendered client-side on state changes. Only the marked component is managed client-side; the rest of the page stays server-rendered.</p>
+                <ExampleBlock id="csr" zx_code={zx_example_csr} zig_code={zig_example_csr} html_code={html_example_csr} filename="counter.zx" preview_component={preview_csr} />
+
+                <h4 id="rendering-client-state">Managing state</h4>
+                <p>Client components that need reactive state must use <code>zx.ComponentCtx(Props)</code> (or <code>zx.ComponentCtx(void)</code> when there are no props). The context provides <code>ctx.state(T, initial)</code> to declare a piece of state:</p>
+                <ul>
+                    <li><code>ctx.state(T, initial_value)</code> - declares a reactive value of type <code>T</code>. Returns a <code>State(T)</code> handle that persists across re-renders.</li>
+                    <li><code>state.get()</code> - read the current value. Can be used directly in markup as <code>{"{count}"}</code>.</li>
+                    <li><code>state.set(new_value)</code> - update the value and trigger a re-render.</li>
+                    <li><code>state.update(fn(T) T)</code> - update via a transform function.</li>
+                </ul>
+                <p>State is stored per-component-instance and survives re-renders. On the server (SSR), <code>ctx.state()</code> always returns the initial value.</p>
+
+                <h4 id="rendering-client-events">Event handlers</h4>
+                <p>ZX provides three ways to attach event handlers to client components:</p>
+                <p><strong>1. Simple handler</strong> - for reading the event without touching state:</p>
+                <CodeBlock code={csr_simple_handler_example} />
+                <p>The handler receives a <code>zx.client.Event</code> value. Useful methods:</p>
+                <ul>
+                    <li><code>event.value()</code> - returns <code>?[]const u8</code> with <code>event.target.value</code> (for inputs and selects).</li>
+                    <li><code>event.key()</code> - returns <code>?[]const u8</code> with the pressed key name (for keyboard events).</li>
+                </ul>
+                <p><strong>2. Stateful handler via <code>ctx.bind()</code></strong> - for reading or writing component state:</p>
+                <CodeBlock code={csr_stateful_handler_example} />
+                <p>The handler receives <code>*zx.client.Event.Stateful</code>. Call <code>e.state(T)</code> in the same order as <code>ctx.state()</code> in the component to access each piece of state.</p>
+                <p><strong>3. State transform via <code>state.bind()</code></strong> - the simplest option when the update is a pure function of the current value:</p>
+                <CodeBlock code={csr_state_bind_example} />
+                <p>The transform function takes the current value and returns the new value. No event object is needed.</p>
+
+                <h4 id="rendering-react">React integration</h4>
+                <p>Use <code>@rendering={"{.react}"}</code> to embed a React or TSX component. Import the component with <code>@jsImport</code> and pass it as you would a ZX component. React handles rendering and hydration on the client.</p>
             </section>
             <section id="attribute-syntax" class="section">
                 <h2>Attribute Syntax</h2>
