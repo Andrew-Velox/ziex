@@ -1,5 +1,5 @@
 const std = @import("std");
-const zx = @import("zx");
+const ziex = @import("ziex");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -15,6 +15,6 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    var zx_builder = try zx.init(b, app_exe, .{});
+    var zx_builder = try ziex.init(b, app_exe, .{});
     zx_builder = zx_builder;
 }

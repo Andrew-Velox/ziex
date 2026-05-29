@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    try zx.init(b, exe, .{
+    try ziex.init(b, exe, .{
         .plugins = &.{
             zx.plugins.tailwind(b, .{
                 .bin = b.path("node_modules/.bin/tailwindcss"),
@@ -35,7 +35,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     // ... setup code ...
 
-    try zx.init(b, exe, .{
+    try ziex.init(b, exe, .{
         .plugins = &.{
             zx.plugins.esbuild(b, .{
                 .bin = b.path("node_modules/.bin/esbuild"),
@@ -55,7 +55,7 @@ pub fn build(b: *std.Build) !void {
 }
 
 // Combined Plugins Example (lines 58-70)
-try zx.init(b, exe, .{
+try ziex.init(b, exe, .{
     .plugins = &.{
         zx.plugins.esbuild(b, .{
             .input = b.path("app/main.ts"),
@@ -75,7 +75,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     // ... setup code ...
 
-    try zx.init(b, exe, .{
+    try ziex.init(b, exe, .{
         .plugins = &.{
             // Custom plugin using PluginOptions directly
             createImageOptimizer(b),

@@ -1,28 +1,28 @@
-/// Configuration options for initializing a ZX project in your build.zig.
+/// Configuration options for initializing a Ziex project in your build.zig.
 ///
-/// This struct provides comprehensive control over how ZX transpiles and builds
+/// This struct provides comprehensive control over how Ziex transpiles and builds
 /// your website, including CLI configuration, experimental features, and plugin integration.
 ///
 /// ## Usage Example
 /// ```zig
-/// const zx_options: zx.InitOptions = .{
+/// const ziex_options: ziex.InitOptions = .{
 ///     .site = .{ .path = "site" },
 ///     .cli = .{
-///         .path = null, // Use ZX from dependency
+///         .path = null, // Use Ziex from dependency
 ///         .steps = .{
 ///             .dev = "dev",
 ///             .serve = "serve",
 ///         },
 ///     },
 /// };
-/// try zx.init(b, exe, zx_options);
+/// try ziex.init(b, exe, ziex_options);
 /// ```
 const std = @import("std");
 const LazyPath = std.Build.LazyPath;
 
-/// Configuration for the ZX CLI executable and build steps.
+/// Configuration for the Ziex CLI executable and build steps.
 pub const CliOptions = struct {
-    /// Custom names for ZX build steps.
+    /// Custom names for Ziex build steps.
     ///
     /// Configure which Zig build steps to create and what names to give them.
     /// Set any step to `null` to disable it.

@@ -357,7 +357,7 @@ fn increment(e: *zx.client.Event.Stateful) void {
 // --- Plugin: tailwind ---
 pub fn buildTailwind(b: *std.Build) !void {
     const exe = b.addExecutable(.{ .name = "my-app" });
-    var zx_build = try zx.init(b, exe, .{});
+    var zx_build = try ziex.init(b, exe, .{});
     var assetsdir = zx_build.assetsdir;
     zx_build.plugin(
         zx.plugins.tailwind(b, .{
@@ -370,7 +370,7 @@ pub fn buildTailwind(b: *std.Build) !void {
 // --- Plugin: esbuild ---
 pub fn buildEsbuild(b: *std.Build) !void {
     const exe = b.addExecutable(.{ .name = "my-app" });
-    var zx_build = try zx.init(b, exe, .{});
+    var zx_build = try ziex.init(b, exe, .{});
     var assetsdir = zx_build.assetsdir;
     zx_build.plugin(
         zx.plugins.esbuild(b, .{
@@ -536,7 +536,7 @@ pub fn Learn__buildManual(b: *std.Build) !void {
             .optimize = optimize,
         }),
     });
-    _ = try zx.init(b, app_exe, .{});
+    _ = try ziex.init(b, app_exe, .{});
 }
 
 // --- Learn: dynamic route ---
@@ -969,4 +969,5 @@ pub fn RenderTest(allocator: zx.Allocator) zx.Component {
 }
 
 const zx = @import("zx");
+const ziex = @import("zx");
 const std = @import("std");
