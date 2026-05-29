@@ -1,7 +1,7 @@
 FROM alpine:3.22.2 AS build
 
 # Install Zig
-ARG ZIG_VER=0.15.2
+ARG ZIG_VER=0.16.0
 RUN apk add --no-cache curl xz
 RUN curl https://ziglang.org/download/${ZIG_VER}/zig-$(uname -m)-linux-${ZIG_VER}.tar.xz -o zig.tar.xz && \
 tar xf zig.tar.xz && \
