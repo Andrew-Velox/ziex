@@ -77,7 +77,7 @@ jobs:
 
   post_deploy:
     name: Post-deploy
-    needs: [deploy_ssg, deploy_edge, deploy_ssr]
+    needs: [deploy_ssg, deploy_edge]
     uses: ./.github/workflows/e2e.yml
     with:
       base_url: ${{ needs.deploy_ssg.outputs.page_url }}
