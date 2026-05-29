@@ -11,6 +11,6 @@
   },
   "devDependencies": {
     "wrangler": "^4.78.0",
-    "@zigc/cli": "0.15.20"
+    "@zigc/cli": "0.16.0"
   }
 }
