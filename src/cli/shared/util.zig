@@ -1,71 +1,119 @@
 const BIN_DIR = "zig-out" ++ std.fs.path.sep_str ++ "bin";
 
-/// Find the ZX executable from the bin directory
-pub fn findprogram(allocator: std.mem.Allocator, binpath: []const u8) !SerilizableAppMeta {
+/// Build-time emitted metadata, written alongside the installed binary as
+/// `<exe>.meta.zon`.
+pub const BuildMeta = struct {
+    pub const Route = struct {
+        path: []const u8,
+        kind: []const u8 = "Page",
+        methods: []const []const u8 = &.{},
+        has_notfound: bool = false,
+        is_dynamic: bool = false,
+    };
+    pub const ServerCfg = struct {
+        port: ?u16 = null,
+        address: ?[]const u8 = null,
+    };
+    pub const Config = struct {
+        server: ServerCfg = .{},
+    };
+
+    binpath: ?[]const u8 = null,
+    rootdir: ?[]const u8 = null,
+    routes: []const Route = &.{},
+    config: Config = .{},
+    version: []const u8 = "",
+    cli_command: ?[]const u8 = null,
+
+    pub fn port(self: BuildMeta) ?u16 {
+        return self.config.server.port;
+    }
+    pub fn address(self: BuildMeta) ?[]const u8 {
+        return self.config.server.address;
+    }
+};
+
+/// Find the ZX app metadata from the install dir.
+///
+/// If `binpath` is given, looks for `<binpath>.meta.zon` next to it.
+/// Otherwise scans `zig-out/bin` for any `*.meta.zon` file.
+pub fn findprogram(io: std.Io, allocator: std.mem.Allocator, binpath: []const u8) !BuildMeta {
     if (!std.mem.eql(u8, binpath, "")) {
-        var app_meta = try inspectProgram(allocator, binpath);
-        // defer std.zon.parse.free(allocator, app_meta);
-        // errdefer std.zon.parse.free(allocator, app_meta);
-        app_meta.binpath = binpath;
-        return app_meta;
+        const meta_path = try std.fmt.allocPrint(allocator, "{s}.meta.zon", .{binpath});
+        defer allocator.free(meta_path);
+        var meta = try readBuildMeta(io, allocator, meta_path);
+        if (meta.binpath) |bp| allocator.free(bp);
+        meta.binpath = try resolveBinPath(io, allocator, binpath);
+        return meta;
     }
 
-    var files = try std.fs.cwd().openDir(BIN_DIR, .{ .iterate = true });
-    defer files.close();
+    var files = try std.Io.Dir.cwd().openDir(io, BIN_DIR, .{ .iterate = true });
+    defer files.close(io);
 
-    var exe_count: usize = 0;
+    var entry_count: usize = 0;
     var it = files.iterate();
-    while (try it.next()) |entry| {
-        if (entry.kind == .file) {
-            exe_count += 1;
+    while (try it.next(io)) |entry| {
+        if (entry.kind != .file) continue;
+        entry_count += 1;
+        if (!std.mem.endsWith(u8, entry.name, ".meta.zon")) continue;
 
-            const full_path = try std.fs.path.join(allocator, &.{ BIN_DIR, entry.name });
-            defer allocator.free(full_path);
+        const meta_path = try std.fs.path.join(allocator, &.{ BIN_DIR, entry.name });
+        defer allocator.free(meta_path);
 
-            log.debug("Inspecting exe: {s}", .{full_path});
+        log.debug("Reading meta: {s}", .{meta_path});
 
-            var app_meta = inspectProgram(allocator, full_path) catch |err| switch (err) {
-                error.ProgramNotFound, error.ParseZon, error.InvalidExe => continue,
-                else => return err,
-            };
-            // defer std.zon.parse.free(allocator, app_meta);
+        var meta = readBuildMeta(io, allocator, meta_path) catch |err| switch (err) {
+            error.ParseZon, error.FileNotFound => continue,
+            else => return err,
+        };
 
-            log.debug("Found app: {s} in {s}", .{ app_meta.version, full_path });
+        // Derive the binary path from the meta file path: strip ".meta.zon".
+        const exe_basename = entry.name[0 .. entry.name.len - ".meta.zon".len];
+        const inferred_binpath = try std.fs.path.join(allocator, &.{ BIN_DIR, exe_basename });
+        defer allocator.free(inferred_binpath);
+        const resolved_binpath = try resolveBinPath(io, allocator, inferred_binpath);
+        if (meta.binpath) |bp| allocator.free(bp);
+        meta.binpath = resolved_binpath;
 
-            app_meta.binpath = try allocator.dupe(u8, full_path);
-            return app_meta;
-        }
+        log.debug("Found app: {s} at {s}", .{ meta.version, meta.binpath.? });
+        return meta;
     }
 
-    if (exe_count == 0) return error.EmptyBinDir;
+    if (entry_count == 0) return error.EmptyBinDir;
     return error.ProgramNotFound;
 }
 
-pub fn inspectProgram(allocator: std.mem.Allocator, binpath: []const u8) !SerilizableAppMeta {
-    var exe = std.process.Child.init(&.{ binpath, "--introspect" }, allocator);
-    exe.stdout_behavior = .Pipe;
-    exe.stderr_behavior = .Ignore;
-    try exe.spawn();
+fn resolveBinPath(io: std.Io, allocator: std.mem.Allocator, binpath: []const u8) ![]const u8 {
+    if (fileExists(io, binpath)) {
+        return allocator.dupe(u8, binpath);
+    }
 
-    const source = if (exe.stdout) |estdout| estdout.readToEndAlloc(allocator, std.math.maxInt(usize)) catch |err| {
-        _ = exe.kill() catch {};
-        return err;
-    } else {
-        _ = exe.kill() catch {};
-        return error.ProgramNotFound;
-    };
+    if (builtin.os.tag == .windows and !std.mem.endsWith(u8, binpath, ".exe")) {
+        const exe_binpath = try std.fmt.allocPrint(allocator, "{s}.exe", .{binpath});
+        if (fileExists(io, exe_binpath)) {
+            return exe_binpath;
+        }
+        allocator.free(exe_binpath);
+    }
+
+    return allocator.dupe(u8, binpath);
+}
+
+fn fileExists(io: std.Io, path: []const u8) bool {
+    _ = std.Io.Dir.cwd().statFile(io, path, .{}) catch return false;
+    return true;
+}
+
+fn readBuildMeta(io: std.Io, allocator: std.mem.Allocator, path: []const u8) !BuildMeta {
+    const source = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .unlimited);
     defer allocator.free(source);
-
-    _ = exe.wait() catch {};
-
-    if (source.len == 0) return error.ProgramNotFound;
-
     const source_z = try allocator.dupeZ(u8, source);
     defer allocator.free(source_z);
+    return try std.zon.parse.fromSliceAlloc(BuildMeta, allocator, source_z, null, .{ .ignore_unknown_fields = true });
+}
 
-    const app_meta = try std.zon.parse.fromSlice(SerilizableAppMeta, allocator, source_z, null, .{});
-
-    return app_meta;
+pub fn freeBuildMeta(allocator: std.mem.Allocator, meta: *BuildMeta) void {
+    std.zon.parse.free(allocator, meta.*);
 }
 
 const ignore_dirs = [_][]const u8{".well-known" ++ std.fs.path.sep_str ++ "_zx"};
@@ -76,6 +124,7 @@ fn shouldIgnorePath(path: []const u8) bool {
     return false;
 }
 pub fn copydirs(
+    io: std.Io,
     allocator: std.mem.Allocator,
     base_dir: []const u8,
     source_dirs: []const []const u8,
@@ -87,25 +136,25 @@ pub fn copydirs(
         const source_path = try std.fs.path.join(allocator, &.{ base_dir, source_dir });
         defer allocator.free(source_path);
 
-        var source = std.fs.cwd().openDir(source_path, .{ .iterate = true }) catch |err| switch (err) {
+        var source = std.Io.Dir.cwd().openDir(io, source_path, .{ .iterate = true }) catch |err| switch (err) {
             error.FileNotFound => continue,
             error.NotDir => continue,
             else => return err,
         };
-        defer source.close();
+        defer source.close(io);
 
-        std.fs.cwd().makePath(dest_dir) catch |err| switch (err) {
+        std.Io.Dir.cwd().createDirPath(io, dest_dir) catch |err| switch (err) {
             error.PathAlreadyExists => {},
             else => return err,
         };
 
-        var dest = try std.fs.cwd().openDir(dest_dir, .{});
-        defer dest.close();
+        var dest = try std.Io.Dir.cwd().openDir(io, dest_dir, .{});
+        defer dest.close(io);
 
         var walker = try source.walk(allocator);
         defer walker.deinit();
 
-        while (try walker.next()) |entry| {
+        while (try walker.next(io)) |entry| {
             const src_path = try std.fs.path.join(allocator, &.{ source_path, entry.path });
             defer allocator.free(src_path);
 
@@ -124,20 +173,20 @@ pub fn copydirs(
 
                     // Create parent directory if needed
                     if (std.fs.path.dirname(dst_abs_path)) |parent| {
-                        std.fs.cwd().makePath(parent) catch |err| switch (err) {
+                        std.Io.Dir.cwd().createDirPath(io, parent) catch |err| switch (err) {
                             error.PathAlreadyExists => {},
                             else => return err,
                         };
                     }
 
                     // Copy file
-                    try std.fs.cwd().copyFile(src_path, std.fs.cwd(), dst_abs_path, .{});
+                    try std.Io.Dir.copyFile(std.Io.Dir.cwd(), src_path, dest, dst_rel_path, io, .{});
                     printer.filepath(dst_rel_path);
                 },
                 .directory => {
                     if (shouldIgnorePath(dst_abs_path)) continue;
                     // Create directory if needed
-                    std.fs.cwd().makePath(dst_abs_path) catch |err| switch (err) {
+                    std.Io.Dir.cwd().createDirPath(io, dst_abs_path) catch |err| switch (err) {
                         error.PathAlreadyExists => {},
                         else => return err,
                     };
@@ -148,17 +197,18 @@ pub fn copydirs(
     }
 }
 
-pub fn getRunnablePath(allocator: std.mem.Allocator, program_path: []const u8) ![]const u8 {
+pub fn getRunnablePath(io: std.Io, allocator: std.mem.Allocator, program_path: []const u8) ![]const u8 {
     if (builtin.os.tag == .windows) {
         // Create .zig-cache/tmp/.zx directory if it doesn't exist
         const cache_dir = ".zig-cache/tmp/.zx";
-        try std.fs.cwd().makePath(cache_dir);
+        try std.Io.Dir.cwd().createDirPath(io, cache_dir);
 
-        const dest_dir = try std.fs.cwd().openDir(cache_dir, .{});
+        const dest_dir = try std.Io.Dir.cwd().openDir(io, cache_dir, .{});
+        defer dest_dir.close(io);
         const bin_name = std.fs.path.basename(program_path);
 
         // Copy the executable to the cache directory
-        try std.fs.cwd().copyFile(program_path, dest_dir, bin_name, .{});
+        try std.Io.Dir.cwd().copyFile(program_path, dest_dir, bin_name, io, .{});
 
         const copied_program_path = try std.fs.path.join(allocator, &.{ cache_dir, bin_name });
         return copied_program_path;
@@ -181,4 +231,3 @@ const zx = @import("zx");
 const builtin = @import("builtin");
 const tui = @import("../../tui/main.zig");
 const log = std.log.scoped(.cli);
-const SerilizableAppMeta = zx.server.SerilizableAppMeta;

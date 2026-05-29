@@ -38,6 +38,10 @@ pub const info = @import("zx_info");
 // --- Aliases --- //
 pub const Allocator = std.mem.Allocator;
 pub const log = std.log;
+pub const Init = switch (builtin.os.tag) {
+    .freestanding => std.process.Init.Minimal,
+    else => std.process.Init,
+};
 
 // TODO: Legacy, should be removed
 pub const Server = app_module.Server;
@@ -105,8 +109,9 @@ pub const fetch = Fetch.fetch;
 
 // --- Values --- //
 pub const allocator = app_mod.allocator;
+pub const io = app_mod.io;
 pub const platform: Platform = plfm.platform;
-pub const std_options: std.Options = opts.std_options;
+pub const std_options = opts.std_options;
 
 // --- StyleSheet (separate cached module) --- //
 pub const style = @import("zx_style");

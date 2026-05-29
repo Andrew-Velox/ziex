@@ -24,10 +24,22 @@ pub fn build(b: *std.Build) !void {
     const zig_dep = playground_dep.builder.dependency("zig", .{
         .target = wasm_target,
         .optimize = wasm_optimize,
-        .@"version-string" = @as([]const u8, "0.15.1"),
+        .@"version-string" = @as([]const u8, "0.16.0"),
         .@"no-lib" = true,
         .dev = "wasm",
     });
+
+    const compiler_rt_step = b.step("zig_compiler_rt", "compile and install compiler_rt");
+    const lib_compiler_rt = b.addLibrary(.{
+        .linkage = .static,
+        .name = "compiler_rt",
+        .root_module = b.createModule(.{
+            .root_source_file = zig_dep.path("lib/compiler_rt.zig"),
+            .target = wasm_target,
+            .optimize = wasm_optimize,
+        }),
+    });
+    compiler_rt_step.dependOn(&b.addInstallArtifact(lib_compiler_rt, .{ .dest_dir = .{ .override = .prefix } }).step);
 
     const zx_exe = zx_wasm_dep.artifact("zx");
     const zls_exe = b.addExecutable(.{
@@ -71,6 +83,7 @@ pub fn build(b: *std.Build) !void {
     _ = playground_assets.addCopyFile(zls_exe.getEmittedBin(), "zls.wasm");
     _ = playground_assets.addCopyFile(zig_exe.getEmittedBin(), b.fmt("zig-{s}.wasm", .{ziex.info.minimum_zig_version}));
     _ = playground_assets.addCopyFile(zx_exe.getEmittedBin(), b.fmt("zx-{s}.wasm", .{ziex.info.version}));
+    _ = playground_assets.addCopyFile(lib_compiler_rt.getEmittedBin(), "libcompiler_rt.a");
     _ = playground_assets.addCopyFile(zig_tar_gz, b.fmt("zig-{s}.tar.gz", .{ziex.info.minimum_zig_version}));
     _ = playground_assets.addCopyFile(zx_tar_gz, b.fmt("zx-{s}.tar.gz", .{ziex.info.version}));
 
@@ -79,6 +92,8 @@ pub fn build(b: *std.Build) !void {
         .install_dir = .prefix,
         .install_subdir = "static/assets/playground",
     });
+
+    b.getInstallStep().dependOn(compiler_rt_step);
 
     // -- Steps: pg - installs playground assets --- //
     const pg_step = b.step("pg", "Install playground assets");
@@ -96,7 +111,7 @@ pub fn build(b: *std.Build) !void {
 
     app_exe.root_module.addImport("tree_sitter", tree_sitter_dep.module("tree_sitter"));
     app_exe.root_module.addImport("tree_sitter_zx", tree_sitter_zx_dep.module("tree_sitter_zx"));
-    app_exe.step.dependOn(&install_pg.step);
+    app_exe.step.dependOn(&install_pg.step); // Playground disabled
 
     // --- ZX setup: wires dependencies and adds `zx`/`dev` build steps --- //
     var ziex_b = try ziex.init(b, app_exe, .{

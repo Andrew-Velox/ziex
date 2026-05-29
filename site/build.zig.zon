@@ -2,15 +2,19 @@
     .name = .ziex_dev,
     .version = "0.0.0",
     .fingerprint = 0xaa5b5903916bf206,
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .ziex = .{ .path = "../" },
         .playground = .{
-            .url = "git+https://github.com/zigtools/playground.git#aee957d5adf39e0c6075696cd5f85cd4f1fcaf90",
-            .hash = "playground-0.0.0-iNkPNkONAQCpX8DVLyQVFizjYQw6b7bukdtfJyw_cT-U",
+            .url = "git+https://github.com/zigtools/playground.git#9f9403892077b7624b97b8c1cd0ca5504afebfe7",
+            .hash = "playground-0.0.0-iNkPNs5RAQAi9QGPVgK1FfiPQ7iAA3xSmyfev36uVu4X",
         },
         .bunjs = .{ .path = "../pkg/plugin-bun" },
         .tailwindcss = .{ .path = "../pkg/plugin-tailwindcss" },
+        .ziex_js = .{
+            .url = "https://registry.npmjs.org/ziex/-/ziex-0.1.0-dev.1000.tgz",
+            .hash = "ziex_js-0.1.0-dev.804-v1W0GT1tAwAjZsTzmZWS4c8VEaNPFV0ABzqEMhmR6-xj",
+        },
     },
     .paths = .{
         "build.zig",
