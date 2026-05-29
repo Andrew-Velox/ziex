@@ -8,7 +8,7 @@ pub const Row = data.Row;
 var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
 var rows: std.ArrayList(Row) = .empty;
 var selected_id: ?usize = null;
-var mutex = std.Thread.Mutex{};
+var mutex = std.Io.Mutex.init;
 
 pub const BenchState = struct {
     rows: std.ArrayList(Row),
@@ -38,6 +38,7 @@ fn redirect(ctx: zx.PageContext) void {
 }
 
 pub fn handleRequest(ctx: zx.PageContext) BenchState {
+    const io = std.Io.Threaded.global_single_threaded.io();
     // Add CORS headers to allow requests from the benchmark server
     ctx.response.setHeader("Access-Control-Allow-Origin", "*");
     ctx.response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -53,8 +54,8 @@ pub fn handleRequest(ctx: zx.PageContext) BenchState {
     const remove_id_str = qs.get("remove");
     const api_mode = qs.get("api"); // Check if this is an API call
 
-    mutex.lock();
-    defer mutex.unlock();
+    mutex.lock(io) catch {};
+    defer mutex.unlock(io);
 
     if (ctx.request.method == .OPTIONS) {
         return BenchState{

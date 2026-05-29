@@ -29,8 +29,10 @@ pub const Row = struct {
 };
 
 fn random(max: usize) usize {
-    const r = std.crypto.random.int(u32);
-    return @mod(r, max);
+    const io = std.Io.Threaded.global_single_threaded.io();
+    var buffer: [1]u8 = undefined;
+    std.Io.random(io, &buffer);
+    return @mod(buffer[0], max);
 }
 
 pub fn buildData(allocator: std.mem.Allocator, count: usize) !std.ArrayList(Row) {
