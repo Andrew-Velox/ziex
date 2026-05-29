@@ -84,6 +84,7 @@ jobs:
       report_name: playwright-report-post-deploy
 
   build_ssr:
+    if: false
     runs-on: ubuntu-24.04-arm
     name: Build (SSR)
     env:
@@ -112,7 +113,9 @@ jobs:
           path: /tmp/image-${{ env.BUILD_ARCH }}.tar
           retention-days: 1
 
+  # Temp disable ssr build
   deploy_ssr:
+    if: false
     environment:
       name: ssr
       url: https://ssr.ziex.dev
