@@ -171,7 +171,7 @@ You can view our current progress and planned features here:
 ## Versions
 | Zig         | Ziex              | Branch            | Status         |
 |-------------|-------------------|-------------------|----------------|
-| `0.16.0`    | `0.1.0-dev.1050+` | `zig-0.16` `main` | Unstable (dev) |
+| `0.16.0`    | `0.1.0-dev.1050+` | `main`            | Unstable (dev) |
 | `0.15.2`    | `0.1.0-dev-1050`  | `zig-0.15`        | Stable (dev)   |
 
 
