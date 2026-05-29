@@ -100,9 +100,19 @@ fn init(ctx: zli.CommandContext) !void {
     printer.header("{s} Initializing ZX project!", .{tui.Printer.emoji("○")});
     printer.info("[{s}]", .{@tagName(template_name)});
 
+    const bin_name = if (template_name == .docker)
+        try detectExeName(io, ctx.allocator, init_path)
+    else
+        null;
+    defer if (bin_name) |n| ctx.allocator.free(n);
+
     try std.Io.Dir.cwd().createDirPath(io, init_path);
     for (templates) |template| {
-        if (template.name != null and template.name.? != template_name) continue;
+        if (template_name == .docker) {
+            if (template.name != .docker) continue;
+        } else {
+            if (template.name != null and template.name.? != template_name) continue;
+        }
 
         const output_path = try std.fs.path.join(ctx.allocator, &.{ init_path, template.path });
         defer ctx.allocator.free(output_path);
@@ -128,8 +138,14 @@ fn init(ctx: zli.CommandContext) !void {
         printer.filepath(template.path);
         defer file.close(io);
 
+        const content = if (bin_name) |name|
+            try renderDockerTemplate(ctx.allocator, template.content, name)
+        else
+            template.content;
+        defer if (bin_name != null) ctx.allocator.free(content);
+
         if (template.lines) |lines| {
-            var line_iter = std.mem.splitScalar(u8, template.content, '\n');
+            var line_iter = std.mem.splitScalar(u8, content, '\n');
             var line_n: usize = 1;
 
             while (line_iter.next()) |line| {
@@ -143,7 +159,7 @@ fn init(ctx: zli.CommandContext) !void {
                 line_n += 1;
             }
         } else {
-            try file.writeStreamingAll(io, template.content);
+            try file.writeStreamingAll(io, content);
         }
     }
 
@@ -154,6 +170,61 @@ fn init(ctx: zli.CommandContext) !void {
     } else {
         printer.footer("Now run {s}\n\n{s}", .{ tui.Printer.emoji("→"), colors.Fns.cyan("zig build dev") });
     }
+}
+
+const default_exe_name = "ziex_app";
+const default_port = 3000;
+
+fn detectExeName(io: std.Io, allocator: std.mem.Allocator, init_path: []const u8) ![]const u8 {
+    if (scanMetaExeName(io, allocator, init_path)) |name| return name else |_| {}
+    if (parseZonName(io, allocator, init_path)) |name| return name else |_| {}
+    return allocator.dupe(u8, default_exe_name);
+}
+
+fn scanMetaExeName(io: std.Io, allocator: std.mem.Allocator, init_path: []const u8) ![]const u8 {
+    const bin_dir_path = try std.fs.path.join(allocator, &.{ init_path, "zig-out", "bin" });
+    defer allocator.free(bin_dir_path);
+
+    var dir = try std.Io.Dir.cwd().openDir(io, bin_dir_path, .{ .iterate = true });
+    defer dir.close(io);
+
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.kind != .file) continue;
+        if (!std.mem.endsWith(u8, entry.name, ".meta.zon")) continue;
+        const stem = entry.name[0 .. entry.name.len - ".meta.zon".len];
+        if (stem.len == 0) continue;
+        return allocator.dupe(u8, stem);
+    }
+    return error.ProgramNotFound;
+}
+
+fn parseZonName(io: std.Io, allocator: std.mem.Allocator, init_path: []const u8) ![]const u8 {
+    const zon_path = try std.fs.path.join(allocator, &.{ init_path, "build.zig.zon" });
+    defer allocator.free(zon_path);
+
+    const data = try std.Io.Dir.cwd().readFileAlloc(io, zon_path, allocator, .limited(64 * 1024));
+    defer allocator.free(data);
+
+    const needle = ".name";
+    var idx = std.mem.indexOf(u8, data, needle) orelse return error.NameNotFound;
+    idx += needle.len;
+    while (idx < data.len and (data[idx] == ' ' or data[idx] == '=')) idx += 1;
+    if (idx >= data.len or data[idx] != '.') return error.NameNotFound;
+    idx += 1; // skip the leading dot of the enum literal
+    const start = idx;
+    while (idx < data.len and (std.ascii.isAlphanumeric(data[idx]) or data[idx] == '_')) idx += 1;
+    if (idx == start) return error.NameNotFound;
+    return allocator.dupe(u8, data[start..idx]);
+}
+
+fn renderDockerTemplate(allocator: std.mem.Allocator, content: []const u8, bin_name: []const u8) ![]const u8 {
+    const with_bin = try std.mem.replaceOwned(u8, allocator, content, "$BIN_NAME", bin_name);
+    defer allocator.free(with_bin);
+
+    var port_buf: [16]u8 = undefined;
+    const port_str = std.fmt.bufPrint(&port_buf, "{d}", .{default_port}) catch unreachable;
+    return std.mem.replaceOwned(u8, allocator, with_bin, "$PORT", port_str);
 }
 
 pub fn isDirEmpty(io: std.Io, path: []const u8) !bool {
@@ -208,9 +279,9 @@ const templates = [_]TemplateFile{
     .{ .name = .react, .path = "tsconfig.json", .content = @embedFile(template_dir ++ "/tsconfig.json") },
 
     // Docker
-    .{ .name = .docker, .path = "compose.yml", .content = @embedFile(template_dir ++ "/compose.yml") },
     .{ .name = .docker, .path = "Dockerfile", .content = @embedFile(template_dir ++ "/Dockerfile") },
-    .{ .name = .docker, .path = ".dockerignore", .content = @embedFile(template_dir ++ "/Dockerfile") },
+    .{ .name = .docker, .path = "compose.yml", .content = @embedFile(template_dir ++ "/compose.yml") },
+    .{ .name = .docker, .path = ".dockerignore", .content = @embedFile(template_dir ++ "/.dockerignore") },
 };
 
 const std = @import("std");

@@ -247,32 +247,14 @@ test "bundle" {
     });
 }
 
-test "bundle --docker" {
+test "init -t docker" {
     if (!test_util.shouldRunSlowTest()) return error.SkipZigTest;
     try test_cmd(.{
-        .args = &.{ "bundle", "--docker" },
+        .args = &.{ "init", "--template", "docker", "--existing" },
         .expected_exit_code = 0,
         .expected_stderr_strings = &.{
-            "Bundling ZX site!",
-            "bundle",
-            "Dockerfile",
-            ".dockerignore",
-        },
-        .expected_files = &.{
-            "Dockerfile",
-            ".dockerignore",
-        },
-    });
-}
-
-test "bundle --docker-compose" {
-    if (!test_util.shouldRunSlowTest()) return error.SkipZigTest;
-    try test_cmd(.{
-        .args = &.{ "bundle", "--docker-compose" },
-        .expected_exit_code = 0,
-        .expected_stderr_strings = &.{
-            "Bundling ZX site!",
-            "bundle",
+            "Initializing ZX project!",
+            "docker",
             "Dockerfile",
             "compose.yml",
             ".dockerignore",
@@ -281,6 +263,16 @@ test "bundle --docker-compose" {
             "Dockerfile",
             "compose.yml",
             ".dockerignore",
+        },
+        .expected_file_contains = &.{
+            // $BIN_NAME placeholder must resolve to the detected exe name.
+            .{ .path = "Dockerfile", .needle = "ziex_app" },
+            .{ .path = "compose.yml", .needle = "ziex_app" },
+        },
+        .expected_file_excludes = &.{
+            .{ .path = "Dockerfile", .needle = "$BIN_NAME" },
+            .{ .path = "compose.yml", .needle = "$BIN_NAME" },
+            .{ .path = "compose.yml", .needle = "$PORT" },
         },
     });
 }
@@ -310,12 +302,19 @@ test "upgrade" {
     });
 }
 
+const FileNeedle = struct {
+    path: []const u8,
+    needle: []const u8,
+};
+
 const TestCmdOptions = struct {
     args: []const []const u8,
     expected_stderr_strings: []const []const u8 = &.{},
     expected_stdout_strings: []const []const u8 = &.{},
     expected_exit_code: i32 = 0,
     expected_files: []const []const u8 = &.{},
+    expected_file_contains: []const FileNeedle = &.{},
+    expected_file_excludes: []const FileNeedle = &.{},
     debug: bool = false,
 };
 fn test_cmd(options: TestCmdOptions) !void {
@@ -401,6 +400,28 @@ fn test_cmd(options: TestCmdOptions) !void {
     if (missing_file > 0) {
         std.log.err("\nTotal missing files: {d}\n", .{missing_file});
         return error.TestExpectedEqual;
+    }
+
+    for (options.expected_file_contains) |fc| {
+        const path = try std.fs.path.join(allocator, &.{ test_dir_abs, fc.path });
+        defer allocator.free(path);
+        const data = try std.Io.Dir.cwd().readFileAlloc(std.testing.io, path, allocator, .limited(64 * 1024));
+        defer allocator.free(data);
+        if (std.mem.indexOf(u8, data, fc.needle) == null) {
+            std.debug.print("\nExpected file '{s}' to contain: '{s}'\nActual:\n{s}\n", .{ fc.path, fc.needle, data });
+            return error.TestExpectedEqual;
+        }
+    }
+
+    for (options.expected_file_excludes) |fc| {
+        const path = try std.fs.path.join(allocator, &.{ test_dir_abs, fc.path });
+        defer allocator.free(path);
+        const data = try std.Io.Dir.cwd().readFileAlloc(std.testing.io, path, allocator, .limited(64 * 1024));
+        defer allocator.free(data);
+        if (std.mem.indexOf(u8, data, fc.needle) != null) {
+            std.debug.print("\nExpected file '{s}' to NOT contain: '{s}'\nActual:\n{s}\n", .{ fc.path, fc.needle, data });
+            return error.TestExpectedEqual;
+        }
     }
 }
 
