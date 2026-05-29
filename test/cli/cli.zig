@@ -432,7 +432,7 @@ const local_zon_str =
     \\    .fingerprint = 0x7246d8c908f650a4,
     \\    .minimum_zig_version = "0.16.0",
     \\    .dependencies = .{
-    \\        .zx = .{
+    \\        .ziex = .{
     \\            .path = "../../",
     \\        },
     \\    },
@@ -450,7 +450,7 @@ var local_wasm_zon_str = .{
     .fingerprint = 0x7246d8c908f650a4,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
-        .zx = .{
+        .ziex = .{
             .path = "../../../",
         },
     },

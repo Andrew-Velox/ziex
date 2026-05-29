@@ -4,7 +4,7 @@
     .fingerprint = 0x3e674a69933290f8,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
-        .zx = .{ .path = "../.." },
+        .ziex = .{ .path = "../.." },
     },
     .paths = .{
         "build.zig",

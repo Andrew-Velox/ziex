@@ -1,5 +1,5 @@
 const std = @import("std");
-const ziex = @import("zx");
+const ziex = @import("ziex");
 
 const Platform = enum {
     chromium,

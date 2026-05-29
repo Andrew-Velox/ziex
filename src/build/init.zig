@@ -552,7 +552,7 @@ pub fn initInner(
         },
         .outdir = transpile_outdir,
         .assetsdir = assetsdir,
-        .zx = .{
+        .cli = .{
             .exe = zx_exe,
         },
         .server = .{
@@ -601,7 +601,7 @@ pub const Build = struct {
     outdir: LazyPath,
     assetsdir: LazyPath,
 
-    zx: BuildZiex,
+    cli: BuildZiex,
 
     server: BuildServer,
     client: BuildClient,
