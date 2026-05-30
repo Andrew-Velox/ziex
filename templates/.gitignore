@@ -21,6 +21,7 @@ node_modules/
 # cloudflare template
 !cloudflare/.gitignore
 !cloudflare/package.json
+!cloudflare/package-lock.json
 !cloudflare/wrangler.jsonc
 !cloudflare/app/main.ts
 !cloudflare/type.d.ts
