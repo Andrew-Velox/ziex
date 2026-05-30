@@ -1,18 +1,13 @@
-const build_zon = @import("build.zig.zon");
 const std = @import("std");
+const initlib = @import("src/build/init.zig");
 
-const buildlib = @import("src/build/main.zig");
+const build_zon = @import("build.zig.zon");
 
-// --- Public API (setting up ZX Site) --- //
 /// Options for initializing
-pub const InitOptions = buildlib.initlib.InitOptions;
-/// Initialize a ZX project (sets up ZX, dependencies, executables, wasm executable and `serve` step)
-pub const init = buildlib.initlib.init;
+pub const InitOptions = initlib.InitOptions;
 
-/// Default plugins
-/// #### Available plugins
-/// - tailwind: Tailwind CSS plugin
-pub const plugins = buildlib.plugins;
+/// Initialize a Ziex project (sets up Ziex, dependencies, executables, wasm executable and `serve` step)
+pub const init = initlib.init;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
