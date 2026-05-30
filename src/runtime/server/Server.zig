@@ -314,13 +314,16 @@ pub const SerilizableAppMeta = struct {
             };
         }
 
+        const version = try allocator.dupe(u8, module_config.version);
+        const rootdir = if (meta.rootdir) |rd| try allocator.dupe(u8, rd) else null;
+
         return SerilizableAppMeta{
             .routes = routes,
             .config = SerilizableAppMeta.Config{
                 .server = config,
             },
-            .version = module_config.version,
-            .rootdir = meta.rootdir,
+            .version = version,
+            .rootdir = rootdir,
             .cli_command = meta.cli_command,
         };
     }
