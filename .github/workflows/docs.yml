@@ -191,7 +191,9 @@ jobs:
           path: ./site
 
       - name: Disable custom build (artifact is prebuilt)
-        run: cd site && sed -i '/"build": {/,/^\t},$/d' wrangler.jsonc
+        run: |
+          cd site
+          sed -i '/"build": {/,/^\t},$/d' wrangler.jsonc
 
       - name: Deploy to Edge
         uses: cloudflare/wrangler-action@v3
