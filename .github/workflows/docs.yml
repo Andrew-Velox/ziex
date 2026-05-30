@@ -184,16 +184,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.16.0
-
       - name: Download Edge build artifact
         uses: actions/download-artifact@v4
         with:
           name: edge-build-artifact
           path: ./site
+
+      - name: Disable custom build (artifact is prebuilt)
+        run: cd site && sed -i '/"build": {/,/^\t},$/d' wrangler.jsonc
 
       - name: Deploy to Edge
         uses: cloudflare/wrangler-action@v3
