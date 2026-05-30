@@ -207,67 +207,33 @@ fn makeServerOnlyStubModule(b: *std.Build, name: []const u8, mode: ServerOnlyStu
     });
 }
 
-fn genIntrospectRoot(b: *std.Build, user_root: std.Build.LazyPath) !std.Build.LazyPath {
-    const template = @embedFile("introspect.zig");
+fn genIntrospectRoot(
+    b: *std.Build,
+    source_builder: *std.Build,
+    user_module: *std.Build.Module,
+    host_target: ?std.Build.ResolvedTarget,
+) !std.Build.LazyPath {
+    const decls_wf = b.addWriteFiles();
+    const decls_src = source_builder.path("src/build/introspect_decls.zig");
 
-    const user_root_path = user_root.getPath(b);
-    const source = std.Io.Dir.cwd().readFileAlloc(b.graph.io, user_root_path, b.allocator, .unlimited) catch
-        try b.allocator.dupe(u8, "");
+    const gen_mod = b.createModule(.{
+        .root_source_file = decls_src,
+        .target = host_target,
+        .optimize = .Debug,
+    });
+    gen_mod.addImport("zx_app_root", user_module);
 
-    var reexports = std.array_list.Managed(u8).init(b.allocator);
-    defer reexports.deinit();
-
-    var seen = std.StringHashMap(void).init(b.allocator);
-    defer seen.deinit();
-
-    var line_it = std.mem.splitScalar(u8, source, '\n');
-    while (line_it.next()) |line| {
-        const name = parsePubDeclName(line) orelse continue;
-        // The wrapper supplies its own `main`; never re-export the user's.
-        if (std.mem.eql(u8, name, "main")) continue;
-        if (seen.contains(name)) continue;
-        try seen.put(name, {});
-        try reexports.appendSlice(b.fmt("pub const {s} = __zx_app_root.{s};\n", .{ name, name }));
-    }
-
-    const marker = "//__ZX_REEXPORTS__";
-    const idx = std.mem.indexOf(u8, template, marker) orelse return error.IntrospectTemplateMarkerMissing;
-    const contents = try std.mem.concat(b.allocator, u8, &.{
-        template[0..idx],
-        reexports.items,
-        template[idx + marker.len ..],
+    const gen_exe = b.addExecutable(.{
+        .name = "ziex_introspect_gen",
+        .root_module = gen_mod,
     });
 
-    const wf = b.addWriteFiles();
-    return wf.add("ziex_introspect.zig", contents);
-}
+    const gen_run = b.addRunArtifact(gen_exe);
+    gen_run.setName("introspect (gen root)");
+    gen_run.expectExitCode(0);
 
-/// Parse the declared name from a top-level `pub const/fn/var <name>` line.
-/// Returns null for any line that isn't such a declaration.
-fn parsePubDeclName(line: []const u8) ?[]const u8 {
-    // Must start at column 0 (top-level decl).
-    if (line.len == 0 or line[0] == ' ' or line[0] == '\t') return null;
-
-    var rest = line;
-    const pub_prefix = "pub ";
-    if (!std.mem.startsWith(u8, rest, pub_prefix)) return null;
-    rest = rest[pub_prefix.len..];
-
-    inline for (.{ "const ", "fn ", "var " }) |kw| {
-        if (std.mem.startsWith(u8, rest, kw)) {
-            const after = rest[kw.len..];
-            var end: usize = 0;
-            while (end < after.len) : (end += 1) {
-                const c = after[end];
-                const is_ident = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or
-                    (c >= '0' and c <= '9') or c == '_';
-                if (!is_ident) break;
-            }
-            if (end == 0) return null;
-            return after[0..end];
-        }
-    }
-    return null;
+    const root_src = decls_wf.addCopyFile(gen_run.captureStdOut(.{}), "ziex_introspect.zig");
+    return root_src;
 }
 
 pub fn initInner(
@@ -470,7 +436,7 @@ pub fn initInner(
     //
     const can_introspect_exe = if (target) |resolved| resolved.query.isNative() else true;
     if (can_introspect_exe) {
-        const introspect_src = try genIntrospectRoot(b, exe.root_module.root_source_file.?);
+        const introspect_src = try genIntrospectRoot(b, zx_module.owner, exe.root_module, target);
 
         const introspect_root = b.createModule(.{
             .root_source_file = introspect_src,
