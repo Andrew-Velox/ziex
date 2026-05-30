@@ -18,10 +18,10 @@
     apps = forAllSystems (pkgs: {
       default = {
         type = "app";
-        meta.description = "zx: framework for building web applications with zig";
+        meta.description = "Ziex: framework for building web applications with Zig";
         program = toString (pkgs.writeShellApplication {
           name = "zx";
-          runtimeInputs = [pkgs.zig_0_15];
+          runtimeInputs = [pkgs.zig_0_16];
           text = ''
             tmp="$(mktemp -d)"
             trap 'rm -rf "$tmp"' EXIT
