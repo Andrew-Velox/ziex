@@ -33,16 +33,11 @@ jobs:
         with:
           version: 0.16.0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.3.5
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Install Node Dependencies
-        run: cd site && bun install
+        run: cd site && npm ci
 
       - name: Build Site
         run: cd site && zig build -Doptimize=ReleaseSmall
@@ -163,13 +158,8 @@ jobs:
         with:
           version: 0.16.0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.3.5
-
       - name: Install Node Dependencies
-        run: cd site && bun install
+        run: cd site && npm ci
 
       - name: Build Edge bundle artifact
         run: cd site && npx wrangler deploy --dry-run --outdir .wrangler-artifact --assets ./zig-out/static
@@ -193,11 +183,6 @@ jobs:
     needs: [build_edge, pre_deploy]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.3.5
 
       - name: Download Edge build artifact
         uses: actions/download-artifact@v4
