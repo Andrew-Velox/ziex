@@ -172,36 +172,17 @@ test "init → build" {
     }
 }
 
-test "init → build -t react" {
-    if (true) return; // current react integration will be removed
+test "dev" {
     if (!test_util.shouldRunSlowTest()) return error.SkipZigTest;
 
-    const test_dir_abs = try getTestDirPath();
-    defer allocator.free(test_dir_abs);
-
-    // Update build.zig.zon to use the local zx dependency, copy local_zon_str to build.zig.zon
-    const build_zig_zon_path = try std.fs.path.join(allocator, &.{ test_dir_abs, "react", "build.zig.zon" });
-    defer allocator.free(build_zig_zon_path);
-    var build_zig_zon = try std.Io.Dir.openDirAbsolute(std.testing.io, test_dir_abs, .{});
-    defer build_zig_zon.close(std.testing.io);
-
-    var aw = std.Io.Writer.Allocating.init(allocator);
-    defer aw.deinit();
-    try std.zon.stringify.serialize(local_wasm_zon_str, .{ .whitespace = true }, &aw.writer);
-    try build_zig_zon.writeFile(std.testing.io, .{ .sub_path = build_zig_zon_path, .data = aw.written() });
-
-    const wasm_path = try std.fs.path.join(allocator, &.{ test_dir_abs, "react" });
-    defer allocator.free(wasm_path);
-    const build_result = try std.process.run(allocator, std.testing.io, .{
-        .argv = &.{ cli_options.zig_exe, "build" },
-        .cwd = .{ .path = wasm_path },
+    try test_cmd_blocking(.{
+        .args = &.{"dev"},
+        .expected_stderr_strings = &.{
+            "- v" ++ zx.info.version,
+            "http://localhost:3000",
+        },
+        .timeout_ms = 120_000,
     });
-    defer allocator.free(build_result.stdout);
-    defer allocator.free(build_result.stderr);
-    switch (build_result.term) {
-        .exited => |code| try std.testing.expectEqual(code, 0),
-        else => try std.testing.expect(false),
-    }
 }
 
 test "export" {
@@ -337,8 +318,8 @@ fn test_cmd(options: TestCmdOptions) !void {
     const result = try std.process.run(allocator, std.testing.io, .{
         .argv = args.items,
         .cwd = .{ .path = test_dir_abs },
-        .stdout_limit = .limited(8192),
-        .stderr_limit = .limited(8192),
+        .stdout_limit = .unlimited,
+        .stderr_limit = .unlimited,
     });
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
@@ -422,6 +403,120 @@ fn test_cmd(options: TestCmdOptions) !void {
             std.debug.print("\nExpected file '{s}' to NOT contain: '{s}'\nActual:\n{s}\n", .{ fc.path, fc.needle, data });
             return error.TestExpectedEqual;
         }
+    }
+}
+
+const TestCmdBlockingOptions = struct {
+    args: []const []const u8,
+    expected_stderr_strings: []const []const u8 = &.{},
+    timeout_ms: u64 = 30_000,
+    debug: bool = false,
+};
+
+const StreamResult = union(enum) {
+    matched,
+    ended,
+    failed,
+    timed_out,
+};
+
+fn test_cmd_blocking(options: TestCmdBlockingOptions) !void {
+    const io = std.testing.io;
+
+    const zx_bin_abs = try getZxPath();
+    const test_dir_abs = try getTestDirPath();
+    defer allocator.free(zx_bin_abs);
+    defer allocator.free(test_dir_abs);
+
+    var args = std.ArrayList([]const u8).empty;
+    defer args.deinit(allocator);
+    try args.appendSlice(allocator, &.{zx_bin_abs});
+    try args.appendSlice(allocator, options.args);
+
+    var child = try std.process.spawn(io, .{
+        .argv = args.items,
+        .cwd = .{ .path = test_dir_abs },
+        .stdin = .ignore,
+        .stdout = .ignore,
+        .stderr = .pipe,
+    });
+    defer child.kill(io);
+
+    const Reader = struct {
+        fn run(
+            r_io: std.Io,
+            stderr: std.Io.File,
+            expected: []const []const u8,
+            debug: bool,
+        ) StreamResult {
+            var acc = std.ArrayList(u8).empty;
+            defer acc.deinit(allocator);
+
+            var chunk: [4096]u8 = undefined;
+            while (true) {
+                const n = stderr.readStreaming(r_io, &.{&chunk}) catch |err| switch (err) {
+                    error.EndOfStream => return .ended,
+                    else => return .failed,
+                };
+                if (n == 0) continue;
+                acc.appendSlice(allocator, chunk[0..n]) catch return .failed;
+                if (debug) std.debug.print("{s}", .{chunk[0..n]});
+
+                var all_found = true;
+                for (expected) |needle| {
+                    if (std.mem.indexOf(u8, acc.items, needle) == null) {
+                        all_found = false;
+                        break;
+                    }
+                }
+                if (all_found) return .matched;
+            }
+        }
+    };
+
+    const Timer = struct {
+        fn run(t_io: std.Io, ms: u64) StreamResult {
+            t_io.sleep(.fromMilliseconds(@intCast(ms)), .awake) catch {};
+            return .timed_out;
+        }
+    };
+
+    const Selector = std.Io.Select(union(enum) {
+        reader: StreamResult,
+        timer: StreamResult,
+    });
+    var buffer: [2]Selector.Union = undefined;
+    var selector = Selector.init(io, &buffer);
+
+    selector.async(.reader, Reader.run, .{ io, child.stderr.?, options.expected_stderr_strings, options.debug });
+    selector.async(.timer, Timer.run, .{ io, options.timeout_ms });
+
+    const winner = try selector.await();
+    // Cancel and drain the loser before returning so its resources are freed.
+    while (selector.cancel()) |_| {}
+
+    const result: StreamResult = switch (winner) {
+        .reader => |r| r,
+        .timer => |t| t,
+    };
+
+    switch (result) {
+        .matched => {},
+        .ended => {
+            std.debug.print("\n`{s}` stderr ended before all expected strings appeared\n", .{options.args[0]});
+            return error.TestExpectedEqual;
+        },
+        .failed => {
+            std.debug.print("\nFailed reading stderr from `{s}`\n", .{options.args[0]});
+            return error.TestExpectedEqual;
+        },
+        .timed_out => {
+            std.debug.print(
+                "\n`{s}` timed out after {d}ms before all expected strings appeared\n",
+                .{ options.args[0], options.timeout_ms },
+            );
+            return error.TestExpectedEqual;
+        },
     }
 }
 
