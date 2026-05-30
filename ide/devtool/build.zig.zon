@@ -5,6 +5,7 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .ziex = .{ .path = "../.." },
+        .esbuild = .{ .path = "../../pkg/plugin-esbuild" },
     },
     .paths = .{
         "build.zig",

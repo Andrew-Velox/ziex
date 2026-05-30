@@ -1,5 +1,6 @@
 const std = @import("std");
 const ziex = @import("ziex");
+const esbuild = @import("esbuild");
 
 const Platform = enum {
     chromium,
@@ -39,18 +40,32 @@ pub fn build(b: *std.Build) !void {
             },
         },
     });
-    var assetsdir = ziex_b.assetsdir;
+    ziex_b = ziex_b;
 
-    ziex_b.plugin(ziex.plugins.esbuild(b, .{
-        .input = b.path("app/scripts/client.ts"),
-        .output = assetsdir.path(b, "_/main.js"),
-        .optimize = optimize,
-    }));
+    const is_release = optimize != .Debug;
+    const client_scripts = esbuild.addBuild(b, .{
+        .name = "devtool_scripts",
+        .config = .{
+            .entrypoints = &.{
+                b.path("app/scripts/client.ts"),
+            },
+            .platform = .browser,
+            .minify = is_release,
+            .sourcemap = if (is_release) .none else .@"inline",
+            .define = &.{
+                .{ .key = "__DEV__", .value = if (is_release) "false" else "true" },
+                .{ .key = "process.env.NODE_ENV", .value = if (is_release) "\"production\"" else "\"development\"" },
+            },
+        },
+    });
+
+    const install_main_js = b.addInstallFile(client_scripts.dir.path(b, "client.js"), "static/assets/_/main.js");
+    b.default_step.dependOn(&install_main_js.step);
 
     // Step: zig build chromium
     const chromium_step = b.step("chromium", "Build chromium extension");
     const chromium_build = b.addSystemCommand(&.{ b.graph.zig_exe, "build", "-Dplatform=chromium" });
-    const chromium_export = b.addRunArtifact(ziex_b.zx.exe);
+    const chromium_export = b.addRunArtifact(ziex_b.cli.exe);
     chromium_export.addArgs(&.{ "export", "--outdir" });
     chromium_export.addDirectoryArg(b.path("../chromium/pages"));
     chromium_export.step.dependOn(&chromium_build.step);
