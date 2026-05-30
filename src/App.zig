@@ -18,11 +18,18 @@ pub const allocator = switch (builtin.os.tag) {
 };
 
 const Io = if (platform.os == .freestanding) void else std.Io;
+
+var threaded_instance: std.Io.Threaded = undefined;
+var threaded_initialized = false;
+
 pub fn io() Io {
     if (platform.os == .freestanding) return {};
 
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    return threaded.io();
+    if (!threaded_initialized) {
+        threaded_instance = std.Io.Threaded.init(allocator, .{});
+        threaded_initialized = true;
+    }
+    return threaded_instance.io();
 }
 
 pub fn App(comptime H: type) type {

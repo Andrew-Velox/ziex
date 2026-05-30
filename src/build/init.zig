@@ -207,6 +207,69 @@ fn makeServerOnlyStubModule(b: *std.Build, name: []const u8, mode: ServerOnlyStu
     });
 }
 
+fn genIntrospectRoot(b: *std.Build, user_root: std.Build.LazyPath) !std.Build.LazyPath {
+    const template = @embedFile("introspect.zig");
+
+    const user_root_path = user_root.getPath(b);
+    const source = std.Io.Dir.cwd().readFileAlloc(b.graph.io, user_root_path, b.allocator, .unlimited) catch
+        try b.allocator.dupe(u8, "");
+
+    var reexports = std.array_list.Managed(u8).init(b.allocator);
+    defer reexports.deinit();
+
+    var seen = std.StringHashMap(void).init(b.allocator);
+    defer seen.deinit();
+
+    var line_it = std.mem.splitScalar(u8, source, '\n');
+    while (line_it.next()) |line| {
+        const name = parsePubDeclName(line) orelse continue;
+        // The wrapper supplies its own `main`; never re-export the user's.
+        if (std.mem.eql(u8, name, "main")) continue;
+        if (seen.contains(name)) continue;
+        try seen.put(name, {});
+        try reexports.appendSlice(b.fmt("pub const {s} = __zx_app_root.{s};\n", .{ name, name }));
+    }
+
+    const marker = "//__ZX_REEXPORTS__";
+    const idx = std.mem.indexOf(u8, template, marker) orelse return error.IntrospectTemplateMarkerMissing;
+    const contents = try std.mem.concat(b.allocator, u8, &.{
+        template[0..idx],
+        reexports.items,
+        template[idx + marker.len ..],
+    });
+
+    const wf = b.addWriteFiles();
+    return wf.add("ziex_introspect.zig", contents);
+}
+
+/// Parse the declared name from a top-level `pub const/fn/var <name>` line.
+/// Returns null for any line that isn't such a declaration.
+fn parsePubDeclName(line: []const u8) ?[]const u8 {
+    // Must start at column 0 (top-level decl).
+    if (line.len == 0 or line[0] == ' ' or line[0] == '\t') return null;
+
+    var rest = line;
+    const pub_prefix = "pub ";
+    if (!std.mem.startsWith(u8, rest, pub_prefix)) return null;
+    rest = rest[pub_prefix.len..];
+
+    inline for (.{ "const ", "fn ", "var " }) |kw| {
+        if (std.mem.startsWith(u8, rest, kw)) {
+            const after = rest[kw.len..];
+            var end: usize = 0;
+            while (end < after.len) : (end += 1) {
+                const c = after[end];
+                const is_ident = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or
+                    (c >= '0' and c <= '9') or c == '_';
+                if (!is_ident) break;
+            }
+            if (end == 0) return null;
+            return after[0..end];
+        }
+    }
+    return null;
+}
+
 pub fn initInner(
     b: *std.Build,
     exe: *std.Build.Step.Compile,
@@ -405,14 +468,26 @@ pub fn initInner(
 
     // --- Build-time App Metadata ---
     //
-    // We capture the app's introspect output (full SerilizableAppMeta with
-    // routes) and use that directly as the installed `<exe>.meta.zon`. This
-    // lets CLI tools like `zx export` discover routes without an HTTP fetch.
     const can_introspect_exe = if (target) |resolved| resolved.query.isNative() else true;
     if (can_introspect_exe) {
-        const introspect_run = b.addRunArtifact(exe);
+        const introspect_src = try genIntrospectRoot(b, exe.root_module.root_source_file.?);
+
+        const introspect_root = b.createModule(.{
+            .root_source_file = introspect_src,
+            .target = target,
+            .optimize = optimize,
+        });
+        introspect_root.addImport("zx", site_zx_module);
+        introspect_root.addImport("zx_app_root", exe.root_module);
+
+        const introspect_exe = b.addExecutable(.{
+            .name = b.fmt("{s}.meta", .{exe.name}),
+            .root_module = introspect_root,
+        });
+        introspect_exe.step.dependOn(&transpile_cmd.step);
+
+        const introspect_run = b.addRunArtifact(introspect_exe);
         introspect_run.setName(b.fmt("introspect {s}", .{exe.name}));
-        introspect_run.setEnvironmentVariable("ZIEX_INTROSPECT", "1");
         introspect_run.expectExitCode(0);
         const introspect_stdout = introspect_run.captureStdOut(.{});
 

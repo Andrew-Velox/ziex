@@ -27,14 +27,14 @@ pub fn setup(self: Database) !void {
     _ = try self.pool.exec(@embedFile("migrations/init.sql"), .{});
 }
 
-pub fn init(allocator: std.mem.Allocator, uri: []const u8) !Database {
+pub fn init(io: anytype, allocator: std.mem.Allocator, uri: []const u8) !Database {
     if (zx.platform.isClient()) return error.ClientHasNoDatabase;
 
     if (uri.len == 0) return error.InvalidDatabaseUrl;
 
     const pgUri = try std.Uri.parse(uri);
-    std.log.info("DB: {s}", .{try pgUri.getHostAlloc(allocator)});
-    const pool = try pg.Pool.initUri(allocator, pgUri, .{ .size = 4 });
+    std.log.info("DB: {s}", .{uri});
+    const pool = try pg.Pool.initUri(io, allocator, pgUri, .{ .size = 4 });
 
     const db: Database = .{ .pool = pool };
     try db.setup();
