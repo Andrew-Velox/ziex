@@ -124,7 +124,6 @@ pub fn build(b: *std.Build) !void {
         .cli = .{ .optimize = optimize },
     });
 
-    var assetsdir = ziex_b.assetsdir;
     const tailwindcss_b = tailwindcss.addBuild(b, .{
         .config = .{
             .input = b.path("app/styles/tailwind.css"),
@@ -136,26 +135,31 @@ pub fn build(b: *std.Build) !void {
     const css_install = b.addInstallFile(tailwindcss_b.file, "static/assets/_/tailwind.css");
     b.default_step.dependOn(&css_install.step);
 
-    // ziex_b.plugin(ziex.plugins.esbuild(b, .{
-    //     .input = b.path("app/scripts/react.ts"),
-    //     .output = assetsdir.path(b, "react.js"),
-    //     .optimize = optimize,
-    // }));
-    ziex_b.plugin(ziex.plugins.esbuild(b, .{
-        .input = b.path("app/scripts/client.ts"),
-        .output = assetsdir.path(b, "_/main.js"),
-        .optimize = optimize,
-    }));
-    ziex_b.plugin(ziex.plugins.esbuild(b, .{
-        .input = b.path("app/scripts/docs.ts"),
-        .output = assetsdir.path(b, "docs.js"),
-        .optimize = optimize,
-    }));
-    ziex_b.plugin(ziex.plugins.esbuild(b, .{
-        .input = b.path("app/scripts/home.ts"),
-        .output = assetsdir.path(b, "home.js"),
-        .optimize = optimize,
-    }));
+    const is_release = optimize != .Debug;
+    const site_scripts = esbuild.addBuild(b, .{
+        .name = "site_scripts",
+        .config = .{
+            .entrypoints = &.{
+                b.path("app/scripts/client.ts"),
+                b.path("app/scripts/docs.ts"),
+                b.path("app/scripts/home.ts"),
+            },
+            .platform = .browser,
+            .minify = is_release,
+            .sourcemap = if (is_release) .none else .@"inline",
+            .define = &.{
+                .{ .key = "__DEV__", .value = if (is_release) "false" else "true" },
+                .{ .key = "process.env.NODE_ENV", .value = if (is_release) "\"production\"" else "\"development\"" },
+            },
+        },
+    });
+
+    const install_main_js = b.addInstallFile(site_scripts.dir.path(b, "client.js"), "static/assets/_/main.js");
+    const install_docs_js = b.addInstallFile(site_scripts.dir.path(b, "docs.js"), "static/assets/docs.js");
+    const install_home_js = b.addInstallFile(site_scripts.dir.path(b, "home.js"), "static/assets/home.js");
+    b.default_step.dependOn(&install_main_js.step);
+    b.default_step.dependOn(&install_docs_js.step);
+    b.default_step.dependOn(&install_home_js.step);
 
     const playground_scripts = esbuild.addBuild(b, .{
         .name = "playground_scripts",
