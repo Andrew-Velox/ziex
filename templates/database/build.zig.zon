@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .ziex = .{
-            .url = "git+https://github.com/ziex-dev/ziex#e08256fc230491f8bb8ef5bf07b594f51611dc62",
-            .hash = "ziex-0.1.0-dev.1068-Z3YcvfNAnQEZZMO_gBssBkCY4Nx47mToHfgBNB6D_7kf",
+            .url = "git+https://github.com/ziex-dev/ziex#52d216ef4204db68e91efa291735b99cb8fae746",
+            .hash = "ziex-0.1.0-dev.1068-Z3YcvX1BnQGYHJA7FIsHRwBjo0uKN0uFShthXtEQy8yR",
         },
         .pg = .{
             .url = "git+https://github.com/karlseguin/pg.zig#61fb377e7afbffedfae28bb4396d038dcf9462c8",

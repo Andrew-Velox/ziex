@@ -6,7 +6,6 @@ const __zx_app_root = @import("zx_app_root");
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
-    defer init.arena.deinit();
     const io = init.io;
     var meta = zx.meta;
 
