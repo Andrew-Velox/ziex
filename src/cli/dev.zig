@@ -473,7 +473,7 @@ fn resolveProgramPath(io: std.Io, allocator: std.mem.Allocator, binpath: []const
 
 fn isLikelyRunnableFile(name: []const u8) bool {
     const ignored_extensions = [_][]const u8{
-        ".a", ".dll", ".dylib", ".lib", ".o", ".obj", ".pdb", ".so", ".wasm",
+        ".a", ".dll", ".dylib", ".lib", ".o", ".obj", ".pdb", ".so", ".wasm", ".zon",
     };
 
     inline for (ignored_extensions) |ext| {
