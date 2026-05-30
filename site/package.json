@@ -10,11 +10,11 @@
     "@types/node": "^25.5.0",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
+    "@ziex/cli": "0.1.0-dev.8640",
+    "@zigc/cli": "0.16.0",
     "esbuild": "0.27.2",
     "typescript": "^5.5.2",
-    "wrangler": "^4.95.0",
-    "@ziex/cli": "0.1.0-dev.8640",
-    "@zigc/cli": "0.16.0"
+    "wrangler": "^4.95.0"
   },
   "dependencies": {
     "@andrewbranch/untar.js": "^1.0.3",
@@ -27,6 +27,7 @@
     "@codemirror/lang-javascript": "^6.2.4",
     "@codemirror/language": "^6.12.1",
     "@codemirror/lint": "^6.9.4",
+    "@codemirror/lsp-client": "^6.2.4",
     "@codemirror/matchbrackets": "^0.19.4",
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.14",

@@ -2,7 +2,7 @@ import { appendTerminalLine, revealOutputWindow, setTerminalCollapsed, clearTerm
 import { EditorState, Prec } from "@codemirror/state"
 import { keymap } from "@codemirror/view"
 import { EditorView, basicSetup } from "codemirror"
-import { JsonRpcMessage, LspClient } from "./lsp";
+import { createZlsClient, workerTransport } from "./lsp";
 import { indentWithTab } from "@codemirror/commands";
 import { indentUnit } from "@codemirror/language";
 import { editorTheme, editorHighlightStyle } from "./theme.ts";
@@ -18,63 +18,7 @@ import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 import { createPlaygroundShareUrl, decodeFilesFromQuery } from "../../../scripts/playground_share";
 
-export default class ZlsClient extends LspClient {
-    public worker: Worker;
-
-    constructor(worker: Worker) {
-        super("file:///", []);
-        this.worker = worker;
-        this.autoClose = false;
-
-        this.worker.addEventListener("message", this.messageHandler);
-    }
-
-    private messageHandler = (ev: MessageEvent) => {
-        const data = JSON.parse(ev.data);
-
-        if (data.method == "window/logMessage") {
-            if (!data.stderr) {
-                switch (data.params.type) {
-                    case 5:
-                        console.debug("ZLS --- ", data.params.message);
-                        break;
-                    case 4:
-                        console.log("ZLS --- ", data.params.message);
-                        break;
-                    case 3:
-                        console.info("ZLS --- ", data.params.message);
-                        break;
-                    case 2:
-                        console.warn("ZLS --- ", data.params.message);
-                        break;
-                    case 1:
-                        console.error("ZLS --- ", data.params.message);
-                        break;
-                    default:
-                        console.error(data.params.message);
-                        break;
-                }
-            }
-        } else {
-            console.debug("LSP <<-", data);
-        }
-        this.handleMessage(data);
-    };
-
-    public async sendMessage(message: JsonRpcMessage): Promise<void> {
-        console.debug("LSP ->>", message);
-        if (this.worker) {
-            this.worker.postMessage(JSON.stringify(message));
-        }
-    }
-
-    public async close(): Promise<void> {
-        super.close();
-        this.worker.terminate();
-    }
-}
-
-let client = new ZlsClient(new Worker('/assets/playground/workers/zls.js'));
+let client = createZlsClient(workerTransport(new Worker('/assets/playground/workers/zls.js')));
 const PLAYGROUND_NOTICE_STORAGE_KEY = "playground_feature_notice_dismissed_v1";
 
 
@@ -108,7 +52,7 @@ function createEditorState(filename: string, content: string) {
     ];
 
     if (filename.endsWith('.zig') || filename.endsWith('.zx') || filename.endsWith('.zon')) {
-        extensions.push(client.createPlugin(`file:///${filename}`, "zig", true));
+        extensions.push(client.plugin(`file:///${filename}`, "zig"));
     }
 
     if (filename.endsWith(".zx") || filename.endsWith(".html")) {
@@ -443,7 +387,7 @@ function setupFeatureNotice() {
 
 window.addEventListener("DOMContentLoaded", async () => {
     setupFeatureNotice();
-    await client.initialize();
+    await client.initializing;
     let code = null;
     if (location.hash.startsWith("#data=")) {
         code = location.hash.slice(6);
@@ -499,10 +443,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (shareBtn) shareBtn.removeAttribute("disabled");
 });
 
-// Only initialize client here, file loading is handled in DOMContentLoaded
-(async () => {
-    // await client.initialize();
-})();
+// Client connects on construction; file loading is handled in DOMContentLoaded.
 
 document.getElementById("pg-add-file")?.addEventListener("click", addFile);
 
