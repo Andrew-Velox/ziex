@@ -232,7 +232,7 @@ pub const Handler = struct {
 
         const zig_uri = handler.getZlsUri(zx_uri);
 
-        const source_z = handler.allocator.dupeZ(u8, content) catch return;
+        const source_z = handler.allocator.dupeSentinel(u8, content, 0) catch return;
         defer handler.allocator.free(source_z);
 
         var parse_result = zx.Ast.parse(handler.allocator, source_z, .{}) catch null;
@@ -254,7 +254,7 @@ pub const Handler = struct {
 
     /// Store .zx file state and publish zx-specific diagnostics.
     fn storeAndDiagnose(handler: *Handler, uri: []const u8, source: []const u8) void {
-        const source_z = handler.allocator.dupeZ(u8, source) catch return;
+        const source_z = handler.allocator.dupeSentinel(u8, source, 0) catch return;
         defer handler.allocator.free(source_z);
 
         var result = zx.Ast.parse(handler.allocator, source_z, .{}) catch return;
@@ -836,7 +836,7 @@ pub const Handler = struct {
     ) error{OutOfMemory}!?[]const lsp.types.flat.TextEdit {
         if (isZxUri(params.textDocument.uri)) {
             if (handler.zx_files.get(params.textDocument.uri)) |state| {
-                const source_z = try handler.allocator.dupeZ(u8, state.source);
+                const source_z = try handler.allocator.dupeSentinel(u8, state.source, 0);
                 defer handler.allocator.free(source_z);
 
                 var format_result = zx.Ast.fmt(handler.allocator, source_z) catch |err| {

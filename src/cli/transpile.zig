@@ -171,7 +171,7 @@ fn transpile(ctx: zli.CommandContext) !void {
                 const source = try std.Io.Dir.cwd().readFileAlloc(io, path, ctx.allocator, std.Io.Limit.limited(std.math.maxInt(usize)));
                 defer ctx.allocator.free(source);
 
-                const source_z = try ctx.allocator.dupeZ(u8, source);
+                const source_z = try ctx.allocator.dupeSentinel(u8, source, 0);
                 defer ctx.allocator.free(source_z);
 
                 // Parse and transpile
@@ -928,7 +928,7 @@ fn genRoutes(allocator: std.mem.Allocator, output_dir: []const u8, rootdir: ?[]c
     const meta_path = try std.fs.path.join(allocator, &.{ output_dir, "meta.zig" });
     defer allocator.free(meta_path);
 
-    const content_z = try allocator.dupeZ(u8, content.written());
+    const content_z = try allocator.dupeSentinel(u8, content.written(), 0);
     defer allocator.free(content_z);
     var ast = try std.zig.Ast.parse(allocator, content_z, .zig);
     defer ast.deinit(allocator);
@@ -1289,7 +1289,7 @@ fn transpileFile(
     );
     defer allocator.free(source);
 
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     // Convert to relative path for deterministic component IDs and sourcemaps

@@ -14,7 +14,7 @@ pub fn fmt(allocator: std.mem.Allocator, source: [:0]const u8) !FmtResult {
     }
 
     const render_result = try parser_result.renderAlloc(arena, .{ .mode = .zx, .sourcemap = false, .path = null });
-    const formatted_sourcez = try allocator.dupeZ(u8, render_result.source);
+    const formatted_sourcez = try allocator.dupeSentinel(u8, render_result.source, 0);
 
     return FmtResult{ .source = formatted_sourcez, .diagnostics = diagnostics };
 }
@@ -63,8 +63,8 @@ pub fn parse(gpa: std.mem.Allocator, zx_source: [:0]const u8, options: ParseOpti
     errdefer diagnostics.deinit();
 
     const render_result = try parse_result.renderAlloc(arena, .{ .mode = .zig, .sourcemap = options.map.enabled(), .path = options.path });
-    var zig_ast = try std.zig.Ast.parse(gpa, try arena.dupeZ(u8, render_result.source), .zig);
-    const zig_sourcez = try arena.dupeZ(u8, if (zig_ast.errors.len == 0) try zig_ast.renderAlloc(arena) else render_result.source);
+    var zig_ast = try std.zig.Ast.parse(gpa, try arena.dupeSentinel(u8, render_result.source, 0), .zig);
+    const zig_sourcez = try arena.dupeSentinel(u8, if (zig_ast.errors.len == 0) try zig_ast.renderAlloc(arena) else render_result.source, 0);
 
     var components = std.ArrayList(ClientComponentMetadata).empty;
     try components.ensureTotalCapacity(gpa, render_result.client_components.len);
@@ -86,8 +86,8 @@ pub fn parse(gpa: std.mem.Allocator, zx_source: [:0]const u8, options: ParseOpti
 
     return ParseResult{
         .zig_ast = zig_ast,
-        .zx_source = try gpa.dupeZ(u8, render_result.source),
-        .zig_source = try gpa.dupeZ(u8, zig_sourcez),
+        .zx_source = try gpa.dupeSentinel(u8, render_result.source, 0),
+        .zig_source = try gpa.dupeSentinel(u8, zig_sourcez, 0),
         .client_components = components,
         .sourcemap = result_sourcemap,
         .diagnostics = diagnostics,

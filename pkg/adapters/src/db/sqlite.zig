@@ -124,7 +124,7 @@ fn open(_: *anyopaque, filename: ?[]const u8, options: db.OpenOptions) !db.Conne
     errdefer ctx.deinit();
 
     if (ctx.mode == .pooled) {
-        const path_z = try allocator.dupeZ(u8, path);
+        const path_z = try allocator.dupeSentinel(u8, path, 0);
         defer allocator.free(path_z);
 
         const pool_config = try allocator.create(PoolConnectionConfig);
@@ -142,7 +142,7 @@ fn open(_: *anyopaque, filename: ?[]const u8, options: db.OpenOptions) !db.Conne
         });
         allocator.destroy(pool_config);
     } else {
-        const path_z = try allocator.dupeZ(u8, path);
+        const path_z = try allocator.dupeSentinel(u8, path, 0);
         defer allocator.free(path_z);
 
         ctx.conn = try zqlite.open(path_z, flags);
@@ -163,7 +163,7 @@ fn deserialize(_: *anyopaque, bytes: []const u8, options: db.OpenOptions) !db.Co
     const path_copy = try allocator.dupe(u8, ":memory:");
     errdefer allocator.free(path_copy);
 
-    const path_z = try allocator.dupeZ(u8, ":memory:");
+    const path_z = try allocator.dupeSentinel(u8, ":memory:", 0);
     defer allocator.free(path_z);
 
     ctx.* = .{

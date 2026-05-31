@@ -180,10 +180,10 @@ const CallbackEntry = struct {
 };
 
 /// Global callback registry
-var callbacks: [MAX_CALLBACKS]CallbackEntry = [_]CallbackEntry{.{
+var callbacks: [MAX_CALLBACKS]CallbackEntry = @splat(CallbackEntry{
     .callback_type = .event,
     .active = false,
-}} ** MAX_CALLBACKS;
+});
 var next_callback_id: u64 = 1;
 
 /// Register a callback and get its ID

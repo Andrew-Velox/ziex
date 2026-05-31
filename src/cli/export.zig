@@ -322,7 +322,7 @@ fn fetchStaticParams(io: std.Io, allocator: std.mem.Allocator, host: []const u8,
     const response = aw.written();
     if (response.len == 0 or std.mem.eql(u8, response, ".{}")) return .{ .items = &.{}, .allocator = null };
 
-    const response_z = try allocator.dupeZ(u8, response);
+    const response_z = try allocator.dupeSentinel(u8, response, 0);
     defer allocator.free(response_z);
 
     const parsed = std.zon.parse.fromSliceAlloc([]const []const zx.PageOptions.StaticParam, allocator, response_z, null, .{}) catch |err| {

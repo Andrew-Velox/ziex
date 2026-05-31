@@ -40,7 +40,7 @@ pub fn extractBlocks(allocator: std.mem.Allocator, ast: *Ast) !ExtractBlockResul
     try extractBlocksInner(ast, root, &blocks, &cleaned_source, allocator);
 
     try cleaned_source.append(allocator, 0);
-    const cleaned = try allocator.dupeZ(u8, cleaned_source.items[0 .. cleaned_source.items.len - 1]);
+    const cleaned = try allocator.dupeSentinel(u8, cleaned_source.items[0 .. cleaned_source.items.len - 1], 0);
 
     return ExtractBlockResult{
         .zx_blocks = try blocks.toOwnedSlice(allocator),
@@ -180,7 +180,7 @@ pub fn patchInBlocks(allocator: std.mem.Allocator, extract_result: ExtractBlockR
 
     try result.append(allocator, 0);
     const result_slice = result.items[0 .. result.items.len - 1 :0];
-    return try allocator.dupeZ(u8, result_slice);
+    return try allocator.dupeSentinel(u8, result_slice, 0);
 }
 
 fn getIndentationLevel(source: []const u8, pos: usize) u32 {
@@ -236,7 +236,7 @@ pub fn renderNode(self: *Ast, node: ts.Node, w: *std.Io.Writer) !void {
 
         // Free old zig_source and replace with formatted
         allocator.free(extract_result.zig_source);
-        extract_result.zig_source = try allocator.dupeZ(u8, formatted_zig);
+        extract_result.zig_source = try allocator.dupeSentinel(u8, formatted_zig, 0);
 
         // Patch in formatted zx_blocks
         const final_result = try patchInBlocks(allocator, extract_result);

@@ -150,7 +150,7 @@ pub fn buildjs(ctx: zli.CommandContext, binpath: []const u8, is_dev: bool, verbo
     const main_tsx_arg = package_json.main orelse "site/main.tsx";
     defer ctx.allocator.free(outfile_arg);
 
-    const main_tsx_argz = try ctx.allocator.dupeZ(u8, main_tsx_arg);
+    const main_tsx_argz = try ctx.allocator.dupeSentinel(u8, main_tsx_arg, 0);
     defer ctx.allocator.free(main_tsx_argz);
 
     log.debug("Building main.tsx: in package.json: {s}", .{package_json.main orelse "na"});
@@ -341,13 +341,13 @@ pub fn transform(
     options: ?TransformOptions,
 ) !TransformResult {
     // Ensure source is null-terminated
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     // Allocate file_path if provided, keep it alive during C call
     var file_path_z: ?[:0]u8 = null;
     if (file_path) |path| {
-        file_path_z = try allocator.dupeZ(u8, path);
+        file_path_z = try allocator.dupeSentinel(u8, path, 0);
     }
     defer if (file_path_z) |path_z| allocator.free(path_z);
 
@@ -358,7 +358,7 @@ pub fn transform(
     var target_z: ?[:0]u8 = null;
     if (options) |opts| {
         if (opts.target) |target| {
-            target_z = try allocator.dupeZ(u8, target);
+            target_z = try allocator.dupeSentinel(u8, target, 0);
         }
         c_options = transformjs_c.CTransformOptions{
             .jsx_enabled = if (opts.jsx_enabled) 1 else 0,
@@ -416,13 +416,13 @@ pub fn transformWithError(
     options: ?TransformOptions,
 ) !struct { result: TransformResult, error_message: ?[]const u8 } {
     // Ensure source is null-terminated
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     // Allocate file_path if provided, keep it alive during C call
     var file_path_z: ?[:0]u8 = null;
     if (file_path) |path| {
-        file_path_z = try allocator.dupeZ(u8, path);
+        file_path_z = try allocator.dupeSentinel(u8, path, 0);
     }
     defer if (file_path_z) |path_z| allocator.free(path_z);
 
@@ -433,7 +433,7 @@ pub fn transformWithError(
     var target_z: ?[:0]u8 = null;
     if (options) |opts| {
         if (opts.target) |target| {
-            target_z = try allocator.dupeZ(u8, target);
+            target_z = try allocator.dupeSentinel(u8, target, 0);
         }
         c_options = transformjs_c.CTransformOptions{
             .jsx_enabled = if (opts.jsx_enabled) 1 else 0,

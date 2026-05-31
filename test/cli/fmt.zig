@@ -374,7 +374,7 @@ fn test_fmt_inner(comptime file_path: []const u8, comptime has_diff_expected: bo
     const source = try cache.get(source_path) orelse return error.FileNotFound;
     const source_altered = try std.fmt.allocPrint(allocator, "\n\n {s} \n\n", .{source});
     defer allocator.free(source_altered);
-    const source_z = try allocator.dupeZ(u8, source_altered);
+    const source_z = try allocator.dupeSentinel(u8, source_altered, 0);
     defer allocator.free(source_z);
 
     // Parse and transpile
@@ -386,7 +386,7 @@ fn test_fmt_inner(comptime file_path: []const u8, comptime has_diff_expected: bo
             std.log.err("Expected file not found: {s}\n", .{expected_source_path});
             return error.FileNotFound;
         };
-        const expected_source_z = try allocator.dupeZ(u8, expected_source);
+        const expected_source_z = try allocator.dupeSentinel(u8, expected_source, 0);
         defer allocator.free(expected_source_z);
         try testing.expectEqualStrings(expected_source_z, result.source orelse return error.FmtHadErrors);
     }

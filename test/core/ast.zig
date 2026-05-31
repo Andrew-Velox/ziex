@@ -446,7 +446,7 @@ fn test_transpile_inner(comptime file_path: []const u8, comptime no_expect: bool
 
     // Get pre-loaded source file
     const source = try cache.get(source_path) orelse return error.FileNotFound;
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     // Parse and transpile with file path for Client support
@@ -469,7 +469,7 @@ fn test_transpile_inner(comptime file_path: []const u8, comptime no_expect: bool
         std.log.err("Expected file not found: {s}\n", .{expected_source_path});
         return error.FileNotFound;
     };
-    const expected_source_z = try allocator.dupeZ(u8, expected_source);
+    const expected_source_z = try allocator.dupeSentinel(u8, expected_source, 0);
     defer allocator.free(expected_source_z);
 
     if (!no_expect) {

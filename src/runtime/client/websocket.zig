@@ -28,7 +28,7 @@ const WebSocketSlot = struct {
     ws: ?*WebSocket = null,
 };
 
-var ws_slots: [MAX_WEBSOCKETS]WebSocketSlot = [_]WebSocketSlot{.{}} ** MAX_WEBSOCKETS;
+var ws_slots: [MAX_WEBSOCKETS]WebSocketSlot = @splat(WebSocketSlot{});
 
 fn findOrAllocSlot(ws_id: u64) ?usize {
     const preferred: usize = @intCast(ws_id % MAX_WEBSOCKETS);

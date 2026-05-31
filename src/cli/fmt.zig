@@ -203,7 +203,7 @@ fn formatFile(
     );
     defer allocator.free(source);
 
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     var format_result = try zx.Ast.fmt(allocator, source_z);
@@ -271,7 +271,7 @@ fn formatDir(
         );
         defer allocator.free(source);
 
-        const source_z = try allocator.dupeZ(u8, source);
+        const source_z = try allocator.dupeSentinel(u8, source, 0);
         defer allocator.free(source_z);
 
         var format_result = try zx.Ast.fmt(allocator, source_z);

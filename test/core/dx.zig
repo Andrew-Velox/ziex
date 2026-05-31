@@ -125,7 +125,7 @@ test "sm > e2e simple element transpilation" {
         \\
         \\const zx = @import("zx");
     ;
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     var result = try zx.Ast.parse(allocator, source_z, .{ .map = .inlined });
@@ -173,7 +173,7 @@ test "sm > e2e generatedToSource roundtrip for zig code" {
         \\    std.debug.print("hello\n", .{});
         \\}
     ;
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     var result = try zx.Ast.parse(allocator, source_z, .{ .map = .inlined });
@@ -210,7 +210,7 @@ test "sm > e2e expression in element" {
         \\
         \\const zx = @import("zx");
     ;
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
     var result = try zx.Ast.parse(allocator, source_z, .{ .map = .inlined });
@@ -248,7 +248,7 @@ test "sm > all test files produce valid sourcemaps" {
         const source = std.Io.Dir.cwd().readFileAlloc(std.testing.io, tf.zx_path, allocator, .limited(std.math.maxInt(usize))) catch continue;
         defer allocator.free(source);
 
-        const source_z = try allocator.dupeZ(u8, source);
+        const source_z = try allocator.dupeSentinel(u8, source, 0);
         defer allocator.free(source_z);
 
         var result = zx.Ast.parse(allocator, source_z, .{ .map = .inlined, .path = tf.zx_path }) catch continue;
@@ -294,7 +294,7 @@ test "sm > golden file mappings" {
         };
         defer allocator.free(source);
 
-        const source_z = try allocator.dupeZ(u8, source);
+        const source_z = try allocator.dupeSentinel(u8, source, 0);
         defer allocator.free(source_z);
 
         var result = zx.Ast.parse(allocator, source_z, .{ .map = .inlined, .path = tf.zx_path }) catch |err| {
@@ -361,7 +361,7 @@ test "sm > generate sourcemap debug files" {
         const source = std.Io.Dir.cwd().readFileAlloc(std.testing.io, tf.zx_path, allocator, .limited(std.math.maxInt(usize))) catch continue;
         defer allocator.free(source);
 
-        const source_z = try allocator.dupeZ(u8, source);
+        const source_z = try allocator.dupeSentinel(u8, source, 0);
         defer allocator.free(source_z);
 
         var result = zx.Ast.parse(allocator, source_z, .{ .map = .inlined, .path = tf.zx_path }) catch continue;

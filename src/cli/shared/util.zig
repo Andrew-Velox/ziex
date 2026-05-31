@@ -109,7 +109,7 @@ fn fileExists(io: std.Io, path: []const u8) bool {
 fn readBuildMeta(io: std.Io, allocator: std.mem.Allocator, path: []const u8) !BuildMeta {
     const source = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .unlimited);
     defer allocator.free(source);
-    const source_z = try allocator.dupeZ(u8, source);
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
     return try std.zon.parse.fromSliceAlloc(BuildMeta, allocator, source_z, null, .{ .ignore_unknown_fields = true });
 }

@@ -76,7 +76,7 @@ fn main_wasm(init: std.process.Init) !void {
     // Transpile/Fmt file_path.zx and write with file_path.zig
     for (files.items) |file_path| {
         const zx_source = try cwd.readFileAlloc(init.io, file_path, allocator, .unlimited);
-        const zx_sourcez = try allocator.dupeZ(u8, zx_source);
+        const zx_sourcez = try allocator.dupeSentinel(u8, zx_source, 0);
 
         const ast = try zx.Ast.parse(allocator, zx_sourcez, .{});
         const output = if (is_transpile) ast.zig_source else ast.zx_source;

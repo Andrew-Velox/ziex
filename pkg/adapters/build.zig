@@ -12,12 +12,19 @@ pub fn build(b: *std.Build) void {
 
     // Database - SQLite
     {
+        const translate_c = b.addTranslateC(.{
+            .root_source_file = b.path("vendor/sqlite/sqlite3.h"),
+            .target = target,
+            .optimize = optimize,
+        });
+
         const zqlite = b.createModule(.{
             .root_source_file = b.path("vendor/zqlite/src/zqlite.zig"),
             .target = target,
             .optimize = optimize,
             .link_libc = true,
         });
+        zqlite.addImport("c", translate_c.createModule());
         zqlite.addIncludePath(b.path("vendor/sqlite"));
 
         const sqlite = b.addModule("db_sqlite", .{

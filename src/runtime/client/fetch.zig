@@ -125,7 +125,7 @@ const PendingFetch = struct {
     allocator: std.mem.Allocator = undefined,
 };
 
-var pending_slots: [MAX_PENDING]PendingFetch = [_]PendingFetch{.{}} ** MAX_PENDING;
+var pending_slots: [MAX_PENDING]PendingFetch = @splat(PendingFetch{});
 
 fn findOrAllocSlot(fetch_id: u64) ?usize {
     const preferred: usize = @intCast(fetch_id % MAX_PENDING);
