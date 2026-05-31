@@ -8,7 +8,7 @@
     "fmt": "zx fmt"
   },
   "devDependencies": {
-    "@ziex/cli": "0.1.0-dev.1068",
+    "@ziex/cli": "0.1.0-dev.1103",
     "@zigc/cli": "0.16.0"
   }
 }
