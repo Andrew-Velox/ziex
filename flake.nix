@@ -13,7 +13,6 @@
     with nixpkgs.lib;
   let
     forAllSystems = f: genAttrs systems.flakeExposed (s: f nixpkgs.legacyPackages.${s});
-    src = cleanSource ./.;
   in {
     apps = forAllSystems (pkgs: {
       default = {
@@ -25,8 +24,11 @@
           text = ''
             tmp="$(mktemp -d)"
             trap 'rm -rf "$tmp"' EXIT
-            (cd "${src}" && ZIG_LOCAL_CACHE_DIR="$tmp" zig build -p "$tmp" -Doptimize=Debug -Dexclude-lsp=true)
-            "$tmp/bin/zx" "$@"
+            export ZIG_LOCAL_CACHE_DIR="$tmp/cache"
+            export ZIG_GLOBAL_CACHE_DIR="$tmp/cache"
+            mkdir -p "$ZIG_LOCAL_CACHE_DIR"
+            zig build -p "$tmp/out" -Doptimize=Debug -Dexclude-lsp=true
+            "$tmp/out/bin/zx" "$@"
             '';
         }) + "/bin/zx";
       };
