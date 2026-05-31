@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
       - id: set-templates
         run: |
-          ALL_TEMPLATES=$(ls -d templates/*/ | grep -v "_base" | xargs -n 1 basename)
+          ALL_TEMPLATES=$(ls -d templates/*/ | grep -vE "_(base|docker)" | xargs -n 1 basename)
 
           # On workflow_dispatch, sync all templates
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -40,7 +40,7 @@ jobs:
             TEMPLATES=$(echo "$ALL_TEMPLATES" | jq -R -s -c 'split("\n") | map(select(. != ""))')
           else
             # Only sync templates whose files changed
-            CHANGED_TEMPLATES=$(echo "$CHANGED_FILES" | grep '^templates/' | cut -d'/' -f2 | sort -u | grep -v '_base')
+            CHANGED_TEMPLATES=$(echo "$CHANGED_FILES" | grep '^templates/' | cut -d'/' -f2 | sort -u | grep -vE '_(base|docker)')
             TEMPLATES=$(comm -12 <(echo "$ALL_TEMPLATES" | sort) <(echo "$CHANGED_TEMPLATES" | sort) | jq -R -s -c 'split("\n") | map(select(. != ""))')
           fi
 
