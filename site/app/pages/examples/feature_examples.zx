@@ -115,19 +115,21 @@ fn parseOnce(first: *bool) !u32 {
 // --- Caching: component ---
 pub fn CacheComponent(
     allocator: zx.Allocator,
-) zx.Component {
-    return (<Expensive @{allocator} @caching="10s" />);
+) !zx.Component {
+    return (<Slow @{allocator} @caching="10s" />);
 }
 
-fn Expensive(allocator: zx.Allocator) zx.Component {
-    std.Thread.sleep(std.time.ns_per_s * 3);
-    return (<div @{allocator}></div>);
+fn Slow(allocator: zx.Allocator) !zx.Component {
+    try std.Io
+        .sleep(zx.io(), .fromNanoseconds(2000000000), .awake);
+    return (<div @{allocator}>Slow</div>);
 }
 // --- Caching: page ---
 pub fn Caching__Page(
     ctx: zx.PageContext,
-) zx.Component {
-    std.Thread.sleep(std.time.ns_per_s * 3);
+) !zx.Component {
+    try std.Io
+        .sleep(zx.io(), .fromNanoseconds(2000000000), .awake);
     return (
         <div @allocator={ctx.arena}>
             <h1>Expensive Page</h1>
