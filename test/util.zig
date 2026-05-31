@@ -170,13 +170,11 @@ pub const TestFileCache = struct {
 };
 
 pub fn shouldRunSlowTest() bool {
-    const allocator = std.testing.allocator;
-    const slow_tests = std.testing.environ.getAlloc(allocator, "E2E") catch {
-        return false;
-    };
+    return testing.environ.contains(testing.allocator, "E2E") catch false;
+}
 
-    defer allocator.free(slow_tests);
-    return std.mem.eql(u8, slow_tests, "1");
+pub fn shouldRunNetworkTest() bool {
+    return testing.environ.contains(testing.allocator, "E2E_NET") catch false;
 }
 
 const std = @import("std");

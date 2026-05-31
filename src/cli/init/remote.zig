@@ -3,16 +3,26 @@ const org = "ziex-dev";
 pub fn fetch(
     io: std.Io,
     allocator: std.mem.Allocator,
+    environ_map: *std.process.Environ.Map,
     template: []const u8,
     dest_dir: []const u8,
 ) !void {
     var client: std.http.Client = .{ .allocator = allocator, .io = io };
     defer client.deinit();
 
+    const auth_header: ?std.http.Header = if (environ_map.get("GITHUB_TOKEN")) |token| blk: {
+        if (token.len == 0) break :blk null;
+        break :blk .{
+            .name = "authorization",
+            .value = try std.fmt.allocPrint(allocator, "Bearer {s}", .{token}),
+        };
+    } else null;
+    defer if (auth_header) |h| allocator.free(h.value);
+
     const repo = try std.fmt.allocPrint(allocator, "template-{s}", .{template});
     defer allocator.free(repo);
 
-    const tag = try fetchLatestReleaseTag(&client, allocator, repo);
+    const tag = try fetchLatestReleaseTag(&client, allocator, auth_header, repo);
     defer allocator.free(tag);
 
     // codeload serves the gzipped source tarball for a given ref.
@@ -23,7 +33,7 @@ pub fn fetch(
     );
     defer allocator.free(tarball_url);
 
-    const gz = try get(&client, allocator, tarball_url);
+    const gz = try get(&client, allocator, auth_header, tarball_url);
     defer allocator.free(gz);
 
     try std.Io.Dir.cwd().createDirPath(io, dest_dir);
@@ -46,6 +56,7 @@ pub fn fetch(
 fn fetchLatestReleaseTag(
     client: *std.http.Client,
     allocator: std.mem.Allocator,
+    auth_header: ?std.http.Header,
     repo: []const u8,
 ) ![]const u8 {
     const url = try std.fmt.allocPrint(
@@ -55,7 +66,7 @@ fn fetchLatestReleaseTag(
     );
     defer allocator.free(url);
 
-    const body = try get(client, allocator, url);
+    const body = try get(client, allocator, auth_header, url);
     defer allocator.free(body);
 
     const parsed = std.json.parseFromSlice(struct {
@@ -66,19 +77,29 @@ fn fetchLatestReleaseTag(
     return allocator.dupe(u8, parsed.value.tag_name);
 }
 
-fn get(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8) ![]u8 {
+fn get(
+    client: *std.http.Client,
+    allocator: std.mem.Allocator,
+    auth_header: ?std.http.Header,
+    url: []const u8,
+) ![]u8 {
     var aw = std.Io.Writer.Allocating.init(allocator);
     defer aw.deinit();
+
+    var headers: std.ArrayList(std.http.Header) = .empty;
+    defer headers.deinit(allocator);
+    try headers.appendSlice(allocator, &.{
+        .{ .name = "user-agent", .value = "ziex-cli" },
+        .{ .name = "accept", .value = "application/vnd.github+json" },
+    });
+    if (auth_header) |h| try headers.append(allocator, h);
 
     const result = client.fetch(.{
         .location = .{ .url = url },
         .method = .GET,
         .redirect_behavior = @enumFromInt(5),
         .response_writer = &aw.writer,
-        .extra_headers = &.{
-            .{ .name = "user-agent", .value = "ziex-cli" },
-            .{ .name = "accept", .value = "application/vnd.github+json" },
-        },
+        .extra_headers = headers.items,
     }) catch return error.NetworkError;
 
     switch (result.status) {

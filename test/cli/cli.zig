@@ -234,7 +234,7 @@ test "init -t docker" {
 }
 
 test "init -t <remote>" {
-    if (!test_util.shouldRunSlowTest()) return error.SkipZigTest;
+    if (!test_util.shouldRunNetworkTest()) return error.SkipZigTest;
     // Fetches github:ziex-dev/template-cloudflare, renames the project to the
     // target directory name, and regenerates the build.zig.zon fingerprint.
     try test_cmd(.{

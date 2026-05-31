@@ -92,7 +92,7 @@ fn init(ctx: zli.CommandContext) !void {
         printer.header("{s} Initializing ZX project!", .{tui.Printer.emoji("○")});
         printer.info("[{s}] (github:{s}/template-{s})", .{ t_val, "ziex-dev", t_val });
 
-        remote.fetch(io, ctx.allocator, t_val, init_path) catch |err| switch (err) {
+        remote.fetch(io, ctx.allocator, app.environ_map, t_val, init_path) catch |err| switch (err) {
             error.TemplateNotFound, error.NoReleaseFound => {
                 printer.warning("Template '{s}' not found in the ziex-dev org (looked for github:ziex-dev/template-{s} with a published release).", .{ t_val, t_val });
                 return;
