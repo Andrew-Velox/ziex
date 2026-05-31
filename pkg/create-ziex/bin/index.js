@@ -8,6 +8,7 @@ import { replaceInFile } from 'replace-in-file';
 import path from 'node:path';
 import { randomInt } from 'node:crypto';
 import { crc32 } from 'node:zlib';
+import process from 'node:process';
 
 const STATIC_TEMPLATES = [
   { value: 'starter', label: 'Starter', hint: 'Ziex starter app' },
@@ -43,7 +44,86 @@ async function fetchGitHubTemplates() {
     });
 }
 
+async function fetchLatestRelease(templateName) {
+  const res = await fetch(
+    `https://api.github.com/repos/ziex-dev/template-${templateName}/releases/latest`,
+    { headers: { Accept: 'application/vnd.github+json' } }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.tag_name;
+}
+
+function parseVersion(tag) {
+  // Parse semantic version with pre-release: v1.2.3, v1.2.3-dev.123, etc.
+  const match = tag.match(/^v?(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
+  if (!match) return { major: 0, minor: 0, patch: 0, prerelease: '', preNum: 0 };
+  const [, major, minor, patch, prerelease] = match;
+
+  // Extract numeric part from prerelease (e.g., "dev.987" -> 987)
+  let preNum = 0;
+  if (prerelease) {
+    const numMatch = prerelease.match(/\.(\d+)$/);
+    preNum = numMatch ? parseInt(numMatch[1], 10) : 0;
+  }
+
+  return {
+    major: parseInt(major, 10),
+    minor: parseInt(minor, 10),
+    patch: parseInt(patch, 10),
+    prerelease: prerelease || '',
+    preNum,
+  };
+}
+
+function compareVersions(a, b) {
+  const va = parseVersion(a);
+  const vb = parseVersion(b);
+
+  if (va.major !== vb.major) return vb.major - va.major;
+  if (va.minor !== vb.minor) return vb.minor - va.minor;
+  if (va.patch !== vb.patch) return vb.patch - va.patch;
+
+  // Both have no prerelease - stable versions are equal
+  if (!va.prerelease && !vb.prerelease) return 0;
+  // Stable version comes before prerelease
+  if (!va.prerelease) return 1;
+  if (!vb.prerelease) return -1;
+  // Both have prerelease - sort by numeric part
+  return vb.preNum - va.preNum;
+}
+
+async function fetchTemplateVersions(templateName) {
+  const res = await fetch(
+    `https://api.github.com/repos/ziex-dev/template-${templateName}/releases`,
+    { headers: { Accept: 'application/vnd.github+json' } }
+  );
+  if (!res.ok) return [];
+  const releases = await res.json();
+  return releases
+    .map((r) => ({
+      tag: r.tag_name,
+      name: r.name || r.tag_name,
+      prerelease: r.prerelease,
+    }))
+    .sort((a, b) => compareVersions(a.tag, b.tag));
+}
+
 async function main() {
+  const args = process.argv.slice(2);
+  const versionFlagIndex = args.indexOf('--version');
+  const listVersionsFlag = args.includes('--list-versions');
+
+  // --version <tag>: pin to a specific version within the normal flow
+  let pinnedVersion = null;
+  if (versionFlagIndex !== -1) {
+    pinnedVersion = args[versionFlagIndex + 1];
+    if (!pinnedVersion || pinnedVersion.startsWith('--')) {
+      console.error('Error: version value required for --version (e.g. --version v0.1.0)');
+      process.exit(1);
+    }
+  }
+
   console.log();
   intro(color.bgCyan(color.black(' Create Ziex App ')));
 
@@ -81,14 +161,45 @@ async function main() {
     process.exit(0);
   }
 
+  let version;
+
+  if (pinnedVersion) {
+    // --version <tag>: use the explicitly pinned version
+    version = pinnedVersion;
+  } else if (listVersionsFlag) {
+    // --list-versions: let the user pick from all releases (defaults to latest)
+    const versions = await fetchTemplateVersions(template);
+    if (versions.length > 0) {
+      version = await select({
+        message: 'Pick a version',
+        options: versions.map((v) => ({
+          value: v.tag,
+          label: v.tag,
+          hint: v.prerelease ? 'pre-release' : '',
+        })),
+        initialValue: versions[0].tag,
+      });
+      if (isCancel(version)) {
+        cancel('Operation cancelled.');
+        process.exit(0);
+      }
+    }
+  } else {
+    // Default: use the latest release
+    version = await fetchLatestRelease(template);
+  }
+
+  const templateRef = version
+    ? `github:ziex-dev/template-${template}#${version}`
+    : `github:ziex-dev/template-${template}`;
+
   const s = spinner();
   const targetDir = path.resolve(process.cwd(), project);
 
   // 2. Download from GitHub
   s.start('Downloading template...');
   try {
-    // Uses giget to fetch from: github:ziex-dev/templates/templates/<name>
-    await downloadTemplate(`github:ziex-dev/template-${template}`, {
+    await downloadTemplate(templateRef, {
       dir: targetDir,
       force: true,
     });
