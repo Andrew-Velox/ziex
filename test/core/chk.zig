@@ -1,4 +1,4 @@
-test "validate: valid element produces no diagnostics" {
+test "valid element" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -18,7 +18,7 @@ test "validate: valid element produces no diagnostics" {
     try testing.expect(!diags.hasErrors());
 }
 
-test "validate: valid fragment produces no diagnostics" {
+test "valid fragment" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -38,7 +38,7 @@ test "validate: valid fragment produces no diagnostics" {
     try testing.expect(!diags.hasErrors());
 }
 
-test "validate: valid expression block produces no diagnostics" {
+test "valid expression block" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -58,7 +58,7 @@ test "validate: valid expression block produces no diagnostics" {
     try testing.expectEqual(0, diags.items.len);
 }
 
-test "validate: unclosed element tag produces error diagnostic" {
+test "unclosed tag" {
     const allocator = std.testing.allocator;
 
     // Missing closing </div>
@@ -77,7 +77,7 @@ test "validate: unclosed element tag produces error diagnostic" {
     try testing.expectEqual(Validate.Severity.err, diags.items[0].severity);
 }
 
-test "validate: mismatched tags produce error diagnostic" {
+test "mismatched tags" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -94,7 +94,7 @@ test "validate: mismatched tags produce error diagnostic" {
     try testing.expect(diags.items.len > 0);
 }
 
-test "validate: diagnostic has non-zero line and column" {
+test "diagnostic position" {
     const allocator = std.testing.allocator;
 
     // Introduce an error on line 2, column 5
@@ -117,7 +117,7 @@ test "validate: diagnostic has non-zero line and column" {
     try testing.expect(diags.items[0].end_line >= diags.items[0].start_line);
 }
 
-test "validate: diagnostic message is non-empty" {
+test "diagnostic message" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -134,7 +134,7 @@ test "validate: diagnostic message is non-empty" {
     try testing.expect(diags.items[0].message.len > 0);
 }
 
-test "validate: broken line does not expand diagnostic to whole file" {
+test "broken line scope" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -159,7 +159,7 @@ test "validate: broken line does not expand diagnostic to whole file" {
     try testing.expect(diags.items[0].end_line < last_line);
 }
 
-test "validate: Ast.parse on valid source has empty diagnostics" {
+test "Ast.parse valid" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -176,7 +176,7 @@ test "validate: Ast.parse on valid source has empty diagnostics" {
     try testing.expectEqual(0, result.diagnostics.items.len);
 }
 
-test "validate: Ast.parse on invalid source populates diagnostics" {
+test "Ast.parse invalid" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -190,7 +190,7 @@ test "validate: Ast.parse on invalid source populates diagnostics" {
     try testing.expect(result.diagnostics.items.len > 0);
 }
 
-test "validate: Ast.fmt on valid source returns formatted source" {
+test "Ast.fmt valid" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -207,7 +207,7 @@ test "validate: Ast.fmt on valid source returns formatted source" {
     try testing.expect(result.source != null);
 }
 
-test "validate: Ast.fmt on invalid source returns null source with diagnostics" {
+test "Ast.fmt invalid" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =
@@ -222,7 +222,7 @@ test "validate: Ast.fmt on invalid source returns null source with diagnostics" 
     try testing.expect(result.diagnostics.items.len > 0);
 }
 
-test "validate: hasErrors is false when diagnostics list is empty" {
+test "hasErrors empty" {
     const allocator = std.testing.allocator;
 
     const source: [:0]const u8 =

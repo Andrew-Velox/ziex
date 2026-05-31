@@ -5,21 +5,21 @@ const Request = zx.server.Request;
 const Response = zx.server.Response;
 
 // --- Type Re-exports --- //
-test "Request.Method: is std.http.Method" {
+test "Request.Method" {
     try std.testing.expect(Request.Method == std.http.Method);
 }
 
-test "Request.Version: is std.http.Version" {
+test "Request.Version" {
     try std.testing.expect(Request.Version == std.http.Version);
 }
 
-test "Request.Header: is std.http.Header" {
+test "Request.Header" {
     try std.testing.expect(Request.Header == std.http.Header);
 }
 
 // --- Request Instance (without backend) --- //
 
-test "Request: Builder default values" {
+test "Request.Builder default" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -33,7 +33,7 @@ test "Request: Builder default values" {
     try std.testing.expectEqual(Request.Version.@"HTTP/1.1", req.protocol);
 }
 
-test "Request: text returns null without backend" {
+test "Request.text no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -41,7 +41,7 @@ test "Request: text returns null without backend" {
     try std.testing.expect(req.text() == null);
 }
 
-test "Request: params.get returns null without backend" {
+test "Request.params.get no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -49,7 +49,7 @@ test "Request: params.get returns null without backend" {
     try std.testing.expect(req.params.get("id") == null);
 }
 
-test "Request: cookies field returns Cookies accessor" {
+test "Request.cookies accessor" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -64,7 +64,7 @@ test "Request: cookies field returns Cookies accessor" {
 
 // --- Headers --- //
 
-test "Request.headers: get returns null without backend" {
+test "Request.headers.get no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -72,7 +72,7 @@ test "Request.headers: get returns null without backend" {
     try std.testing.expect(req.headers.get("Content-Type") == null);
 }
 
-test "Request.headers: has returns false without backend" {
+test "Request.headers.has no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -82,7 +82,7 @@ test "Request.headers: has returns false without backend" {
 
 // --- URLSearchParams --- //
 
-test "Request.queries: get returns null without backend" {
+test "Request.queries.get no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -90,7 +90,7 @@ test "Request.queries: get returns null without backend" {
     try std.testing.expect(req.queries.get("q") == null);
 }
 
-test "Request.queries: has returns false without backend" {
+test "Request.queries.has no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -100,7 +100,7 @@ test "Request.queries: has returns false without backend" {
 
 // --- Builder --- //
 
-test "Request.Builder: builds with custom values" {
+test "Request.Builder custom" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -126,21 +126,21 @@ test "Request.Builder: builds with custom values" {
 
 // --- Type Re-exports --- //
 
-test "Response.HttpStatus: is std.http.Status" {
+test "Response.HttpStatus" {
     try std.testing.expect(Response.HttpStatus == std.http.Status);
 }
 
-test "Response.ContentType: is common.ContentType" {
+test "Response.ContentType" {
     // Verify it exists and has expected variants
     try std.testing.expectEqualStrings("text/html", Response.ContentType.@"text/html".toString());
 }
 
-test "Response.CookieOptions: is common.CookieOptions" {
+test "Response.CookieOptions" {
     const opts = Response.CookieOptions{};
     try std.testing.expectEqualStrings("", opts.path);
 }
 
-test "Response.Headers: exists and has expected methods" {
+test "Response.Headers" {
     const headers = Response.Headers{};
     // Response.Headers has get, set, add methods
     try std.testing.expect(headers.get("X-Test") == null);
@@ -148,7 +148,7 @@ test "Response.Headers: exists and has expected methods" {
 
 // --- Response Instance (Web Standard Properties) --- //
 
-test "Response: default field values" {
+test "Response default" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -164,7 +164,7 @@ test "Response: default field values" {
     try std.testing.expectEqualStrings("", res.url);
 }
 
-test "Response: ok is true for 2xx status" {
+test "Response.ok 2xx" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -177,7 +177,7 @@ test "Response: ok is true for 2xx status" {
     try std.testing.expect(res299.ok);
 }
 
-test "Response: ok is false for non-2xx status" {
+test "Response.ok non-2xx" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -192,7 +192,7 @@ test "Response: ok is false for non-2xx status" {
     try std.testing.expect(!res500.ok);
 }
 
-test "Response: statusText is set from status code" {
+test "Response.statusText" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -207,7 +207,7 @@ test "Response: statusText is set from status code" {
 
 // --- ResponseType --- //
 
-test "Response.ResponseType: all values" {
+test "Response.ResponseType" {
     const types = [_]Response.ResponseType{
         .basic, .cors, .default, .@"error", .@"opaque", .opaqueredirect,
     };
@@ -216,7 +216,7 @@ test "Response.ResponseType: all values" {
 
 // --- Builder --- //
 
-test "Response.Builder: builds with custom values" {
+test "Response.Builder custom" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -236,7 +236,7 @@ test "Response.Builder: builds with custom values" {
 
 // --- Methods (without backend) --- //
 
-test "Response.setStatus: no-op without backend" {
+test "Response.setStatus no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -247,7 +247,7 @@ test "Response.setStatus: no-op without backend" {
     try std.testing.expectEqual(@as(u16, 200), res.status);
 }
 
-test "Response.text: no-op without backend" {
+test "Response.text no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -257,7 +257,7 @@ test "Response.text: no-op without backend" {
     try std.testing.expectEqualStrings("", res.body);
 }
 
-test "Response.redirect: no-op without backend" {
+test "Response.redirect no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -271,7 +271,7 @@ test "Response.redirect: no-op without backend" {
 
 // --- Headers --- //
 
-test "Response.headers: get returns null without backend" {
+test "Response.headers.get no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -279,7 +279,7 @@ test "Response.headers: get returns null without backend" {
     try std.testing.expect(res.headers.get("Content-Type") == null);
 }
 
-test "Response.headers: set and add are no-op without backend" {
+test "Response.headers.set no backend" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -293,17 +293,17 @@ const Headers = @import("zx").Headers;
 
 // --- Type Re-exports --- //
 
-test "Headers.Header: is std.http.Header" {
+test "Headers.Header" {
     try std.testing.expect(Headers.Header == std.http.Header);
 }
 
-test "Headers.HeaderIterator: is std.http.HeaderIterator" {
+test "Headers.HeaderIterator" {
     try std.testing.expect(Headers.HeaderIterator == std.http.HeaderIterator);
 }
 
 // --- HeaderIterator Usage --- //
 
-test "Headers.HeaderIterator: parses raw HTTP headers" {
+test "Headers.HeaderIterator parse" {
     const raw = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nX-Custom: value\r\n\r\n";
     var iter = Headers.HeaderIterator.init(raw);
 
@@ -320,32 +320,32 @@ test "Headers.HeaderIterator: parses raw HTTP headers" {
 
 // --- Headers Instance (without backend) --- //
 
-test "Headers: default is read-only" {
+test "Headers read-only" {
     const headers = Headers{};
     try std.testing.expect(headers.isReadOnly());
 }
 
-test "Headers: can be set to writable" {
+test "Headers writable" {
     const headers = Headers{ .read_only = false };
     try std.testing.expect(!headers.isReadOnly());
 }
 
-test "Headers: get returns null without backend" {
+test "Headers.get no backend" {
     const headers = Headers{};
     try std.testing.expect(headers.get("Content-Type") == null);
 }
 
-test "Headers: has returns false without backend" {
+test "Headers.has no backend" {
     const headers = Headers{};
     try std.testing.expect(!headers.has("Content-Type"));
 }
 
-test "Headers: entries returns null without backend" {
+test "Headers.entries no backend" {
     const headers = Headers{};
     try std.testing.expect(headers.entries() == null);
 }
 
-test "Headers: write methods are no-op without backend" {
+test "Headers.write no backend" {
     var headers = Headers{ .read_only = false };
     // These should not crash
     headers.append("X-Test", "value");
@@ -353,7 +353,7 @@ test "Headers: write methods are no-op without backend" {
     headers.delete("X-Test");
 }
 
-test "Headers: write methods are no-op when read-only" {
+test "Headers.write read-only" {
     var headers = Headers{}; // read_only = true by default
     // These should not crash and should be no-ops
     headers.append("X-Test", "value");
@@ -362,14 +362,14 @@ test "Headers: write methods are no-op when read-only" {
 
 // --- Builder --- //
 
-test "Headers.Builder: builds with defaults" {
+test "Headers.Builder default" {
     const headers = (Headers.Builder{}).build();
     try std.testing.expect(headers.read_only);
     try std.testing.expect(headers.backend_ctx == null);
     try std.testing.expect(headers.vtable == null);
 }
 
-test "Headers.Builder: builds with custom values" {
+test "Headers.Builder custom" {
     const headers = (Headers.Builder{
         .read_only = false,
     }).build();
@@ -378,7 +378,7 @@ test "Headers.Builder: builds with custom values" {
 
 // --- Cookies (accessed via Request) --- //
 
-test "Cookies: get returns value" {
+test "Cookies.get value" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -391,7 +391,7 @@ test "Cookies: get returns value" {
     try std.testing.expectEqualStrings("john", req.cookies.get("user").?);
 }
 
-test "Cookies: get returns null for missing cookie" {
+test "Cookies.get missing" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -403,7 +403,7 @@ test "Cookies: get returns null for missing cookie" {
     try std.testing.expectEqual(null, req.cookies.get("missing"));
 }
 
-test "Cookies: handles empty header" {
+test "Cookies empty header" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -415,7 +415,7 @@ test "Cookies: handles empty header" {
     try std.testing.expectEqual(null, req.cookies.get("session"));
 }
 
-test "Cookies: handles spaces after semicolon" {
+test "Cookies spaces" {
     var buffer: [1024]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
 
@@ -431,7 +431,7 @@ test "Cookies: handles spaces after semicolon" {
 
 // --- CookieOptions (accessed via Response) --- //
 
-test "CookieOptions: defaults" {
+test "CookieOptions default" {
     const opts = Response.CookieOptions{};
     try std.testing.expectEqualStrings("", opts.path);
     try std.testing.expectEqualStrings("", opts.domain);
@@ -442,7 +442,7 @@ test "CookieOptions: defaults" {
     try std.testing.expectEqual(null, opts.same_site);
 }
 
-test "CookieOptions: with all values" {
+test "CookieOptions all values" {
     const opts = Response.CookieOptions{
         .path = "/api",
         .domain = "example.com",
@@ -461,14 +461,14 @@ test "CookieOptions: with all values" {
     try std.testing.expectEqual(Response.CookieOptions.SameSite.strict, opts.same_site.?);
 }
 
-test "CookieOptions.SameSite: all values" {
+test "CookieOptions.SameSite" {
     const values = [_]Response.CookieOptions.SameSite{ .lax, .strict, .none };
     try std.testing.expectEqual(3, values.len);
 }
 
 // --- ContentType (accessed via Response) --- //
 
-test "ContentType: toString returns MIME type" {
+test "ContentType.toString" {
     try std.testing.expectEqualStrings("text/html", Response.ContentType.@"text/html".toString());
     try std.testing.expectEqualStrings("application/json", Response.ContentType.@"application/json".toString());
     try std.testing.expectEqualStrings("application/wasm", Response.ContentType.@"application/wasm".toString());
@@ -477,7 +477,7 @@ test "ContentType: toString returns MIME type" {
 
 // --- MultiFormEntry (accessed via Request) --- //
 
-test "MultiFormEntry: fields" {
+test "MultiFormEntry fields" {
     const entry = Request.MultiFormEntry{
         .key = "file",
         .value = "binary data",
@@ -488,7 +488,7 @@ test "MultiFormEntry: fields" {
     try std.testing.expectEqualStrings("photo.jpg", entry.filename.?);
 }
 
-test "MultiFormEntry: filename can be null" {
+test "MultiFormEntry filename" {
     const entry = Request.MultiFormEntry{
         .key = "name",
         .value = "John",
