@@ -297,7 +297,7 @@ fn formatDir(
         }
 
         // Write formatted content back to file using entry.dir
-        var atomic_file = try entry.dir.createFileAtomic(io, entry.basename, .{});
+        var atomic_file = try entry.dir.createFileAtomic(io, entry.basename, .{ .replace = true });
         defer atomic_file.deinit(io);
 
         try atomic_file.file.writeStreamingAll(io, formatted);
