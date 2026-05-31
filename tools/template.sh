@@ -28,7 +28,7 @@ list_templates() {
     echo "Available templates:"
     for dir in "$TEMPLATES_DIR"/*/; do
         template_name=$(basename "$dir")
-        if [ "$template_name" != "_base" ]; then
+        if [[ "$template_name" != _* ]]; then
             local unignored_count=$(git ls-files "$TEMPLATES_DIR/$template_name" | wc -l)
             echo "  - $template_name ($unignored_count files overridden)"
         fi
@@ -77,8 +77,8 @@ populate_template() {
     local template=$1
     echo "Populating template: $template..."
 
-    if [ "$template" == "_base" ]; then
-        echo "Skipping _base template."
+    if [[ "$template" == _* ]]; then
+        echo "Skipping internal template '$template'."
         return
     fi
 
@@ -108,8 +108,8 @@ clean_template() {
     local template=$1
     echo "Cleaning template: $template..."
 
-    if [ "$template" == "_base" ]; then
-        echo "Skipping _base template."
+    if [[ "$template" == _* ]]; then
+        echo "Skipping internal template '$template'."
         return
     fi
 
@@ -168,7 +168,7 @@ case "$1" in
         else
             for dir in "$TEMPLATES_DIR"/*/; do
                 template_name=$(basename "$dir")
-                if [ "$template_name" != "_base" ]; then
+                if [[ "$template_name" != _* ]]; then
                     populate_template "$template_name"
                 fi
             done
@@ -182,7 +182,7 @@ case "$1" in
         else
             for dir in "$TEMPLATES_DIR"/*/; do
                 template_name=$(basename "$dir")
-                if [ "$template_name" != "_base" ]; then
+                if [[ "$template_name" != _* ]]; then
                     clean_template "$template_name"
                 fi
             done

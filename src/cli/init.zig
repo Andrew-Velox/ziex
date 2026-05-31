@@ -15,7 +15,7 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 const template_flag = zli.Flag{
     .name = "template",
     .shortcut = "t",
-    .description = "Template to use (default, react)",
+    .description = "Template to use (default, docker)",
     .type = .String,
     .default_value = .{ .String = "default" },
 };
@@ -144,23 +144,7 @@ fn init(ctx: zli.CommandContext) !void {
             template.content;
         defer if (bin_name != null) ctx.allocator.free(content);
 
-        if (template.lines) |lines| {
-            var line_iter = std.mem.splitScalar(u8, content, '\n');
-            var line_n: usize = 1;
-
-            while (line_iter.next()) |line| {
-                for (lines) |line_range| {
-                    const start, const end = line_range;
-                    if (line_n < start or line_n > end) continue;
-                    try file.writeStreamingAll(io, line);
-                    try file.writeStreamingAll(io, "\n");
-                }
-
-                line_n += 1;
-            }
-        } else {
-            try file.writeStreamingAll(io, content);
-        }
+        try file.writeStreamingAll(io, content);
     }
 
     if (has_init_path_arg) {
@@ -238,53 +222,12 @@ pub fn isDirEmpty(io: std.Io, path: []const u8) !bool {
     return try iter.next(io) == null;
 }
 
-const TemplateFile = struct {
-    const Name = enum { default, react, docker };
+const TemplateFile = app_template.TemplateFile;
 
-    name: ?Name = null,
-    path: []const u8,
-    content: []const u8,
-    description: ?[]const u8 = "",
-
-    /// Lines to include from the template file
-    /// Range of lines to include
-    lines: ?[]const struct { u32, u32 } = null,
-};
-
-const template_dir = "init/template";
-
-const templates = [_]TemplateFile{
-    // Shared
-    .{ .path = "build.zig.zon", .content = @embedFile(template_dir ++ "/build.zig.zon") },
-    .{ .path = "build.zig", .content = @embedFile(template_dir ++ "/build.zig") },
-    .{ .path = "app/main.zig", .content = @embedFile(template_dir ++ "/app/main.zig") },
-    .{ .path = "README.md", .content = @embedFile(template_dir ++ "/README.md") },
-    .{ .path = "app/assets/style.css", .content = @embedFile(template_dir ++ "/app/assets/style.css") },
-    .{ .path = "app/public/favicon.ico", .content = @embedFile(template_dir ++ "/app/public/favicon.ico") },
-    .{ .path = "app/pages/about/page.zx", .content = @embedFile(template_dir ++ "/app/pages/about/page.zx") },
-    .{ .path = "app/pages/layout.zx", .content = @embedFile(template_dir ++ "/app/pages/layout.zx") },
-    .{ .path = ".gitignore", .content = @embedFile(template_dir ++ "/.gitignore") },
-    .{ .path = ".gitattributes", .content = @embedFile(template_dir ++ "/.gitattributes") },
-
-    // Default (SSR + CSR)
-    .{ .name = .default, .path = "app/pages/page.zx", .content = @embedFile(template_dir ++ "/app/pages/page.zx") },
-    .{ .name = .default, .path = "app/pages/client.zx", .content = @embedFile(template_dir ++ "/app/pages/client.zx") },
-
-    // Ziex + React (SSR + CSR)
-    .{ .name = .react, .path = "app/pages/page.zx", .content = @embedFile(template_dir ++ "/app/pages/page+react.zx") },
-    .{ .name = .react, .path = "app/pages/client.zx", .content = @embedFile(template_dir ++ "/app/pages/client.zx") },
-    .{ .name = .react, .path = "app/pages/client.tsx", .content = @embedFile(template_dir ++ "/app/pages/client.tsx") },
-    .{ .name = .react, .path = "app/main.ts", .content = @embedFile(template_dir ++ "/app/main.ts"), .lines = &.{ .{ 1, 4 }, .{ 7, 7 }, .{ 11, 18 } } },
-    .{ .name = .react, .path = "package.json", .content = @embedFile(template_dir ++ "/package.json") },
-    .{ .name = .react, .path = "tsconfig.json", .content = @embedFile(template_dir ++ "/tsconfig.json") },
-
-    // Docker
-    .{ .name = .docker, .path = "Dockerfile", .content = @embedFile(template_dir ++ "/Dockerfile") },
-    .{ .name = .docker, .path = "compose.yml", .content = @embedFile(template_dir ++ "/compose.yml") },
-    .{ .name = .docker, .path = ".dockerignore", .content = @embedFile(template_dir ++ "/.dockerignore") },
-};
+const templates = app_template.files;
 
 const std = @import("std");
+const app_template = @import("app_template");
 const zli = @import("zli");
 const tui = @import("../tui/main.zig");
 const AppContext = @import("shared/context.zig").AppContext;

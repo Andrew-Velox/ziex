@@ -111,6 +111,7 @@ pub fn build(b: *std.Build) !void {
 
     const exe = b.addExecutable(.{ .name = "zx", .root_module = b.createModule(exe_rootmod_opts) });
     exe.root_module.addOptions("build_options", exe_build_options);
+    exe.root_module.addAnonymousImport("app_template", .{ .root_source_file = b.path("templates/Template.zig") });
     if (!exclude_lsp) {
         const zls_dep = b.dependency("zls", .{ .target = target, .optimize = optimize });
         exe.root_module.addImport("zls", zls_dep.module("zls"));
@@ -308,6 +309,7 @@ pub fn build(b: *std.Build) !void {
             const release_exe_build_options = b.addOptions();
             release_exe_build_options.addOption(bool, "exclude_lsp", true);
             release_exe.root_module.addOptions("build_options", release_exe_build_options);
+            release_exe.root_module.addAnonymousImport("app_template", .{ .root_source_file = b.path("templates/Template.zig") });
 
             const exe_ext = if (resolved_target.result.os.tag == .windows) ".exe" else "";
             const install_release = b.addInstallArtifact(release_exe, .{

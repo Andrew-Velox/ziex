@@ -59,37 +59,6 @@ test "init --force" {
     });
 }
 
-test "init -t react" {
-    if (!test_util.shouldRunSlowTest()) return error.SkipZigTest;
-    try test_cmd(.{
-        .args = &.{ "init", "react", "--template", "react" },
-        .expected_exit_code = 0,
-        .expected_stderr_strings = &.{
-            "Initializing ZX project!",
-            "react",
-            "build.zig",
-            "main.zig",
-            "main.ts",
-            "page.zx",
-            "client.tsx",
-            "package.json",
-            ".gitattributes",
-            "tsconfig.json",
-        },
-        .expected_files = &.{
-            "react/build.zig.zon",
-            "react/build.zig",
-            "react/app/main.zig",
-            "react/app/main.ts",
-            "react/app/pages/page.zx",
-            "react/app/pages/client.tsx",
-            "react/package.json",
-            "react/.gitattributes",
-            "react/tsconfig.json",
-        },
-    });
-}
-
 // test "serve" {
 //     if (!sholdRunSlowTest()) return error.SkipZigTest; // Slow test, will enable later, and execute as another steps as e2e before release
 //     if (true) return error.Todo;
@@ -195,13 +164,19 @@ test "export" {
             "Building static ZX site!",
             "dist",
             "index.html",
-            "about.html",
+            "form.html",
+            "actions.html",
+            "actions" ++ std.fs.path.sep_str ++ "server.html",
+            "actions" ++ std.fs.path.sep_str ++ "client.html",
             "assets" ++ std.fs.path.sep_str ++ "style.css",
             "favicon.ico",
         },
         .expected_files = &.{
             "dist/index.html",
-            "dist/about.html",
+            "dist/form.html",
+            "dist/actions.html",
+            "dist/actions/server.html",
+            "dist/actions/client.html",
             "dist/assets/style.css",
             "dist/favicon.ico",
         },

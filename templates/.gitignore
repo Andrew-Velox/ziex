@@ -17,6 +17,10 @@ node_modules/
 # base template
 !_base/**/*
 !.gitignore
+!Template.zig
+
+# docker overlay (used by `zx init -t docker`)
+!_docker/**/*
 
 # cloudflare template
 !cloudflare/.gitignore
