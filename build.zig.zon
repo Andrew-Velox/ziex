@@ -41,5 +41,8 @@
         "vendor/cliz",
         "vendor/jsz",
         "vendor/zig-tree-sitter",
+        "templates/Template.zig",
+        "templates/_base",
+        "templates/_docker",
     },
 }
