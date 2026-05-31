@@ -233,6 +233,32 @@ test "init -t docker" {
     });
 }
 
+test "init -t <remote>" {
+    if (!test_util.shouldRunSlowTest()) return error.SkipZigTest;
+    // Fetches github:ziex-dev/template-cloudflare, renames the project to the
+    // target directory name, and regenerates the build.zig.zon fingerprint.
+    try test_cmd(.{
+        .args = &.{ "init", "--template", "cloudflare", "remote-app", "--force" },
+        .expected_exit_code = 0,
+        .expected_stderr_strings = &.{
+            "Initializing ZX project!",
+            "github:ziex-dev/template-cloudflare",
+        },
+        .expected_files = &.{
+            "remote-app/build.zig.zon",
+            "remote-app/build.zig",
+            "remote-app/app/main.zig",
+        },
+        .expected_file_contains = &.{
+            // Project renamed from ziex_app to the directory name.
+            .{ .path = "remote-app/build.zig.zon", .needle = ".name = .remote_app" },
+        },
+        .expected_file_excludes = &.{
+            .{ .path = "remote-app/build.zig.zon", .needle = "ziex_app" },
+        },
+    });
+}
+
 test "fmt" {
     try test_cmd(.{
         .args = &.{ "fmt", "app" ++ std.fs.path.sep_str ++ "pages" },

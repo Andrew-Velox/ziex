@@ -15,7 +15,7 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 const template_flag = zli.Flag{
     .name = "template",
     .shortcut = "t",
-    .description = "Template to use (default, docker)",
+    .description = "Template to use: a builtin (default, docker) or any github:ziex-dev/template-<name> (e.g. cloudflare, vercel)",
     .type = .String,
     .default_value = .{ .String = "default" },
 };
@@ -87,13 +87,24 @@ fn init(ctx: zli.CommandContext) !void {
         std.debug.print("{s}Initializing with existing files, overriding if files already exist.{s}\n", .{ colors.yellow, colors.reset });
     }
 
-    const template_name = if (std.meta.stringToEnum(TemplateFile.Name, t_val)) |name| name else {
-        std.debug.print("\x1b[33mUnknown template:\x1b[0m {s}\n\nTemplates:\n", .{t_val});
+    // Non-builtin templates are fetched from `github:ziex-dev/template-<name>`.
+    const template_name = std.meta.stringToEnum(TemplateFile.Name, t_val) orelse {
+        printer.header("{s} Initializing ZX project!", .{tui.Printer.emoji("○")});
+        printer.info("[{s}] (github:{s}/template-{s})", .{ t_val, "ziex-dev", t_val });
 
-        for (std.enums.values(TemplateFile.Name)) |name| {
-            std.debug.print("  - \x1b[34m{s}\x1b[0m\n", .{@tagName(name)});
-        }
-        std.debug.print("\n", .{});
+        remote.fetch(io, ctx.allocator, t_val, init_path) catch |err| switch (err) {
+            error.TemplateNotFound, error.NoReleaseFound => {
+                printer.warning("Template '{s}' not found in the ziex-dev org (looked for github:ziex-dev/template-{s} with a published release).", .{ t_val, t_val });
+                return;
+            },
+            error.NetworkError => {
+                printer.warning("Failed to download template '{s}'. Check your network connection and try again.", .{t_val});
+                return;
+            },
+            else => return err,
+        };
+
+        try printInitFooter(&printer, ctx.allocator, init_path, has_init_path_arg);
         return;
     };
 
@@ -147,9 +158,13 @@ fn init(ctx: zli.CommandContext) !void {
         try file.writeStreamingAll(io, content);
     }
 
+    try printInitFooter(&printer, ctx.allocator, init_path, has_init_path_arg);
+}
+
+fn printInitFooter(printer: *tui.Printer, allocator: std.mem.Allocator, init_path: []const u8, has_init_path_arg: bool) !void {
     if (has_init_path_arg) {
-        const suggested_cmd = try std.fmt.allocPrint(ctx.allocator, "cd {s} && zig build dev", .{init_path});
-        defer ctx.allocator.free(suggested_cmd);
+        const suggested_cmd = try std.fmt.allocPrint(allocator, "cd {s} && zig build dev", .{init_path});
+        defer allocator.free(suggested_cmd);
         printer.footer("Now run {s}\n\n{s}{s}{s}", .{ tui.Printer.emoji("→"), colors.cyan, suggested_cmd, colors.reset });
     } else {
         printer.footer("Now run {s}\n\n{s}", .{ tui.Printer.emoji("→"), colors.Fns.cyan("zig build dev") });
@@ -228,6 +243,7 @@ const templates = app_template.files;
 
 const std = @import("std");
 const app_template = @import("app_template");
+const remote = @import("init/remote.zig");
 const zli = @import("zli");
 const tui = @import("../tui/main.zig");
 const AppContext = @import("shared/context.zig").AppContext;
