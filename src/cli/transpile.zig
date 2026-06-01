@@ -904,6 +904,19 @@ fn genRoutes(allocator: std.mem.Allocator, output_dir: []const u8, rootdir: ?[]c
     }
     try writer.writeAll("};\n\n");
 
+    // Generate a RoutePaths enum of all unique route paths.
+    {
+        var seen = std.StringHashMap(void).init(allocator);
+        defer seen.deinit();
+
+        try writer.writeAll("pub const RoutePaths = enum {\n");
+        for (routes.items) |route| {
+            if ((try seen.getOrPut(route.path)).found_existing) continue;
+            try writer.print("    @\"{s}\",\n", .{route.path});
+        }
+        try writer.writeAll("};\n\n");
+    }
+
     // Use rootdir if provided, otherwise fall back to output_dir
     const meta_rootdir = rootdir orelse output_dir;
 
@@ -1296,7 +1309,7 @@ fn transpileFile(
     var relative_source_path: []const u8 = source_path;
     var rel_path_allocated = false;
     if (std.fs.path.isAbsolute(source_path)) {
-        if (std.fs.path.resolve(allocator, &.{"."})) |cwd| {
+        if (std.process.currentPathAlloc(io, allocator)) |cwd| {
             defer allocator.free(cwd);
             if (relativePath(allocator, cwd, source_path)) |rel| {
                 relative_source_path = rel;

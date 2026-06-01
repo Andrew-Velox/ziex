@@ -49,6 +49,9 @@ pub const Client = @import("runtime/client/Client.zig");
 
 pub const App = app_mod.App;
 pub const AppConfig = app_mod.Config;
+pub const app = struct {
+    pub const Route = @import("zx_meta").RoutePaths;
+};
 
 // --- Namespaces --- //
 pub const client = @import("runtime/client.zig");

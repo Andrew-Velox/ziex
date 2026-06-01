@@ -4,6 +4,8 @@ const zx = @import("zx");
 
 pub const routes: []const zx.server.ServerMeta.Route = &.{};
 
+pub const RoutePaths = enum {};
+
 pub const meta = zx.server.ServerMeta{
     .routes = &routes,
     .rootdir = "",
