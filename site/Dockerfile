@@ -24,6 +24,7 @@ RUN cd site && npm ci
 COPY src ./src
 COPY vendor ./vendor
 COPY pkg ./pkg
+COPY templates ./templates
 
 # Ziex Site
 COPY site/build.zig site/build.zig.zon ./site/
