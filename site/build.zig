@@ -114,13 +114,16 @@ pub fn build(b: *std.Build) !void {
     app_exe.step.dependOn(&install_pg.step); // Playground disabled
 
     // --- ZX setup: wires dependencies and adds `zx`/`dev` build steps --- //
-    var ziex_b = try ziex.init(b, app_exe, .{
+    _ = try ziex.init(b, app_exe, .{
         .app = .{
             // .path = b.path("app"),
             // .base_path = "/test",
             .copy_embedded_sources = true,
         },
-        .client = .{ .jsglue_href = "/assets/_/main.js" },
+        .client = .{
+            .jsglue_href = "/assets/_/main.js",
+            .jsglue_install_subdir = "pkg/ziex",
+        },
         .cli = .{ .optimize = optimize },
     });
 
@@ -194,15 +197,6 @@ pub fn build(b: *std.Build) !void {
         .install_subdir = "static/assets/playground",
     });
     b.default_step.dependOn(&install_playground_scripts.step);
-
-    b.installDirectory(.{
-        .source_dir = ziex_b.ziex_js.dep.path("."),
-        .install_dir = .prefix,
-        .include_extensions = &.{ ".js", ".ts" },
-        .install_subdir = "pkg/ziex",
-    });
-
-    // ziex_b.installZiexJs(.{});
 }
 
 const bunjs = @import("bunjs");

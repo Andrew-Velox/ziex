@@ -350,6 +350,17 @@ pub fn initInner(
         }
     }
 
+    // --- JS-Glue Package Install --- //
+    if (opts.client.jsglue_install_subdir) |subdir| {
+        const install_pkg = b.addInstallDirectory(.{
+            .source_dir = opts.ziex_js_dep.path("."),
+            .install_dir = .prefix,
+            .include_extensions = &.{ ".js", ".ts" },
+            .install_subdir = subdir,
+        });
+        b.getInstallStep().dependOn(&install_pkg.step);
+    }
+
     // --- ZX Injections --- //
     const version = opts.version orelse build_zon.version;
     const injections_step = try InjectionsGenStep.create(b);
@@ -512,12 +523,10 @@ pub fn initInner(
     }
     try wasm_meta_imports.append(.{ .name = "zx", .module = site_wasm_module });
 
-    const wasm_zx_meta_module = b.addModule("zx_meta", .{
+    site_wasm_module.addAnonymousImport("zx_meta", .{
         .root_source_file = transpile_outdir.path(b, "meta.zig"),
         .imports = wasm_meta_imports.items,
     });
-
-    site_wasm_module.addImport("zx_meta", wasm_zx_meta_module);
     site_wasm_module.addOptions("zx_options", zx_options);
     wasm_exe.root_module.addImport("zx", site_wasm_module);
     wasm_exe.step.dependOn(&transpile_cmd.step);
@@ -596,43 +605,27 @@ pub fn initInner(
         .cli = .{
             .exe = zx_exe,
         },
-        .server = .{
-            .exe = exe,
-        },
-        .client = .{
-            .exe = wasm_exe,
-            .root_module = wasm_zx_meta_module,
-        },
-        .injections_step = injections_step,
-        .zx_build_options = zx_options,
-        .ziex_js = .{
-            .dep = opts.ziex_js_dep,
-        },
+        .transformer = .{ .userdata = injections_step },
     };
 }
 
 pub const Build = struct {
-    pub const PluginRun = struct {};
-
-    pub const BuildClient = struct {
-        exe: *std.Build.Step.Compile,
-        root_module: *std.Build.Module,
-    };
-
-    pub const BuildServer = struct {
-        exe: *std.Build.Step.Compile,
-    };
-
     pub const BuildZiex = struct {
         exe: *std.Build.Step.Compile,
     };
 
-    pub const BuildZiexJs = struct {
-        dep: *std.Build.Dependency,
-    };
-
     pub const BuildCommand = struct {
         transpile: *std.Build.Step.Run,
+    };
+
+    /// Output transformer: injects elements into the generated output
+    pub const Transformer = struct {
+        userdata: *anyopaque,
+
+        pub fn addElement(self: Transformer, options: AddElementOptions) void {
+            const injections_step: *InjectionsGenStep = @ptrCast(@alignCast(self.userdata));
+            injections_step.add(options);
+        }
     };
 
     build: *std.Build,
@@ -644,53 +637,7 @@ pub const Build = struct {
 
     cli: BuildZiex,
 
-    server: BuildServer,
-    client: BuildClient,
-
-    ziex_js: BuildZiexJs,
-
-    /// Handle to the injections generator
-    injections_step: *InjectionsGenStep,
-    /// Handle to the build options module
-    zx_build_options: *std.Build.Step.Options,
-
-    pub fn addPlugin(self: *Build, opts: InitOptions.PluginOptions) *PluginRun {
-        for (opts.steps) |*step| {
-            switch (step.*) {
-                .command => {
-                    var run = step.command.run;
-
-                    // TODO: Fails when used with remote package, was added to supress the output of TW Plugin
-                    // But it tries to check for that before the plugin is run, so it fails.
-                    // _ = run.captureStdErr();
-                    // run.captured_stderr = null;
-                    run.setName(opts.name);
-
-                    const transpile_cmd = self.cmd.transpile;
-                    const exe = self.server.exe;
-                    switch (step.command.type) {
-                        .before_transpile => transpile_cmd.step.dependOn(&run.step),
-                        .after_transpile => {
-                            run.step.dependOn(&transpile_cmd.step);
-                            exe.step.dependOn(&run.step);
-                        },
-                    }
-                },
-            }
-        }
-
-        const plugin_run = self.build.allocator.create(PluginRun) catch @panic("OOM");
-        plugin_run.* = .{};
-        return plugin_run;
-    }
-
-    pub fn plugin(self: *Build, opts: InitOptions.PluginOptions) void {
-        _ = self.addPlugin(opts);
-    }
-
-    pub fn addElement(self: *Build, options: AddElementOptions) void {
-        self.injections_step.add(options);
-    }
+    transformer: Transformer,
 };
 
 const ServerOnlyStubMode = enum {

@@ -87,41 +87,18 @@ pub const ClientOptions = struct {
 
     jsglue_href: ?[]const u8 = null,
     wasm_href: ?[]const u8 = null,
+
+    /// Install the JS-glue package source (the `ziex_js` npm package) into a
+    /// subdirectory under the install prefix (`zig-out/<subdir>`).
+    ///
+    /// Ziex auto-injects the JS glue at runtime for normal server deployments,
+    /// so this is `null` (no install) by default. Set it for platforms that
+    /// need the package available on disk to install it themselves — e.g. Vercel
+    jsglue_install_subdir: ?[]const u8 = null,
 };
 
 /// Experimental features that may change in future versions.
 const ExperimentalOptions = struct {};
-
-/// Configuration for build plugins that extend ZX functionality.
-pub const PluginOptions = struct {
-    /// Command-based plugin step configuration.
-    pub const PluginStepCommand = struct {
-        /// When to execute this plugin in the build lifecycle.
-        type: enum {
-            /// Run before ZX transpilation occurs
-            before_transpile,
-            /// Run after ZX transpilation completes
-            after_transpile,
-        },
-
-        /// Command to execute.
-        ///
-        /// Use `{outdir}` in `LazyPath` arguments to reference the transpile output directory.
-        run: *std.Build.Step.Run,
-    };
-
-    /// A plugin step that can be executed during the build.
-    pub const PluginStep = union(enum) {
-        /// Execute a shell command
-        command: PluginStepCommand,
-    };
-
-    /// Human-readable name for this plugin.
-    name: []const u8,
-
-    /// List of steps this plugin should execute during the build.
-    steps: []const PluginStep,
-};
 
 /// App directory configuration.
 ///
@@ -166,10 +143,3 @@ data_path: ?LazyPath = null,
 /// ```
 /// If `null`, falls back to ziex's own version.
 version: ?[]const u8 = null,
-
-// /// Plugin configurations for extending the build process.
-// ///
-// /// Plugins allow you to run custom commands (like CSS preprocessors, asset optimizers, etc.)
-// /// at specific points in the ZX build lifecycle.
-// /// If `null`, no plugins are registered.
-// plugins: ?[]const PluginOptions = null,
