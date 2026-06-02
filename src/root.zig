@@ -98,7 +98,9 @@ pub const Platform = plfm.Platform;
 pub const Router = @import("runtime/core/Router.zig");
 
 // --- Storage --- //
-pub const kv = @import("runtime/core/kv.zig");
+const kv_mod = @import("runtime/core/kv.zig");
+pub const Kv = kv_mod.Kv;
+pub var kv: Kv = kv_mod.default;
 pub const db = if (!module_options.exclude_db) @import("db") else @compileError("db is excluded. Set exclude-db=false to enable.");
 
 // --- Net --- //

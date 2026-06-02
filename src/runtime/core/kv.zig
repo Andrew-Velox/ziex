@@ -1,60 +1,62 @@
+/// A Key Value store
+///
+/// Use this to store small pieces of data that need to be shared across requests or persisted across restarts.
+///
+/// The default zx.kv implementation is a native filesystem based store,
+/// stored inside configurable datadir/kv/
+///
+/// Builtin bindings are provided for WASI for
+///
+/// - Cloudflare: Workers KV
+///
+/// and you can implement your own bindings or storage backends if desired.
+pub const Kv = @This();
+
 const std = @import("std");
 const builtin = @import("builtin");
 const zx_options = @import("zx_options");
 
 const zx = @import("../../root.zig");
-
 const kv_wasm = @import("../server/wasm/kv.zig");
 
-// -- Public types -- //
+userdata: ?*anyopaque = null,
+vtable: *const VTable,
+
+pub const VTable = struct {
+    get: *const fn (userdata: ?*anyopaque, ns: []const u8, allocator: std.mem.Allocator, key: []const u8) anyerror!?[]u8,
+    put: *const fn (userdata: ?*anyopaque, ns: []const u8, key: []const u8, value: []const u8, opts: PutOptions) anyerror!void,
+    delete: *const fn (userdata: ?*anyopaque, ns: []const u8, key: []const u8) anyerror!void,
+    list: *const fn (userdata: ?*anyopaque, ns: []const u8, allocator: std.mem.Allocator, prefix: []const u8) anyerror![][]u8,
+};
+
 pub const PutOptions = struct {
     expiration: ?u64 = null,
     expiration_ttl: ?u64 = null,
 };
 
-pub const VTable = struct {
-    get: *const fn (ctx: *anyopaque, ns: []const u8, allocator: std.mem.Allocator, key: []const u8) anyerror!?[]u8,
-    put: *const fn (ctx: *anyopaque, ns: []const u8, key: []const u8, value: []const u8, opts: PutOptions) anyerror!void,
-    delete: *const fn (ctx: *anyopaque, ns: []const u8, key: []const u8) anyerror!void,
-    list: *const fn (ctx: *anyopaque, ns: []const u8, allocator: std.mem.Allocator, prefix: []const u8) anyerror![][]u8,
-};
-
-// -- Global state -- //
-var _stateless: u8 = 0;
-var _ctx: *anyopaque = @ptrCast(&_stateless);
-var _vtable: *const VTable = if (builtin.cpu.arch == .wasm32) &noop_vtable else &filesystem_vtable;
-
-/// Override the active backend. Called once at startup by platform adapters.
-pub fn adapter(ctx: *anyopaque, vtable: *const VTable) void {
-    _ctx = ctx;
-    _vtable = vtable;
+pub fn get(self: Kv, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
+    return self.vtable.get(self.userdata, "default", allocator, key);
 }
 
-// -- Default namespace API (uses "default" binding) -- //
-
-pub fn get(allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
-    return _vtable.get(_ctx, "default", allocator, key);
+/// Get the value of a key parsed as the given type, returning error if type is not expected.
+pub fn as(self: Kv, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
+    return self.getTyped("default", allocator, key, T);
 }
 
-// Get the value of a key parsed as the given type, returning error if type is not expected,
-pub fn as(allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
-    return getTyped("default", allocator, key, T);
+pub fn put(self: Kv, key: []const u8, value: []const u8, opts: PutOptions) !void {
+    return self.vtable.put(self.userdata, "default", key, value, opts);
 }
 
-pub fn put(key: []const u8, value: []const u8, opts: PutOptions) !void {
-    return _vtable.put(_ctx, "default", key, value, opts);
+pub fn putAs(self: Kv, key: []const u8, value: anytype, opts: PutOptions) !void {
+    return self.putTyped("default", key, value, opts);
 }
 
-pub fn putAs(key: []const u8, value: anytype, opts: PutOptions) !void {
-    return putTyped("default", key, value, opts);
+pub fn delete(self: Kv, key: []const u8) !void {
+    return self.vtable.delete(self.userdata, "default", key);
 }
 
-pub fn delete(key: []const u8) !void {
-    return _vtable.delete(_ctx, "default", key);
-}
-
-pub fn list(allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
-    return _vtable.list(_ctx, "default", allocator, prefix);
+pub fn list(self: Kv, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
+    return self.vtable.list(self.userdata, "default", allocator, prefix);
 }
 
 /// Return a scoped handle that routes all operations to the named KV binding.
@@ -63,39 +65,41 @@ pub fn list(allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
 /// const users = zx.kv.scope("users");
 /// const val = try users.get(ctx.arena, "user-123");
 /// ```
-pub fn scope(ns: []const u8) KVScope {
-    return .{ .ns = ns };
+pub fn scope(self: Kv, ns: []const u8) Scope {
+    return .{ .kv = self, .ns = ns };
 }
 
-pub const KVScope = struct {
+const Scope = struct {
+    kv: Kv,
     ns: []const u8,
 
-    pub fn get(self: KVScope, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
-        return _vtable.get(_ctx, self.ns, allocator, key);
+    pub fn get(self: Scope, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
+        return self.kv.vtable.get(self.kv.userdata, self.ns, allocator, key);
     }
 
-    pub fn as(self: KVScope, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
-        return getTyped(self.ns, allocator, key, T);
+    pub fn as(self: Scope, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
+        return self.kv.getTyped(self.ns, allocator, key, T);
     }
 
-    pub fn put(self: KVScope, key: []const u8, value: []const u8, opts: PutOptions) !void {
-        return _vtable.put(_ctx, self.ns, key, value, opts);
+    pub fn put(self: Scope, key: []const u8, value: []const u8, opts: PutOptions) !void {
+        return self.kv.vtable.put(self.kv.userdata, self.ns, key, value, opts);
     }
 
-    pub fn putAs(self: KVScope, key: []const u8, value: anytype, opts: PutOptions) !void {
-        return putTyped(self.ns, key, value, opts);
+    pub fn putAs(self: Scope, key: []const u8, value: anytype, opts: PutOptions) !void {
+        return self.kv.putTyped(self.ns, key, value, opts);
     }
 
-    pub fn delete(self: KVScope, key: []const u8) !void {
-        return _vtable.delete(_ctx, self.ns, key);
+    pub fn delete(self: Scope, key: []const u8) !void {
+        return self.kv.vtable.delete(self.kv.userdata, self.ns, key);
     }
-    pub fn list(self: KVScope, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
-        return _vtable.list(_ctx, self.ns, allocator, prefix);
+
+    pub fn list(self: Scope, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
+        return self.kv.vtable.list(self.kv.userdata, self.ns, allocator, prefix);
     }
 };
 
-fn getTyped(ns: []const u8, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
-    const raw = (try _vtable.get(_ctx, ns, allocator, key)) orelse return null;
+fn getTyped(self: Kv, ns: []const u8, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
+    const raw = (try self.vtable.get(self.userdata, ns, allocator, key)) orelse return null;
     defer allocator.free(raw);
 
     const expected_hash = zx.util.zxon.schema(T).hash;
@@ -110,7 +114,7 @@ fn getTyped(ns: []const u8, allocator: std.mem.Allocator, key: []const u8, compt
     return parsed.value;
 }
 
-fn putTyped(ns: []const u8, key: []const u8, value: anytype, opts: PutOptions) !void {
+fn putTyped(self: Kv, ns: []const u8, key: []const u8, value: anytype, opts: PutOptions) !void {
     const ValueType = @TypeOf(value);
     const TypedValue = struct {
         hash: u64,
@@ -125,8 +129,17 @@ fn putTyped(ns: []const u8, key: []const u8, value: anytype, opts: PutOptions) !
         .value = value,
     }, &writer.writer, .{});
 
-    return _vtable.put(_ctx, ns, key, writer.written(), opts);
+    return self.vtable.put(self.userdata, ns, key, writer.written(), opts);
 }
+
+// -- Default backend -- //
+
+/// The platform default backend, used to initialize `zx.kv`. Platform adapters
+/// reassign `zx.kv` at startup (before any request is served) to swap backends.
+pub const default: Kv = if (builtin.cpu.arch == .wasm32)
+    .{ .vtable = &noop_vtable }
+else
+    .{ .vtable = &filesystem_vtable };
 
 fn storedTypeHash(raw: []const u8) !u64 {
     var i: usize = 0;
@@ -146,12 +159,12 @@ fn storedTypeHash(raw: []const u8) !u64 {
 
 // -- Impl: Noop (WASM default - replaced by edge adapter at startup) -- //
 
-fn noopGet(_: *anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror!?[]u8 {
+fn noopGet(_: ?*anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror!?[]u8 {
     return null;
 }
-fn noopPut(_: *anyopaque, _: []const u8, _: []const u8, _: []const u8, _: PutOptions) anyerror!void {}
-fn noopDelete(_: *anyopaque, _: []const u8, _: []const u8) anyerror!void {}
-fn noopList(_: *anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror![][]u8 {
+fn noopPut(_: ?*anyopaque, _: []const u8, _: []const u8, _: []const u8, _: PutOptions) anyerror!void {}
+fn noopDelete(_: ?*anyopaque, _: []const u8, _: []const u8) anyerror!void {}
+fn noopList(_: ?*anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror![][]u8 {
     return &[_][]u8{};
 }
 
@@ -192,14 +205,14 @@ fn nsDir(ns: []const u8, buf: *[256]u8) ?[]u8 {
     return buf[0..needed];
 }
 
-fn fsGet(_: *anyopaque, ns: []const u8, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
+fn fsGet(_: ?*anyopaque, ns: []const u8, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
     const io = std.Io.Threaded.global_single_threaded.io();
     var buf: [1024]u8 = undefined;
     const path = keyPath(ns, key, &buf) orelse return null;
     return std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(10 * 1024 * 1024)) catch null;
 }
 
-fn fsPut(_: *anyopaque, ns: []const u8, key: []const u8, value: []const u8, _: PutOptions) !void {
+fn fsPut(_: ?*anyopaque, ns: []const u8, key: []const u8, value: []const u8, _: PutOptions) !void {
     const io = std.Io.Threaded.global_single_threaded.io();
     var buf: [1024]u8 = undefined;
     const path = keyPath(ns, key, &buf) orelse return error.KeyTooLong;
@@ -212,14 +225,14 @@ fn fsPut(_: *anyopaque, ns: []const u8, key: []const u8, value: []const u8, _: P
     try file.replace(io);
 }
 
-fn fsDelete(_: *anyopaque, ns: []const u8, key: []const u8) !void {
+fn fsDelete(_: ?*anyopaque, ns: []const u8, key: []const u8) !void {
     const io = std.Io.Threaded.global_single_threaded.io();
     var buf: [1024]u8 = undefined;
     const path = keyPath(ns, key, &buf) orelse return;
     std.Io.Dir.cwd().deleteFile(io, path) catch {};
 }
 
-fn fsList(_: *anyopaque, ns: []const u8, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
+fn fsList(_: ?*anyopaque, ns: []const u8, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
     const io = std.Io.Threaded.global_single_threaded.io();
     var dir_buf: [256]u8 = undefined;
     const dir_path = nsDir(ns, &dir_buf) orelse return &[_][]u8{};

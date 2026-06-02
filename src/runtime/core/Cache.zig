@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const zx = @import("../../root.zig");
 
 const Allocator = std.mem.Allocator;
-const kv = zx.kv;
+const kv = @import("kv.zig");
 
 /// Global cache for components and pages
 const cachez = switch (builtin.os.tag) {
@@ -246,7 +246,7 @@ pub const CacheScope = struct {
         const backend_ns = try backendNamespace(s.allocator, self.ns);
         defer s.allocator.free(backend_ns);
 
-        const backend = kv.scope(backend_ns);
+        const backend = zx.kv.scope(backend_ns);
         const encoded = (try backend.get(s.allocator, key)) orelse return null;
         defer s.allocator.free(encoded);
 
@@ -286,7 +286,7 @@ pub const CacheScope = struct {
 
         const backend_ns = try backendNamespace(s.allocator, self.ns);
         defer s.allocator.free(backend_ns);
-        try kv.scope(backend_ns).put(key, encoded, .{});
+        try zx.kv.scope(backend_ns).put(key, encoded, .{});
 
         const scoped_key = try scopedKey(s.allocator, self.ns, key);
         defer s.allocator.free(scoped_key);
@@ -322,7 +322,7 @@ pub const CacheScope = struct {
         _ = s.memory.del(scoped_key);
         const backend_ns = try backendNamespace(s.allocator, self.ns);
         defer s.allocator.free(backend_ns);
-        try kv.scope(backend_ns).delete(key);
+        try zx.kv.scope(backend_ns).delete(key);
     }
 
     pub fn list(self: CacheScope, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
@@ -333,7 +333,7 @@ pub const CacheScope = struct {
         const backend_ns = try backendNamespace(s.allocator, self.ns);
         defer s.allocator.free(backend_ns);
 
-        const backend = kv.scope(backend_ns);
+        const backend = zx.kv.scope(backend_ns);
         const keys = try backend.list(s.allocator, prefix);
         defer {
             for (keys) |key| s.allocator.free(key);
@@ -371,7 +371,7 @@ pub const CacheScope = struct {
         const backend_ns = backendNamespace(s.allocator, self.ns) catch return false;
         defer s.allocator.free(backend_ns);
 
-        const backend = kv.scope(backend_ns);
+        const backend = zx.kv.scope(backend_ns);
         const existing = backend.get(s.allocator, key) catch null;
         const existed = if (existing) |bytes| blk: {
             s.allocator.free(bytes);
@@ -394,7 +394,7 @@ pub const CacheScope = struct {
         const backend_ns = try backendNamespace(s.allocator, self.ns);
         defer s.allocator.free(backend_ns);
 
-        const backend = kv.scope(backend_ns);
+        const backend = zx.kv.scope(backend_ns);
         const keys = try backend.list(s.allocator, prefix);
         defer {
             for (keys) |key| s.allocator.free(key);
