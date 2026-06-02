@@ -17,12 +17,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     // --- Ziex setup: wires dependencies and adds `zx`/`dev` build steps ---
-    var ziex_b = try ziex.init(b, app_exe, .{});
-
-    b.installDirectory(.{
-        .source_dir = ziex_b.ziex_js.dep.path("."),
-        .install_dir = .prefix,
-        .include_extensions = &.{ ".js", ".ts" },
-        .install_subdir = "pkg/ziex",
+    _ = try ziex.init(b, app_exe, .{
+        .client = .{ .jsglue_install_subdir = "pkg/ziex" },
     });
 }
