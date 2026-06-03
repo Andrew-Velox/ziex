@@ -97,17 +97,11 @@ pub const Platform = plfm.Platform;
 pub const Router = @import("runtime/core/Router.zig");
 
 // --- Storage --- //
-const kv_mod = @import("runtime/core/Kv.zig");
-pub const Kv = kv_mod.Kv;
+pub const Kv = @import("runtime/core/Kv.zig");
 pub const Cache = @import("runtime/core/Cache.zig");
 
-/// The active KV backend. `App.init` builds this with the resolved datadir
-/// passed via `userdata`; WASM edge adapters override it in their `use()`.
-/// Until then it is the inert no-op backend (no store root).
-pub var kv: Kv = kv_mod.noop;
-/// The active cache. `App.init` points it at a persistent backend; until then
-/// it is the in-memory-only default (no-op persistent backend).
-pub var cache: Cache = .{};
+pub var kv: Kv = .failing;
+pub var cache: Cache = .failing;
 pub const db = if (!module_options.exclude_db) @import("db") else @compileError("db is excluded. Set exclude-db=false to enable.");
 
 // --- Net --- //

@@ -275,10 +275,6 @@ pub fn Handler(comptime AppCtxType: type) type {
 
         pub fn init(io: std.Io, allocator: std.mem.Allocator, meta: *App.Meta, config: AppConfig, app_ctx: *AppCtxType) !Self {
             const cache_config = config.cache;
-            // Initialize unified component cache
-            try zx.Cache.init(allocator, .{
-                .max_size = cache_config.max_size,
-            });
 
             return Self{
                 .meta = meta,

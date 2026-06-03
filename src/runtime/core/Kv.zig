@@ -10,7 +10,7 @@
 /// - Cloudflare: Workers KV
 ///
 /// and you can implement your own bindings or storage backends if desired.
-pub const Kv = @This();
+const Kv = @This();
 
 const std = @import("std");
 const builtin = @import("builtin");
@@ -48,46 +48,12 @@ pub fn get(self: Kv, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
     return self.vtable.get(self.userdata, self.namespace, allocator, key);
 }
 
-/// Get the value of a key parsed as the given type, returning error if type is not expected.
 pub fn as(self: Kv, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
-    return self.getTyped(allocator, key, T);
-}
-
-pub fn put(self: Kv, key: []const u8, value: []const u8, opts: PutOptions) !void {
-    return self.vtable.put(self.userdata, self.namespace, key, value, opts);
-}
-
-pub fn putAs(self: Kv, key: []const u8, value: anytype, opts: PutOptions) !void {
-    return self.putTyped(key, value, opts);
-}
-
-pub fn delete(self: Kv, key: []const u8) !void {
-    return self.vtable.delete(self.userdata, self.namespace, key);
-}
-
-pub fn list(self: Kv, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
-    return self.vtable.list(self.userdata, self.namespace, allocator, prefix);
-}
-
-/// Return a handle that routes all operations to the named KV binding, given
-/// as an enum literal like `std.log.scoped`. The result is itself a `Kv`, so
-/// it composes with every method. For a runtime namespace, set the
-/// `namespace` field directly in a struct literal instead.
-///
-/// ```zig
-/// const users = zx.kv.scope(.users);
-/// const val = try users.get(ctx.arena, "user-123");
-/// ```
-pub fn scope(self: Kv, comptime ns: @EnumLiteral()) Kv {
-    return .{ .userdata = self.userdata, .vtable = self.vtable, .namespace = @tagName(ns) };
-}
-
-fn getTyped(self: Kv, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
-    const raw = (try self.vtable.get(self.userdata, self.namespace, allocator, key)) orelse return null;
+    const raw = (try self.vtable.get(self.userdata, self.namespace, allocator, key) orelse return null);
     defer allocator.free(raw);
 
     const expected_hash = zx.util.zxon.schema(T).hash;
-    if (try storedTypeHash(raw) != expected_hash) return error.InvalidType;
+    if (try typeHash(raw) != expected_hash) return error.InvalidType;
 
     const TypedValue = struct {
         hash: u64,
@@ -98,7 +64,11 @@ fn getTyped(self: Kv, allocator: std.mem.Allocator, key: []const u8, comptime T:
     return parsed.value;
 }
 
-fn putTyped(self: Kv, key: []const u8, value: anytype, opts: PutOptions) !void {
+pub fn put(self: Kv, key: []const u8, value: []const u8, opts: PutOptions) !void {
+    return self.vtable.put(self.userdata, self.namespace, key, value, opts);
+}
+
+pub fn putAs(self: Kv, key: []const u8, value: anytype, opts: PutOptions) !void {
     const ValueType = @TypeOf(value);
     const TypedValue = struct {
         hash: u64,
@@ -116,7 +86,19 @@ fn putTyped(self: Kv, key: []const u8, value: anytype, opts: PutOptions) !void {
     return self.vtable.put(self.userdata, self.namespace, key, writer.written(), opts);
 }
 
-fn storedTypeHash(raw: []const u8) !u64 {
+pub fn delete(self: Kv, key: []const u8) !void {
+    return self.vtable.delete(self.userdata, self.namespace, key);
+}
+
+pub fn list(self: Kv, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
+    return self.vtable.list(self.userdata, self.namespace, allocator, prefix);
+}
+
+pub fn scope(self: Kv, comptime ns: @EnumLiteral()) Kv {
+    return .{ .userdata = self.userdata, .vtable = self.vtable, .namespace = @tagName(ns) };
+}
+
+fn typeHash(raw: []const u8) !u64 {
     var i: usize = 0;
 
     while (i < raw.len and std.ascii.isWhitespace(raw[i])) : (i += 1) {}
@@ -132,20 +114,24 @@ fn storedTypeHash(raw: []const u8) !u64 {
     return std.fmt.parseUnsigned(u64, raw[start..i], 10);
 }
 
-fn noopGet(_: ?*anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror!?[]u8 {
-    return null;
+fn failingGet(_: ?*anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror!?[]u8 {
+    return error.KvUnavailable;
 }
-fn noopPut(_: ?*anyopaque, _: []const u8, _: []const u8, _: []const u8, _: PutOptions) anyerror!void {}
-fn noopDelete(_: ?*anyopaque, _: []const u8, _: []const u8) anyerror!void {}
-fn noopList(_: ?*anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror![][]u8 {
-    return &[_][]u8{};
+fn failingPut(_: ?*anyopaque, _: []const u8, _: []const u8, _: []const u8, _: PutOptions) anyerror!void {
+    return error.KvUnavailable;
+}
+fn failingDelete(_: ?*anyopaque, _: []const u8, _: []const u8) anyerror!void {
+    return error.KvUnavailable;
+}
+fn failingList(_: ?*anyopaque, _: []const u8, _: std.mem.Allocator, _: []const u8) anyerror![][]u8 {
+    return error.KvUnavailable;
 }
 
-pub const noop_vtable = VTable{
-    .get = &noopGet,
-    .put = &noopPut,
-    .delete = &noopDelete,
-    .list = &noopList,
+pub const failing_vtable = VTable{
+    .get = &failingGet,
+    .put = &failingPut,
+    .delete = &failingDelete,
+    .list = &failingList,
 };
 
-pub const noop = Kv{ .vtable = &noop_vtable };
+pub const failing = Kv{ .vtable = &failing_vtable };

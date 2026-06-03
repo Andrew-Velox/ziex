@@ -71,7 +71,6 @@ pub fn build(b: *std.Build) !void {
         if (!is_client) {
             mod.addImport("db", adapters_dep.module("db"));
             mod.addImport("db_sqlite", adapters_dep.module("db_sqlite"));
-            mod.addImport("cachez", cachez_dep.module("cache"));
             mod.addImport("httpz", httpz_dep.module("httpz"));
         }
 
@@ -81,6 +80,7 @@ pub fn build(b: *std.Build) !void {
         }
 
         if (!exclude_core_lang) mod.addImport("zx_core_lang", zx_core_lang_mod);
+        mod.addImport("cachez", cachez_dep.module("cache"));
         mod.addImport("zx_style", zx_style_mod);
         mod.addOptions("zx_info", options);
         mod.addOptions("zx_options", zx_runtime_options);
