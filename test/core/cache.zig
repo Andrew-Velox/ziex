@@ -13,6 +13,9 @@ fn scopedCache(namespace: []const u8) zx.Cache {
     return .{
         .backend = cache.backend,
         .namespace = namespace,
+        .allocator = cache.allocator,
+        .io = cache.io,
+        .memory = cache.memory,
     };
 }
 
@@ -37,7 +40,7 @@ const WorkerContext = struct {
 const worker_iterations = 100;
 
 fn ensureCache() !void {
-    cache = try zx.Cache.init(std.testing.io, cache_fs.kv(), .{
+    cache = try zx.Cache.init(std.testing.io, allocator, cache_fs.kv(), .{
         .max_size = 4096,
         .segment_count = 8,
     });

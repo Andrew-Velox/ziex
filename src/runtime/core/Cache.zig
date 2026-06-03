@@ -18,6 +18,9 @@ const header_len = 9;
 
 backend: Kv = Kv.failing,
 namespace: []const u8 = "default",
+allocator: std.mem.Allocator,
+io: std.Io,
+memory: ?*cachez.Cache(CacheEntry) = null,
 
 pub const PutOptions = Kv.PutOptions;
 
@@ -36,31 +39,12 @@ const CacheEntry = struct {
     }
 };
 
-const State = struct {
-    io: std.Io,
-    allocator: Allocator,
-    memory: cachez.Cache(CacheEntry),
-};
-
 const StoredEntry = struct {
     expires_at: ?u64,
     payload: []const u8,
 };
 
-const StateMutex = struct {
-    inner: std.Io.Mutex = .init,
-    pub fn lock(self: *@This(), io: std.Io) void {
-        self.inner.lockUncancelable(io);
-    }
-    pub fn unlock(self: *@This(), io: std.Io) void {
-        self.inner.unlock(io);
-    }
-};
-
-var state: ?State = null;
-var state_mutex: StateMutex = .{};
-
-pub fn init(io: std.Io, kv: Kv, config: Config) !Cache {
+pub fn init(io: std.Io, allocator: Allocator, kv: Kv, config: Config) !Cache {
     const cachez_config = cachez.Config{
         .max_size = config.max_size,
         .segment_count = config.segment_count,
@@ -68,36 +52,25 @@ pub fn init(io: std.Io, kv: Kv, config: Config) !Cache {
         .shrink_ratio = config.shrink_ratio,
     };
 
-    const lock_io = if (state) |current| current.io else io;
-    state_mutex.lock(lock_io);
-    defer state_mutex.unlock(lock_io);
-
-    if (state) |*current| {
-        current.memory.deinit();
-        state = null;
-    }
-
-    state = .{
-        .io = io,
-        .allocator = zx.allocator,
-        .memory = try cachez.Cache(CacheEntry).init(io, zx.allocator, cachez_config),
-    };
+    const memory = try allocator.create(cachez.Cache(CacheEntry));
+    errdefer allocator.destroy(memory);
+    memory.* = try cachez.Cache(CacheEntry).init(io, allocator, cachez_config);
 
     return .{
         .backend = kv,
         .namespace = "default",
+        .allocator = allocator,
+        .io = io,
+        .memory = memory,
     };
 }
 
-/// Deinitialize the cache
-pub fn deinit(_: *Cache) void {
-    const io = if (state) |current| current.io else return;
-    state_mutex.lock(io);
-    defer state_mutex.unlock(io);
-
-    if (state) |*current| {
-        current.memory.deinit();
-        state = null;
+pub fn deinit(self: *Cache) void {
+    if (self.memory) |mem| {
+        const allocator = mem.allocator;
+        mem.deinit();
+        allocator.destroy(mem);
+        self.memory = null;
     }
 }
 
@@ -105,14 +78,12 @@ pub fn scoped(self: Cache, comptime ns: @EnumLiteral()) Cache {
     return .{
         .backend = self.backend,
         .namespace = @tagName(ns),
+        .allocator = self.allocator,
+        .io = self.io,
+        .memory = self.memory,
     };
 }
 
-pub fn scope(self: Cache, comptime ns: @EnumLiteral()) Cache {
-    return self.scoped(ns);
-}
-
-/// The persistent backend bound to this handle's namespace.
 fn boundBackend(self: Cache) Kv {
     return .{
         .vtable = self.backend.vtable,
@@ -122,30 +93,29 @@ fn boundBackend(self: Cache) Kv {
 }
 
 pub fn get(self: Cache, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
-    const io = if (state) |current| current.io else return null;
-    state_mutex.lock(io);
-    defer state_mutex.unlock(io);
+    const io = self.io;
+    const memory = self.memory orelse return error.CacheUnavailable;
 
-    const s = if (state) |*current| current else return null;
-    const scoped_key = try scopedKey(s.allocator, self.namespace, key);
-    defer s.allocator.free(scoped_key);
+    const scoped_key = try scopedKey(allocator, self.namespace, key);
+    defer allocator.free(scoped_key);
 
-    if (s.memory.get(scoped_key)) |entry| {
+    if (memory.get(scoped_key)) |entry| {
         defer entry.release();
         return @as(?[]u8, try allocator.dupe(u8, entry.value.bytes));
     }
 
     const backend = self.boundBackend();
-    const encoded = (try backend.get(s.allocator, key)) orelse return null;
-    defer s.allocator.free(encoded);
+    const encoded = (try backend.get(allocator, key)) orelse return null;
+    defer allocator.free(encoded);
 
     const decoded = try decodeStoredEntry(encoded);
-    if (isExpired(s.io, decoded.expires_at)) {
+    if (isExpired(io, decoded.expires_at)) {
         try backend.delete(key);
+        _ = memory.del(scoped_key);
         return null;
     }
 
-    putMemoryEntryLocked(s, scoped_key, decoded.payload, ttlFromExpiration(s.io, decoded.expires_at)) catch {};
+    try putMemoryEntryLocked(self, scoped_key, decoded.payload, ttlFromExpiration(io, decoded.expires_at));
     return @as(?[]u8, try allocator.dupe(u8, decoded.payload));
 }
 
@@ -166,29 +136,31 @@ pub fn as(self: Cache, allocator: std.mem.Allocator, key: []const u8, comptime T
 }
 
 pub fn put(self: Cache, key: []const u8, value: []const u8, opts: PutOptions) !void {
-    const io = if (state) |current| current.io else return;
-    state_mutex.lock(io);
-    defer state_mutex.unlock(io);
+    _ = self.memory orelse return error.CacheUnavailable;
 
-    const s = if (state) |*current| current else return;
-    const encoded = try encodeStoredEntry(s.io, s.allocator, value, opts);
-    defer s.allocator.free(encoded);
+    const io = self.io;
+    const allocator = self.allocator;
+    const encoded = try encodeStoredEntry(io, allocator, value, opts);
+    defer allocator.free(encoded);
 
     try self.boundBackend().put(key, encoded, .{});
 
-    const scoped_key = try scopedKey(s.allocator, self.namespace, key);
-    defer s.allocator.free(scoped_key);
-    try putMemoryEntryLocked(s, scoped_key, value, ttlFromOptions(s.io, opts));
+    const scoped_key = try scopedKey(allocator, self.namespace, key);
+    defer allocator.free(scoped_key);
+    try putMemoryEntryLocked(self, scoped_key, value, ttlFromOptions(io, opts));
 }
 
 pub fn putAs(self: Cache, key: []const u8, value: anytype, opts: PutOptions) !void {
+    _ = self.memory orelse return error.CacheUnavailable;
+
     const ValueType = @TypeOf(value);
     const TypedValue = struct {
         hash: u64,
         value: ValueType,
     };
 
-    var writer = std.Io.Writer.Allocating.init(zx.allocator);
+    const allocator = self.allocator;
+    var writer = std.Io.Writer.Allocating.init(allocator);
     defer writer.deinit();
 
     try zx.util.zxon.serialize(TypedValue{
@@ -200,45 +172,39 @@ pub fn putAs(self: Cache, key: []const u8, value: anytype, opts: PutOptions) !vo
 }
 
 pub fn delete(self: Cache, key: []const u8) !void {
-    const io = if (state) |current| current.io else return;
-    state_mutex.lock(io);
-    defer state_mutex.unlock(io);
+    const memory = self.memory orelse return error.CacheUnavailable;
+    const allocator = self.allocator;
+    const scoped_key = try scopedKey(allocator, self.namespace, key);
+    defer allocator.free(scoped_key);
 
-    const s = if (state) |*current| current else return;
-    const scoped_key = try scopedKey(s.allocator, self.namespace, key);
-    defer s.allocator.free(scoped_key);
-
-    _ = s.memory.del(scoped_key);
+    _ = memory.del(scoped_key);
     try self.boundBackend().delete(key);
 }
 
 pub fn list(self: Cache, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
-    const io = if (state) |current| current.io else return &[_][]u8{};
-    state_mutex.lock(io);
-    defer state_mutex.unlock(io);
-
-    const s = if (state) |*current| current else return &[_][]u8{};
+    const io = self.io;
+    const memory = self.memory orelse return error.CacheUnavailable;
     const backend = self.boundBackend();
-    const keys = try backend.list(s.allocator, prefix);
+    const keys = try backend.list(allocator, prefix);
     defer {
-        for (keys) |key| s.allocator.free(key);
-        s.allocator.free(keys);
+        for (keys) |key| allocator.free(key);
+        allocator.free(keys);
     }
 
     var live_keys: std.ArrayList([]u8) = .empty;
     defer live_keys.deinit(allocator);
 
     for (keys) |key| {
-        const encoded = (try backend.get(s.allocator, key)) orelse continue;
-        defer s.allocator.free(encoded);
+        const encoded = (try backend.get(allocator, key)) orelse continue;
+        defer allocator.free(encoded);
 
         const decoded = try decodeStoredEntry(encoded);
-        if (isExpired(s.io, decoded.expires_at)) {
+        if (isExpired(io, decoded.expires_at)) {
             try backend.delete(key);
 
-            const scoped_key = try scopedKey(s.allocator, self.namespace, key);
-            defer s.allocator.free(scoped_key);
-            _ = s.memory.del(scoped_key);
+            const scoped_key = try scopedKey(allocator, self.namespace, key);
+            defer allocator.free(scoped_key);
+            _ = memory.del(scoped_key);
             continue;
         }
 
@@ -249,46 +215,40 @@ pub fn list(self: Cache, allocator: std.mem.Allocator, prefix: []const u8) ![][]
 }
 
 pub fn del(self: Cache, key: []const u8) bool {
-    const io = if (state) |current| current.io else return false;
-    state_mutex.lock(io);
-    defer state_mutex.unlock(io);
-
-    const s = if (state) |*current| current else return false;
+    const memory = self.memory orelse return false;
+    const allocator = self.allocator;
     const backend = self.boundBackend();
-    const existing = backend.get(s.allocator, key) catch null;
+    const existing = backend.get(allocator, key) catch null;
     const existed = if (existing) |bytes| blk: {
-        s.allocator.free(bytes);
+        allocator.free(bytes);
         break :blk true;
     } else false;
 
-    const scoped_key = scopedKey(s.allocator, self.namespace, key) catch return existed;
-    defer s.allocator.free(scoped_key);
+    const scoped_key = scopedKey(allocator, self.namespace, key) catch return existed;
+    defer allocator.free(scoped_key);
 
-    const memory_deleted = s.memory.del(scoped_key);
+    const memory_deleted = memory.del(scoped_key);
     backend.delete(key) catch {};
     return existed or memory_deleted;
 }
 
 pub fn delPrefix(self: Cache, prefix: []const u8) !usize {
-    const io = if (state) |current| current.io else return 0;
-    state_mutex.lock(io);
-    defer state_mutex.unlock(io);
-
-    const s = if (state) |*current| current else return 0;
+    const memory = self.memory orelse return error.CacheUnavailable;
+    const allocator = self.allocator;
     const backend = self.boundBackend();
-    const keys = try backend.list(s.allocator, prefix);
+    const keys = try backend.list(allocator, prefix);
     defer {
-        for (keys) |key| s.allocator.free(key);
-        s.allocator.free(keys);
+        for (keys) |key| allocator.free(key);
+        allocator.free(keys);
     }
 
     var deleted: usize = 0;
     for (keys) |key| {
         try backend.delete(key);
 
-        const scoped_key = try scopedKey(s.allocator, self.namespace, key);
-        defer s.allocator.free(scoped_key);
-        _ = s.memory.del(scoped_key);
+        const scoped_key = try scopedKey(allocator, self.namespace, key);
+        defer allocator.free(scoped_key);
+        _ = memory.del(scoped_key);
         deleted += 1;
     }
 
@@ -354,12 +314,14 @@ fn isExpired(io: std.Io, expires_at: ?u64) bool {
     return expiration <= now(io);
 }
 
-fn putMemoryEntryLocked(s: *State, scoped_key: []const u8, value: []const u8, ttl_seconds: ?u32) !void {
-    const value_copy = try s.allocator.dupe(u8, value);
-    errdefer s.allocator.free(value_copy);
+fn putMemoryEntryLocked(self: Cache, scoped_key: []const u8, value: []const u8, ttl_seconds: ?u32) !void {
+    const io = self.io;
+    const memory = self.memory orelse return error.CacheUnavailable;
+    const value_copy = try memory.allocator.dupe(u8, value);
+    errdefer memory.allocator.free(value_copy);
 
-    try s.memory.put(scoped_key, .{ .bytes = value_copy }, .{
-        .ttl = cachezSafeTtl(s.io, ttl_seconds),
+    try memory.put(scoped_key, .{ .bytes = value_copy }, .{
+        .ttl = cachezSafeTtl(io, ttl_seconds),
     });
 }
 
@@ -389,7 +351,9 @@ fn storedTypeHash(raw: []const u8) !u64 {
 }
 
 pub const failing: Cache = .{
-    .backend = Kv.failing,
+    .allocator = .failing,
+    .io = .failing,
+    .backend = .failing,
 };
 
 const cachez_failing = struct {

@@ -65,7 +65,7 @@ fn resolveOptions(init: zx.Init, config: Config) !Config {
     };
 
     zx.kv = kv_fs.kv();
-    zx.cache = try zx.Cache.init(init.io, cache_fs.kv(), .{
+    zx.cache = try zx.Cache.init(init.io, allocator, cache_fs.kv(), .{
         .max_size = resolved.cache.max_size,
     });
 

@@ -93,7 +93,7 @@ test "scoped namespaces are isolated" {
     var ns_buf: [64]u8 = undefined;
     const namespace = try uniqueLabel("kv-scope", &ns_buf);
 
-    // Runtime namespace: set the field directly (scope() takes a comptime literal).
+    // Runtime namespace: set the field directly (scoped() takes a comptime literal).
     const scoped = zx.Kv{ .vtable = kv.vtable, .userdata = kv.userdata, .namespace = namespace };
     const key = "shared-key";
 
@@ -113,8 +113,8 @@ test "scoped namespaces are isolated" {
     try std.testing.expectEqualStrings("default-value", default_value);
 }
 
-test "scope() enum literal routes to a distinct namespace" {
-    const users = kv.scope(.users);
+test "scoped() enum literal routes to a distinct namespace" {
+    const users = kv.scoped(.users);
     const key = "u-1";
 
     defer users.delete(key) catch {};

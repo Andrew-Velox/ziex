@@ -35,7 +35,7 @@ pub var host: []const u8 = "localhost:3000";
 pub var current_path: []const u8 = "/";
 
 fn settingsKV() zx.kv.KVScope {
-    return zx.kv.scope(settings_namespace);
+    return zx.kv.scoped(settings_namespace);
 }
 
 pub fn loadSettings() bool {

@@ -101,7 +101,7 @@ fn filterUsers(allocator: std.mem.Allocator, users: *std.ArrayList(User), search
 }
 
 fn kv() zx.Kv {
-    return zx.kv.scope(.@"examples/form");
+    return zx.kv.scoped(.@"examples/form");
 }
 
 fn syncFromKv(ctx: zx.PageContext, users: *std.ArrayList(User)) void {

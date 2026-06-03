@@ -94,7 +94,7 @@ pub fn list(self: Kv, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 
     return self.vtable.list(self.userdata, self.namespace, allocator, prefix);
 }
 
-pub fn scope(self: Kv, comptime ns: @EnumLiteral()) Kv {
+pub fn scoped(self: Kv, comptime ns: @EnumLiteral()) Kv {
     return .{ .userdata = self.userdata, .vtable = self.vtable, .namespace = @tagName(ns) };
 }
 
