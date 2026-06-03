@@ -187,9 +187,6 @@ pub fn deinit(self: *Client) void {
 fn mainClient() callconv(.c) void {
     if (zx.platform.role != .client) return;
 
-    var kv_wasm = zx.Kv.Wasm{};
-    zx.kv = kv_wasm.kv();
-
     clnt.info();
     clnt.renderAll();
 }

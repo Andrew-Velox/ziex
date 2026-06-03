@@ -12,7 +12,6 @@ const Component = zx.Component;
 
 pub fn run(process_init: std.process.Init) !void {
     db.use();
-    kv.use();
     const allocator = std.heap.wasm_allocator;
 
     var args = try process_init.minimal.args.iterateAllocator(allocator);

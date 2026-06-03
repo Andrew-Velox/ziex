@@ -47,6 +47,9 @@ fn resolveOptions(init: zx.Init, config: Config) !Config {
     resolved.staticdir = staticdir;
 
     if (platform.os == .freestanding or platform.os == .wasi) {
+        var kv_wasm = zx.Kv.Wasm{};
+        zx.kv = kv_wasm.kv();
+
         return resolved;
     }
 
