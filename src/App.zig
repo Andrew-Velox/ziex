@@ -32,6 +32,50 @@ pub fn io() Io {
     return threaded_instance.io();
 }
 
+var kv_fs: zx.Kv.Fs = undefined;
+var cache_fs: zx.Kv.Fs = undefined;
+
+fn resolveOptions(init: zx.Init, config: Config) !Config {
+    const zx_options = @import("zx_options"); // Remove and from build system pass these as env var
+
+    var resolved = config;
+
+    const datadir = config.datadir orelse envVar(init, "ZX_DATADIR") orelse zx_options.datadir;
+    const staticdir = config.staticdir orelse envVar(init, "ZX_STATICDIR") orelse zx_options.staticdir;
+
+    resolved.datadir = datadir;
+    resolved.staticdir = staticdir;
+
+    if (platform.os == .freestanding or platform.os == .wasi) {
+        return resolved;
+    }
+
+    const arena = init.arena.allocator();
+
+    kv_fs = .{
+        .io = init.io,
+        .subdir = try std.fs.path.join(arena, &.{ datadir, "kv" }),
+    };
+    cache_fs = .{
+        .io = init.io,
+        .subdir = try std.fs.path.join(arena, &.{ datadir, "cache" }),
+    };
+
+    zx.kv = kv_fs.kv();
+    zx.cache = .{ .backend = cache_fs.kv() };
+
+    return resolved;
+}
+
+fn envVar(init: zx.Init, name: []const u8) ?[]const u8 {
+    const minimal: std.process.Init.Minimal = switch (@TypeOf(zx.Init)) {
+        std.process.Init.Minimal => init,
+        std.process.Init => init.minimal,
+        else => return null,
+    };
+    return minimal.environ.getAlloc(minimal.gpa, name) catch null;
+}
+
 pub fn App(comptime H: type) type {
     return AppInstance(H);
 }
@@ -53,6 +97,8 @@ fn AppInstance(comptime H: type) type {
         inita: zx.Init,
 
         pub fn init(inita: zx.Init, process_io: anytype, alloc: std.mem.Allocator, config: Config, app_ctx: H) !Self {
+            const resolved = try resolveOptions(inita, config);
+
             const instance: Instance = switch (platform.role) {
                 .client => {},
                 .server => switch (platform.os) {
@@ -60,7 +106,7 @@ fn AppInstance(comptime H: type) type {
                     else => try server.Server(H).init(
                         if (@TypeOf(process_io) == std.Io) process_io else return error.InvalidIo,
                         alloc,
-                        config,
+                        resolved,
                         app_ctx,
                     ),
                 },

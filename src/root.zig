@@ -57,7 +57,6 @@ pub const app = struct {
 pub const client = @import("runtime/client.zig");
 pub const server = @import("runtime/server.zig");
 pub const util = @import("util.zig");
-pub const cache = @import("runtime/core//Cache.zig");
 
 // --- Reactivity --- //
 pub const EventHandler = @import("runtime/core/EventHandler.zig");
@@ -98,9 +97,17 @@ pub const Platform = plfm.Platform;
 pub const Router = @import("runtime/core/Router.zig");
 
 // --- Storage --- //
-const kv_mod = @import("runtime/core/kv.zig");
+const kv_mod = @import("runtime/core/Kv.zig");
 pub const Kv = kv_mod.Kv;
-pub var kv: Kv = kv_mod.default;
+pub const Cache = @import("runtime/core/Cache.zig");
+
+/// The active KV backend. `App.init` builds this with the resolved datadir
+/// passed via `userdata`; WASM edge adapters override it in their `use()`.
+/// Until then it is the inert no-op backend (no store root).
+pub var kv: Kv = kv_mod.noop;
+/// The active cache. `App.init` points it at a persistent backend; until then
+/// it is the in-memory-only default (no-op persistent backend).
+pub var cache: Cache = .{};
 pub const db = if (!module_options.exclude_db) @import("db") else @compileError("db is excluded. Set exclude-db=false to enable.");
 
 // --- Net --- //

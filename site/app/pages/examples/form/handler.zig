@@ -100,9 +100,12 @@ fn filterUsers(allocator: std.mem.Allocator, users: *std.ArrayList(User), search
     return filtered;
 }
 
-const kv = zx.kv.scope("examples/form");
+fn kv() zx.Kv {
+    return zx.kv.scope(.@"examples/form");
+}
+
 fn syncFromKv(ctx: zx.PageContext, users: *std.ArrayList(User)) void {
-    const v = kv.get(ctx.arena, "users") catch return;
+    const v = kv().get(ctx.arena, "users") catch return;
     const ul = zx.util.zxon.parse([]User, ctx.arena, v orelse return, .{}) catch return;
     users.appendSlice(ctx.arena, ul) catch return;
 }
@@ -110,5 +113,5 @@ fn syncFromKv(ctx: zx.PageContext, users: *std.ArrayList(User)) void {
 fn syncToKv(ctx: zx.PageContext, users: *std.ArrayList(User)) void {
     var aw: std.Io.Writer.Allocating = .init(ctx.arena);
     zx.util.zxon.serialize(users.items, &aw.writer, .{}) catch return;
-    kv.put("users", aw.written(), .{}) catch return;
+    kv().put("users", aw.written(), .{}) catch return;
 }

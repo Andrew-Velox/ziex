@@ -1,8 +1,17 @@
 const std = @import("std");
 const zx = @import("zx");
 
-const cache = zx.cache;
 const allocator = std.testing.allocator;
+
+var cache_fs = zx.Kv.Fs{
+    .io = std.testing.io,
+    .subdir = "zig-out" ++ std.fs.path.sep_str ++ "test-data" ++ std.fs.path.sep_str ++ "cache",
+};
+const cache = zx.Cache{ .backend = cache_fs.kv() };
+
+fn scopedCache(namespace: []const u8) zx.Cache {
+    return .{ .backend = cache.backend, .namespace = namespace };
+}
 
 const Profile = struct {
     id: u32,
@@ -23,7 +32,7 @@ const WorkerContext = struct {
 };
 
 fn ensureCache() !void {
-    try cache.init(std.heap.page_allocator, .{
+    try zx.Cache.init(std.heap.page_allocator, .{
         .max_size = 4096,
         .segment_count = 8,
     });
@@ -41,7 +50,7 @@ fn freeProfile(profile: Profile) void {
 
 test "put/get/delete roundtrip" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-roundtrip", &key_buf);
@@ -61,7 +70,7 @@ test "put/get/delete roundtrip" {
 
 test "del reports whether key existed" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-del", &key_buf);
@@ -75,7 +84,7 @@ test "del reports whether key existed" {
 
 test "list and delPrefix work for live entries" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var prefix_buf: [96]u8 = undefined;
     const prefix = try uniqueLabel("cache-prefix", &prefix_buf);
@@ -88,7 +97,7 @@ test "list and delPrefix work for live entries" {
     const key2 = try std.fmt.bufPrint(&key2_buf, "{s}-b", .{prefix});
     const other_key = try uniqueLabel("cache-other", &other_key_buf);
 
-    defer _ = cache.delPrefix(prefix);
+    defer _ = cache.delPrefix(prefix) catch 0;
     defer cache.delete(other_key) catch {};
 
     try cache.put(key1, "value-a", .{ .expiration_ttl = 30 });
@@ -112,18 +121,18 @@ test "list and delPrefix work for live entries" {
 
     try std.testing.expect(saw_key1);
     try std.testing.expect(saw_key2);
-    try std.testing.expectEqual(@as(usize, 2), try cache.scope("default").delPrefix(prefix));
+    try std.testing.expectEqual(@as(usize, 2), try scopedCache("default").delPrefix(prefix));
     try std.testing.expect((try cache.get(allocator, key1)) == null);
     try std.testing.expect((try cache.get(allocator, key2)) == null);
 }
 
 test "scoped namespaces are isolated" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var ns_buf: [96]u8 = undefined;
     const namespace = try uniqueLabel("cache-scope", &ns_buf);
-    const scoped = cache.scope(namespace);
+    const scoped = scopedCache(namespace);
     const key = "shared-key";
 
     defer scoped.delete(key) catch {};
@@ -144,7 +153,7 @@ test "scoped namespaces are isolated" {
 
 test "putAs/as roundtrip typed value" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-typed", &key_buf);
@@ -167,7 +176,7 @@ test "putAs/as roundtrip typed value" {
 
 test "as returns invalid type on schema mismatch" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-typed-mismatch", &key_buf);
@@ -185,14 +194,14 @@ test "as returns invalid type on schema mismatch" {
 
 test "scoped putAs/as roundtrip typed value" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var ns_buf: [96]u8 = undefined;
     var key_buf: [96]u8 = undefined;
 
     const namespace = try uniqueLabel("cache-typed-scope", &ns_buf);
     const key = try uniqueLabel("profile", &key_buf);
-    const scoped = cache.scope(namespace);
+    const scoped = scopedCache(namespace);
 
     defer scoped.delete(key) catch {};
 
@@ -212,7 +221,7 @@ test "scoped putAs/as roundtrip typed value" {
 
 test "expired entries are filtered from get and list" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var prefix_buf: [96]u8 = undefined;
     const prefix = try uniqueLabel("cache-expired", &prefix_buf);
@@ -223,7 +232,7 @@ test "expired entries are filtered from get and list" {
     const expired_key = try std.fmt.bufPrint(&expired_key_buf, "{s}-expired", .{prefix});
     const live_key = try std.fmt.bufPrint(&live_key_buf, "{s}-live", .{prefix});
 
-    defer _ = cache.delPrefix(prefix);
+    defer _ = cache.delPrefix(prefix) catch 0;
 
     const now: u64 = @intCast(@divTrunc(std.Io.Clock.real.now(std.testing.io).nanoseconds, std.time.ns_per_s));
     try cache.put(expired_key, "stale", .{ .expiration = now });
@@ -242,7 +251,7 @@ test "expired entries are filtered from get and list" {
 }
 
 fn runConcurrentWorker(ctx: *WorkerContext) void {
-    const scoped = cache.scope(ctx.ns);
+    const scoped = scopedCache(ctx.ns);
 
     var key_buf: [96]u8 = undefined;
     var value_buf: [96]u8 = undefined;
@@ -281,11 +290,11 @@ fn runConcurrentWorker(ctx: *WorkerContext) void {
 
 test "concurrent reads and writes are threadsafe" {
     try ensureCache();
-    defer cache.deinit();
+    defer zx.Cache.deinit();
 
     var ns_buf: [96]u8 = undefined;
     const namespace = try uniqueLabel("cache-threadsafe", &ns_buf);
-    const scoped = cache.scope(namespace);
+    const scoped = scopedCache(namespace);
 
     defer {
         _ = scoped.delPrefix("") catch 0;

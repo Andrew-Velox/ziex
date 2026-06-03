@@ -3,6 +3,13 @@ const zx = @import("zx");
 
 const allocator = std.testing.allocator;
 
+var kv_fs = zx.Kv.Fs{
+    .io = std.testing.io,
+    .subdir = "zig-out" ++ std.fs.path.sep_str ++ "test-data" ++ std.fs.path.sep_str ++ "kv",
+};
+
+const kv = kv_fs.kv();
+
 const User = struct {
     id: u32,
     name: []const u8,
@@ -30,17 +37,17 @@ test "put/get/delete roundtrip" {
     const key = try uniqueLabel("kv-default-key", &key_buf);
     const value = "hello from kv";
 
-    defer zx.kv.delete(key) catch {};
+    defer kv.delete(key) catch {};
 
-    try zx.kv.put(key, value, .{});
+    try kv.put(key, value, .{});
 
-    const found = (try zx.kv.get(std.testing.allocator, key)).?;
+    const found = (try kv.get(std.testing.allocator, key)).?;
     defer std.testing.allocator.free(found);
 
     try std.testing.expectEqualStrings(value, found);
 
-    try zx.kv.delete(key);
-    try std.testing.expect((try zx.kv.get(std.testing.allocator, key)) == null);
+    try kv.delete(key);
+    try std.testing.expect((try kv.get(std.testing.allocator, key)) == null);
 }
 
 test "list returns prefixed keys" {
@@ -55,15 +62,15 @@ test "list returns prefixed keys" {
     const key2 = try std.fmt.bufPrint(&key2_buf, "{s}-b", .{prefix});
     const other_key = try uniqueLabel("kv-list-other", &other_key_buf);
 
-    defer zx.kv.delete(key1) catch {};
-    defer zx.kv.delete(key2) catch {};
-    defer zx.kv.delete(other_key) catch {};
+    defer kv.delete(key1) catch {};
+    defer kv.delete(key2) catch {};
+    defer kv.delete(other_key) catch {};
 
-    try zx.kv.put(key1, "value-a", .{});
-    try zx.kv.put(key2, "value-b", .{});
-    try zx.kv.put(other_key, "value-c", .{});
+    try kv.put(key1, "value-a", .{});
+    try kv.put(key2, "value-b", .{});
+    try kv.put(other_key, "value-c", .{});
 
-    const keys = try zx.kv.list(std.testing.allocator, prefix);
+    const keys = try kv.list(std.testing.allocator, prefix);
     defer {
         for (keys) |key| std.testing.allocator.free(key);
         std.testing.allocator.free(keys);
@@ -86,38 +93,58 @@ test "scoped namespaces are isolated" {
     var ns_buf: [64]u8 = undefined;
     const namespace = try uniqueLabel("kv-scope", &ns_buf);
 
-    const scoped = zx.kv.scope(namespace);
+    // Runtime namespace: set the field directly (scope() takes a comptime literal).
+    const scoped = zx.Kv{ .vtable = kv.vtable, .userdata = kv.userdata, .namespace = namespace };
     const key = "shared-key";
 
     defer scoped.delete(key) catch {};
-    defer zx.kv.delete(key) catch {};
+    defer kv.delete(key) catch {};
 
     try scoped.put(key, "scoped-value", .{});
-    try zx.kv.put(key, "default-value", .{});
+    try kv.put(key, "default-value", .{});
 
     const scoped_value = (try scoped.get(std.testing.allocator, key)).?;
     defer std.testing.allocator.free(scoped_value);
 
-    const default_value = (try zx.kv.get(std.testing.allocator, key)).?;
+    const default_value = (try kv.get(std.testing.allocator, key)).?;
     defer std.testing.allocator.free(default_value);
 
     try std.testing.expectEqualStrings("scoped-value", scoped_value);
     try std.testing.expectEqualStrings("default-value", default_value);
 }
 
+test "scope() enum literal routes to a distinct namespace" {
+    const users = kv.scope(.users);
+    const key = "u-1";
+
+    defer users.delete(key) catch {};
+    defer kv.delete(key) catch {};
+
+    try users.put(key, "in-users", .{});
+    try kv.put(key, "in-default", .{});
+
+    const from_users = (try users.get(std.testing.allocator, key)).?;
+    defer std.testing.allocator.free(from_users);
+    const from_default = (try kv.get(std.testing.allocator, key)).?;
+    defer std.testing.allocator.free(from_default);
+
+    try std.testing.expectEqualStrings("in-users", from_users);
+    try std.testing.expectEqualStrings("in-default", from_default);
+}
+
 test "putAs/as roundtrip typed value" {
     var key_buf: [64]u8 = undefined;
     const key = try uniqueLabel("kv-typed-key", &key_buf);
 
-    defer zx.kv.delete(key) catch {};
+    defer kv.delete(key) catch {};
 
-    try zx.kv.putAs(key, User{
+    try kv.putAs(key, User{
         .id = 42,
         .name = "nurul",
         .active = true,
     }, .{});
 
-    const user = (try zx.kv.as(allocator, key, User)).?;
+    const user = (try kv.as(allocator, key, User)).?;
     defer freeUser(user);
 
     try std.testing.expectEqual(@as(u32, 42), user.id);
@@ -129,15 +156,15 @@ test "as returns invalid type on schema mismatch" {
     var key_buf: [64]u8 = undefined;
     const key = try uniqueLabel("kv-typed-mismatch", &key_buf);
 
-    defer zx.kv.delete(key) catch {};
+    defer kv.delete(key) catch {};
 
-    try zx.kv.putAs(key, User{
+    try kv.putAs(key, User{
         .id = 7,
         .name = "mismatch",
         .active = false,
     }, .{});
 
-    try std.testing.expectError(error.InvalidType, zx.kv.as(allocator, key, UserAlias));
+    try std.testing.expectError(error.InvalidType, kv.as(allocator, key, UserAlias));
 }
 
 test "scoped putAs/as roundtrip typed value" {
@@ -146,7 +173,7 @@ test "scoped putAs/as roundtrip typed value" {
 
     const namespace = try uniqueLabel("kv-typed-scope", &ns_buf);
     const key = try uniqueLabel("profile", &key_buf);
-    const scoped = zx.kv.scope(namespace);
+    const scoped = zx.Kv{ .vtable = kv.vtable, .userdata = kv.userdata, .namespace = namespace };
 
     defer scoped.delete(key) catch {};
 
