@@ -789,26 +789,48 @@ fn Deployment(allocator: zx.Allocator) zx.Component {
     return (
         <section id="deployment" class="section" @allocator={allocator}>
             <h2>Deployment</h2>
-            <p>ZX compiles to a single, self-contained binary with zero runtime dependencies. Deploy anywhere.</p>
+            <p>ZX apps can be deployed in three ways: as a <strong>standalone</strong> binary on your own server, as a <strong>static</strong> site on a CDN, or to an <strong>edge</strong> runtime like Cloudflare Workers or Vercel.</p>
 
-            <h3>Server deployment</h3>
-            <p>Build for production and create a self-contained bundle:</p>
+            <h3 id="deployment-standalone">Standalone</h3>
+            <p>Compile your app to a single, self-contained binary with zero runtime dependencies. Build for production, then bundle the binary with its static assets:</p>
             <CodeBlock code="zig build -Doptimize=ReleaseSafe" />
             <CodeBlock code="zig build zx -- bundle" />
-            <p>This creates a <code>bundle/</code> directory with your binary and <code>static/</code> assets. Deploy the entire directory to your server.</p>
+            <p>This creates a <code>bundle/</code> directory containing your binary and <code>static/</code> assets. Copy the whole directory to your server and run the binary — no interpreter or external dependencies needed.</p>
 
-            <h3>Static hosting</h3>
-            <p>Export your site to static HTML for Netlify, Vercel, or GitHub Pages:</p>
-            <CodeBlock code="zig build zx -- export" />
-            <p>This crawls all routes and generates a <code>dist/</code> directory with static files ready to upload.</p>
-
-            <h3>Docker</h3>
-            <p>Use the provided two-stage Alpine Dockerfile in <code>templates/_docker/Dockerfile</code>. Customize <code>$BIN_NAME</code> and deploy:</p>
+            <h4 id="deployment-docker">Docker</h4>
+            <p>Scaffold a project with a ready-to-use Dockerfile using the <code>docker</code> template:</p>
+            <CodeBlock code="zx init --template docker" />
+            <p>It uses a two-stage Alpine build that compiles your app and ships only the final binary and assets. Build and run the image:</p>
             <CodeBlock code="docker build -t myapp ." />
 
             <div class="callout note">
-                <strong>No runtime needed:</strong>
-                 Your binary includes everything — no interpreter, runtime, or external dependencies required on the target system.
+                <strong>Others:</strong>
+                 More standalone deployment guides (systemd, bare VPS) are coming soon.
+            </div>
+
+            <h3 id="deployment-static">Static</h3>
+            <p>For sites without per-request server logic, export every route to static HTML:</p>
+            <CodeBlock code="zig build zx -- export" />
+            <p>This crawls all routes and writes the output to a <code>dist/</code> directory, ready to upload to any static host like Netlify, GitHub Pages, or a CDN.</p>
+
+            <h3 id="deployment-edge">Edge</h3>
+            <p>ZX compiles to WebAssembly (WASI), so it runs on edge runtimes close to your users. Edge targets use the <code>KV</code> binding for storage instead of the filesystem.</p>
+
+            <h4 id="deployment-cloudflare">Cloudflare</h4>
+            <p>Scaffold a Cloudflare Workers project with the <code>cloudflare</code> template:</p>
+            <CodeBlock code="zx init --template cloudflare" />
+            <p>The template includes a <code>wrangler.jsonc</code> that builds your app to WASM and wires up KV and static assets. Deploy with Wrangler:</p>
+            <CodeBlock code="npx wrangler deploy" />
+
+            <h4 id="deployment-vercel">Vercel</h4>
+            <p>Scaffold a Vercel project with the <code>vercel</code> template:</p>
+            <CodeBlock code="zx init --template vercel" />
+            <p>It ships a <code>vercel.json</code> configured for Edge Functions (with an optional Node.js runtime). Deploy with the Vercel CLI:</p>
+            <CodeBlock code="vercel deploy" />
+
+            <div class="callout note">
+                <strong>Others:</strong>
+                 AWS Lambda and additional edge providers are in progress.
             </div>
         </section>
     );

@@ -79,7 +79,25 @@ const categories = [_]SidebarProps.Category{
     .{
         .title = "DEPLOYMENT",
         .sections = &[_]SidebarProps.Section{
-            .{ .title = "Deployment", .href = "/learn#deployment" },
+            .{
+                .title = "Standalone",
+                .items = &[_]SidebarProps.Link{
+                    .{ .href = "/learn#deployment-standalone", .text = "Overview" },
+                    .{ .href = "/learn#deployment-docker", .text = "Docker" },
+                },
+            },
+            .{
+                .title = "Static",
+                .href = "/learn#deployment-static",
+            },
+            .{
+                .title = "Edge",
+                .items = &[_]SidebarProps.Link{
+                    .{ .href = "/learn#deployment-edge", .text = "Overview" },
+                    .{ .href = "/learn#deployment-cloudflare", .text = "Cloudflare" },
+                    .{ .href = "/learn#deployment-vercel", .text = "Vercel" },
+                },
+            },
         },
     },
 };
@@ -103,6 +121,9 @@ const toc_links = [_]SidebarProps.Link{
     .{ .href = "/learn#kv", .text = "Key-Value Storage" },
     .{ .href = "/learn#database", .text = "Database" },
     .{ .href = "/learn#deployment", .text = "Deployment" },
+    .{ .href = "/learn#deployment-standalone", .text = "Standalone" },
+    .{ .href = "/learn#deployment-static", .text = "Static" },
+    .{ .href = "/learn#deployment-edge", .text = "Edge" },
     .{ .href = "/learn#next-steps", .text = "Next Steps" },
 };
 
