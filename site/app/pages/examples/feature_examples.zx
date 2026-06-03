@@ -949,6 +949,160 @@ pub fn Learn__GET(ctx: zx.RouteContext) !void {
     try ctx.response.json(.{ .message = "Hello World!" }, .{});
 }
 
+// --- Learn: kv basic ---
+pub fn Learn__KVBasic(ctx: zx.PageContext) !zx.Component {
+    try zx.kv.put("greeting", "hello from kv", .{});
+    const value = try zx.kv.get(ctx.arena, "greeting");
+    try zx.kv.delete("greeting");
+
+    return (
+        <main @allocator={ctx.arena}>
+            <p>Stored value: {value orelse "not found"}</p>
+        </main>
+    );
+}
+
+// --- Learn: kv typed ---
+pub fn Learn__KVTyped(ctx: zx.PageContext) !zx.Component {
+    const User = struct {
+        id: u32,
+        name: []const u8,
+        active: bool,
+    };
+
+    try zx.kv.putAs("user:123", User{
+        .id = 123,
+        .name = "alice",
+        .active = true,
+    }, .{});
+
+    const user = try zx.kv.as(ctx.arena, "user:123", User);
+
+    return (
+        <main @allocator={ctx.arena}>
+            {if (user) |u| (
+                <div>
+                    <p>User: {u.name} (ID: {u.id})</p>
+                    <p>Active: {if (u.active) "yes" else "no"}</p>
+                </div>
+            ) else (
+                <p>User not found</p>
+            )}
+        </main>
+    );
+}
+
+// --- Learn: kv scope ---
+pub fn Learn__KVScope(ctx: zx.PageContext) !zx.Component {
+    const sessions = zx.kv.scope("sessions");
+    const users = zx.kv.scope("users");
+
+    try sessions.put("sess:abc123", "token-xyz", .{});
+    try users.put("user:42", "alice", .{});
+
+    const session = try sessions.get(ctx.arena, "sess:abc123");
+    const user = try users.get(ctx.arena, "user:42");
+
+    return (
+        <main @allocator={ctx.arena}>
+            <p>Session: {session orelse "none"}</p>
+            <p>User: {user orelse "none"}</p>
+        </main>
+    );
+}
+
+// --- Learn: db basic ---
+pub fn Learn__DBBasic(ctx: zx.PageContext) !zx.Component {
+    _ = try zx.db.run(
+        \\CREATE TABLE IF NOT EXISTS posts (
+        \\  id INTEGER PRIMARY KEY,
+        \\  title TEXT NOT NULL
+        \\)
+    , .empty);
+
+    _ = try zx.db.run(
+        \\INSERT INTO posts (title) VALUES ('Hello World')
+    , .empty);
+
+    var stmt = try zx.db.query(
+        \\SELECT id, title FROM posts LIMIT 1
+    );
+    defer stmt.deinit();
+
+    const rows = try stmt.all(ctx.arena, .empty);
+
+    return (
+        <main @allocator={ctx.arena}>
+            <p>Posted {rows.len} row(s)</p>
+        </main>
+    );
+}
+
+// --- Learn: db typed ---
+pub fn Learn__DBTyped(ctx: zx.PageContext) !zx.Component {
+    const Post = struct {
+        id: i64,
+        title: []const u8,
+    };
+
+    _ = try zx.db.run(
+        \\CREATE TABLE IF NOT EXISTS blog_posts (
+        \\  id INTEGER PRIMARY KEY,
+        \\  title TEXT NOT NULL
+        \\)
+    , .empty);
+
+    _ = try zx.db.run(
+        \\INSERT INTO blog_posts (title) VALUES ('ZX Guide')
+    , .empty);
+
+    var stmt = try zx.db.query(
+        \\SELECT id, title FROM blog_posts
+    );
+    defer stmt.deinit();
+
+    const posts = try stmt.rows(ctx.arena, Post, .empty);
+
+    return (
+        <main @allocator={ctx.arena}>
+            {for (posts) |post| (
+                <div>
+                    <h3>{post.title}</h3>
+                    <p>ID: {post.id}</p>
+                </div>
+            )}
+        </main>
+    );
+}
+
+// --- Learn: db transaction ---
+pub fn Learn__DBTransaction(ctx: zx.PageContext) !zx.Component {
+    try zx.db.transaction(ctx, txn);
+
+    return (
+        <main @allocator={ctx.arena}>
+            <p>Transaction completed</p>
+        </main>
+    );
+}
+
+fn txn(_: zx.RouteContext) !void {
+    _ = try zx.db.run(
+        \\CREATE TABLE IF NOT EXISTS accounts (
+        \\  id INTEGER PRIMARY KEY,
+        \\  balance REAL NOT NULL
+        \\)
+    , .empty);
+
+    _ = try zx.db.run(
+        \\INSERT INTO accounts (balance) VALUES (100.0)
+    , .empty);
+
+    _ = try zx.db.run(
+        \\UPDATE accounts SET balance = balance - 10.0 WHERE id = 1
+    , .empty);
+}
+
 // --- Imports ---
 pub fn RenderTest(allocator: zx.Allocator) zx.Component {
     return (

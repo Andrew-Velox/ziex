@@ -61,6 +61,14 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
 
     const zig_api = util.extractSection(allocator, examples_content, "Learn: api route");
 
+    const kv_basic = util.extractSection(allocator, examples_content, "Learn: kv basic");
+    const kv_typed = util.extractSection(allocator, examples_content, "Learn: kv typed");
+    const kv_scope = util.extractSection(allocator, examples_content, "Learn: kv scope");
+
+    const db_basic = util.extractSection(allocator, examples_content, "Learn: db basic");
+    const db_typed = util.extractSection(allocator, examples_content, "Learn: db typed");
+    const db_transaction = util.extractSection(allocator, examples_content, "Learn: db transaction");
+
     const html_greeting = util.renderComponentToHtml(allocator, examples.Learn__HelloWorld(allocator));
     const html_markup = util.renderComponentToHtml(allocator, examples.Learn__AboutSection(allocator));
     const html_text = util.renderComponentToHtml(allocator, examples.Learn__UserGreeting(allocator));
@@ -102,6 +110,9 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
             <PagesAndLayouts zx_page={zx_page} zig_page={zig_page} html_page={html_page} zx_layout={zx_layout} zx_dynamic={zx_dynamic} zig_dynamic={zig_dynamic} html_dynamic={html_dynamic} />
             <APIRoutes zig_code={zig_api} />
             <Plugins />
+            <KVStorage kv_basic={kv_basic} kv_typed={kv_typed} kv_scope={kv_scope} />
+            <Database db_basic={db_basic} db_typed={db_typed} db_transaction={db_transaction} />
+            <Deployment allocator={allocator} />
             <NextSteps />
         </fragment>
     );
@@ -706,6 +717,98 @@ fn NextSteps(allocator: zx.Allocator) zx.Component {
                     <h3>Examples</h3>
                     <p>Explore working code examples and patterns.</p>
                 </a>
+            </div>
+        </section>
+    );
+}
+
+const KVStorageProps = struct {
+    kv_basic: []const u8,
+    kv_typed: []const u8,
+    kv_scope: []const u8,
+};
+
+fn KVStorage(allocator: zx.Allocator, props: KVStorageProps) zx.Component {
+    return (
+        <section id="kv" class="section" @allocator={allocator}>
+            <h2>Key-Value Storage</h2>
+            <p>ZX includes a key-value store for persisting data on the server. Use <code>zx.kv</code> to store and retrieve values with optional expiration.</p>
+            <p>Store and retrieve raw bytes:</p>
+            <CodeBlock code={props.kv_basic} />
+
+            <h3>Typed values</h3>
+            <p>For structured data, use <code>zx.kv.putAs</code> and <code>zx.kv.as</code> to automatically serialize and deserialize Zig structs:</p>
+            <CodeBlock code={props.kv_typed} />
+            <p>If the stored type doesn't match, <code>zx.kv.as</code> returns <code>error.InvalidType</code>.</p>
+
+            <h3>Scoped namespaces</h3>
+            <p>Organize data into separate namespaces with <code>zx.kv.scope()</code>:</p>
+            <CodeBlock code={props.kv_scope} />
+            <p>Scoped stores have the same API as the default store.</p>
+
+            <div class="callout note">
+                <strong>Storage:</strong>
+                 On native platforms, data persists to <code>datadir/kv/</code>. On WASM, the storage adapter is provided by your platform.
+            </div>
+        </section>
+    );
+}
+
+const DatabaseProps = struct {
+    db_basic: []const u8,
+    db_typed: []const u8,
+    db_transaction: []const u8,
+};
+
+fn Database(allocator: zx.Allocator, props: DatabaseProps) zx.Component {
+    return (
+        <section id="database" class="section" @allocator={allocator}>
+            <h2>Database</h2>
+            <p>ZX includes SQLite integration via <code>zx.db</code>. Create tables, run queries, and manage transactions with a simple API.</p>
+            <p>Create tables and insert data with <code>zx.db.run()</code>:</p>
+            <CodeBlock code={props.db_basic} />
+
+            <h3>Reading typed rows</h3>
+            <p>Map query results directly to Zig structs with <code>stmt.rows()</code>. Column names match your struct field names:</p>
+            <CodeBlock code={props.db_typed} />
+
+            <h3>Transactions</h3>
+            <p>Group multiple queries into an atomic transaction with <code>zx.db.transaction()</code>:</p>
+            <CodeBlock code={props.db_transaction} />
+            <p>All statements execute together or roll back on error.</p>
+
+            <div class="callout note">
+                <strong>Default location:</strong>
+                 Set <code>ZX_DB_URL</code> or <code>DATABASE_URL</code> to override the default <code>zig-out/data/db/default.db</code>. Use <code>mem://</code> for in-memory databases or <code>file:</code> for persistent files.
+            </div>
+        </section>
+    );
+}
+
+fn Deployment(allocator: zx.Allocator) zx.Component {
+    return (
+        <section id="deployment" class="section" @allocator={allocator}>
+            <h2>Deployment</h2>
+            <p>ZX compiles to a single, self-contained binary with zero runtime dependencies. Deploy anywhere.</p>
+
+            <h3>Server deployment</h3>
+            <p>Build for production and create a self-contained bundle:</p>
+            <CodeBlock code="zig build -Doptimize=ReleaseSafe" />
+            <CodeBlock code="zig build zx -- bundle" />
+            <p>This creates a <code>bundle/</code> directory with your binary and <code>static/</code> assets. Deploy the entire directory to your server.</p>
+
+            <h3>Static hosting</h3>
+            <p>Export your site to static HTML for Netlify, Vercel, or GitHub Pages:</p>
+            <CodeBlock code="zig build zx -- export" />
+            <p>This crawls all routes and generates a <code>dist/</code> directory with static files ready to upload.</p>
+
+            <h3>Docker</h3>
+            <p>Use the provided two-stage Alpine Dockerfile in <code>templates/_docker/Dockerfile</code>. Customize <code>$BIN_NAME</code> and deploy:</p>
+            <CodeBlock code="docker build -t myapp ." />
+
+            <div class="callout note">
+                <strong>No runtime needed:</strong>
+                 Your binary includes everything — no interpreter, runtime, or external dependencies required on the target system.
             </div>
         </section>
     );
