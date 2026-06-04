@@ -20,16 +20,13 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
     , .empty);
 
     // Fetch tasks
-    var stmt = try zx.db.query(
-        \\SELECT id, title, status 
-        \\FROM tasks 
+    var tasks = std.ArrayList(Task).empty;
+    const rows = try zx.db.all(ctx.arena,
+        \\SELECT id, title, status
+        \\FROM tasks
         \\WHERE status is not 2
         \\ORDER BY id DESC
-    );
-    defer stmt.deinit();
-
-    var tasks = std.ArrayList(Task).empty;
-    const rows = try stmt.all(ctx.arena, .empty);
+    , .{});
     for (rows) |row| {
         try tasks.append(ctx.arena, .{
             .id = row.get("id").?.integer,
@@ -141,7 +138,7 @@ fn handleCreate(data: struct { title: []const u8 }) void {
     zx.log.info("create: title: {s}", .{data.title});
 
     if (data.title.len == 0) return;
-    _ = zx.db.run("INSERT INTO tasks (title, status) VALUES (?, 0)", zx.db.Bindings.fromPositional(&.{.{ .text = data.title }})) catch |err| {
+    _ = zx.db.run("INSERT INTO tasks (title, status) VALUES (?, 0)", .{data.title}) catch |err| {
         zx.log.err("Failed to create task: {any}", .{err});
     };
 }
@@ -160,10 +157,7 @@ fn handleToggle(e: *zx.server.Event.Stateful) void {
 
     if (zx.platform.isClient()) return;
 
-    _ = zx.db.run("UPDATE tasks SET status = ? WHERE id = ?", zx.db.Bindings.fromPositional(&.{
-        .{ .integer = @intFromEnum(task.status) },
-        .{ .integer = task.id },
-    })) catch |err| {
+    _ = zx.db.run("UPDATE tasks SET status = ? WHERE id = ?", .{ @intFromEnum(task.status), task.id }) catch |err| {
         zx.log.err("Failed to toggle task: {any}", .{err});
     };
 
@@ -183,9 +177,7 @@ fn handleRename(e: *zx.server.Event.Stateful) void {
     if (zx.platform.isClient()) return;
 
     // Commit
-    _ = zx.db.run("UPDATE tasks SET title = ? WHERE id = ?", zx.db.Bindings.fromPositional(
-        &.{ .{ .text = task.title }, .{ .integer = task.id } },
-    )) catch |err| {
+    _ = zx.db.run("UPDATE tasks SET title = ? WHERE id = ?", .{ task.title, task.id }) catch |err| {
         zx.log.err("Failed to rename task: {any}", .{err});
     };
 
@@ -202,10 +194,7 @@ fn handleDelete(e: *zx.server.Event.Stateful) void {
 
     if (zx.platform.isClient()) return;
 
-    _ = zx.db.run("UPDATE tasks SET status = ? WHERE id = ?", zx.db.Bindings.fromPositional(&.{
-        .{ .integer = @intFromEnum(task.status) },
-        .{ .integer = task.id },
-    })) catch |err| {
+    _ = zx.db.run("UPDATE tasks SET status = ? WHERE id = ?", .{ @intFromEnum(task.status), task.id }) catch |err| {
         zx.log.err("Failed to delete task: {any}", .{err});
     };
 

@@ -35,16 +35,21 @@ pub fn io() Io {
 var kv_fs: zx.Kv.Fs = undefined;
 var cache_fs: zx.Kv.Fs = undefined;
 
-fn resolveOptions(init: zx.Init, config: Config) !Config {
+fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Config {
     const zx_options = @import("zx_options"); // Remove and from build system pass these as env var
+    const module_options = @import("zx_module_options");
 
     var resolved = config;
 
-    const datadir = config.datadir orelse envVar(init, "ZX_DATADIR") orelse zx_options.datadir;
-    const staticdir = config.staticdir orelse envVar(init, "ZX_STATICDIR") orelse zx_options.staticdir;
+    const datadir = config.datadir orelse envVar(alloc, init, "ZX_DATADIR") orelse zx_options.datadir;
+    const staticdir = config.staticdir orelse envVar(alloc, init, "ZX_STATICDIR") orelse zx_options.staticdir;
 
     resolved.datadir = datadir;
     resolved.staticdir = staticdir;
+
+    if (!module_options.exclude_db and platform.os == .wasi) {
+        zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+    }
 
     if (platform.os == .freestanding or platform.os == .wasi) {
         var kv_wasm = zx.Kv.Wasm{};
@@ -52,33 +57,40 @@ fn resolveOptions(init: zx.Init, config: Config) !Config {
 
         return resolved;
     }
-
-    const arena = init.arena.allocator();
-
     kv_fs = .{
         .io = init.io,
-        .subdir = try std.fs.path.join(arena, &.{ datadir, "kv" }),
+        .subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" }),
     };
     cache_fs = .{
         .io = init.io,
-        .subdir = try std.fs.path.join(arena, &.{ datadir, "cache" }),
+        .subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" }),
     };
+    const db_dir = try std.fs.path.join(alloc, &.{ datadir, "db", "default.db" });
 
     zx.kv = kv_fs.kv();
-    zx.cache = try zx.Cache.init(init.io, allocator, cache_fs.kv(), .{
+    zx.cache = try zx.Cache.init(init.io, alloc, cache_fs.kv(), .{
         .max_size = resolved.cache.max_size,
     });
+
+    if (!module_options.exclude_db) {
+        zx.db = try zx.Db.Sqlite.open(
+            alloc,
+            init.io,
+            try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir}),
+            .{},
+        );
+    }
 
     return resolved;
 }
 
-fn envVar(init: zx.Init, name: []const u8) ?[]const u8 {
+fn envVar(alloc: std.mem.Allocator, init: zx.Init, name: []const u8) ?[]const u8 {
     const minimal: std.process.Init.Minimal = switch (@TypeOf(zx.Init)) {
         std.process.Init.Minimal => init,
         std.process.Init => init.minimal,
         else => return null,
     };
-    return minimal.environ.getAlloc(minimal.gpa, name) catch null;
+    return minimal.environ.getAlloc(alloc, name) catch null;
 }
 
 pub fn App(comptime H: type) type {
@@ -102,7 +114,7 @@ fn AppInstance(comptime H: type) type {
         inita: zx.Init,
 
         pub fn init(inita: zx.Init, process_io: anytype, alloc: std.mem.Allocator, config: Config, app_ctx: H) !Self {
-            const resolved = try resolveOptions(inita, config);
+            const resolved = try resolveOptions(alloc, inita, config);
 
             const instance: Instance = switch (platform.role) {
                 .client => {},

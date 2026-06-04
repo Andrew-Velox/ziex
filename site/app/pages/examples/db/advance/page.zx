@@ -11,8 +11,7 @@ fn defaultDbUrl() ?[]const u8 {
 const builtin = @import("builtin");
 
 pub fn Page(ctx: zx.PageContext) !zx.Component {
-    var database = try zx.db.open(defaultDbUrl(), .{});
-    defer database.deinit();
+    var database = zx.db;
 
     try query.init(&database);
     try query.seed(&database);

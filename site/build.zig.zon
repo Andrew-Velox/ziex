@@ -12,10 +12,6 @@
         .bunjs = .{ .path = "../pkg/plugin-bun" },
         .esbuild = .{ .path = "../pkg/plugin-esbuild" },
         .tailwindcss = .{ .path = "../pkg/plugin-tailwindcss" },
-        .ziex_js = .{
-            .url = "https://registry.npmjs.org/ziex/-/ziex-0.1.0-dev.1000.tgz",
-            .hash = "ziex_js-0.1.0-dev.804-v1W0GT1tAwAjZsTzmZWS4c8VEaNPFV0ABzqEMhmR6-xj",
-        },
     },
     .paths = .{
         "build.zig",
