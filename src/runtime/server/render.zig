@@ -102,7 +102,11 @@ pub fn render(self: zx.Component, writer: *std.Io.Writer, options: RenderOptions
 
                     if (generated_key) |key| {
                         // Try to get from cache
-                        if (try zx.cache.get(func.allocator, key)) |cached_html| {
+                        const cached = zx.cache.get(func.allocator, key) catch |err| switch (err) {
+                            error.CacheUnavailable => null,
+                            else => return err,
+                        };
+                        if (cached) |cached_html| {
                             defer func.allocator.free(cached_html);
                             try writer.writeAll(cached_html);
                             return;
@@ -114,7 +118,10 @@ pub fn render(self: zx.Component, writer: *std.Io.Writer, options: RenderOptions
                         try render(component, &buf_writer.writer, options);
 
                         const rendered = buf_writer.written();
-                        try zx.cache.put(key, rendered, .{ .expiration_ttl = caching.seconds });
+                        zx.cache.put(key, rendered, .{ .expiration_ttl = caching.seconds }) catch |err| switch (err) {
+                            error.CacheUnavailable => {},
+                            else => return err,
+                        };
 
                         // Write to actual output
                         try writer.writeAll(rendered);

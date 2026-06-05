@@ -1,8 +1,14 @@
 const std = @import("std");
 const zx = @import("zx");
 
-const kv = zx.kv;
 const allocator = std.testing.allocator;
+
+var kv_fs = zx.Kv.Fs{
+    .io = std.testing.io,
+    .subdir = "zig-out" ++ std.fs.path.sep_str ++ "test-data" ++ std.fs.path.sep_str ++ "kv",
+};
+
+const kv = kv_fs.kv();
 
 const User = struct {
     id: u32,
@@ -87,7 +93,8 @@ test "scoped namespaces are isolated" {
     var ns_buf: [64]u8 = undefined;
     const namespace = try uniqueLabel("kv-scope", &ns_buf);
 
-    const scoped = kv.scope(namespace);
+    // Runtime namespace: set the field directly (scoped() takes a comptime literal).
+    const scoped = zx.Kv{ .vtable = kv.vtable, .userdata = kv.userdata, .namespace = namespace };
     const key = "shared-key";
 
     defer scoped.delete(key) catch {};
@@ -104,6 +111,25 @@ test "scoped namespaces are isolated" {
 
     try std.testing.expectEqualStrings("scoped-value", scoped_value);
     try std.testing.expectEqualStrings("default-value", default_value);
+}
+
+test "scoped() enum literal routes to a distinct namespace" {
+    const users = kv.scoped(.users);
+    const key = "u-1";
+
+    defer users.delete(key) catch {};
+    defer kv.delete(key) catch {};
+
+    try users.put(key, "in-users", .{});
+    try kv.put(key, "in-default", .{});
+
+    const from_users = (try users.get(std.testing.allocator, key)).?;
+    defer std.testing.allocator.free(from_users);
+    const from_default = (try kv.get(std.testing.allocator, key)).?;
+    defer std.testing.allocator.free(from_default);
+
+    try std.testing.expectEqualStrings("in-users", from_users);
+    try std.testing.expectEqualStrings("in-default", from_default);
 }
 
 test "putAs/as roundtrip typed value" {
@@ -147,7 +173,7 @@ test "scoped putAs/as roundtrip typed value" {
 
     const namespace = try uniqueLabel("kv-typed-scope", &ns_buf);
     const key = try uniqueLabel("profile", &key_buf);
-    const scoped = kv.scope(namespace);
+    const scoped = zx.Kv{ .vtable = kv.vtable, .userdata = kv.userdata, .namespace = namespace };
 
     defer scoped.delete(key) catch {};
 

@@ -1,6 +1,9 @@
 server: ServerConfig = .{},
 cache: CacheConfig = .{},
 
+datadir: ?[]const u8 = null,
+staticdir: ?[]const u8 = null,
+
 pub const CacheConfig = struct {
     max_size: u32 = 1000,
     default_ttl: u32 = 10,

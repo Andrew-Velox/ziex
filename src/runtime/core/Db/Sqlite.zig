@@ -1,9 +1,14 @@
+const Sqlite = @This();
+
 const std = @import("std");
-const db = @import("db");
 const zqlite = @import("zqlite");
 
+const zx = @import("../../../root.zig");
+
+const Db = zx.Db;
 const c = zqlite.c;
 
+// TODO: get rid of default allocator
 const default_allocator = std.heap.c_allocator;
 const main_schema = "main";
 
@@ -20,41 +25,40 @@ const DatabaseMode = enum {
     pooled,
 };
 
-const DatabaseCtx = struct {
-    allocator: std.mem.Allocator,
-    mode: DatabaseMode,
-    path: []u8,
-    flags: c_int,
-    busy_timeout_ms: c_int,
-    conn: ?zqlite.Conn = null,
-    pool: ?*zqlite.Pool = null,
-    owns_resources: bool = true,
+allocator: std.mem.Allocator,
+io: std.Io,
+mode: DatabaseMode,
+path: []u8,
+flags: c_int,
+busy_timeout_ms: c_int,
+conn: ?zqlite.Conn = null,
+pool: ?*zqlite.Pool = null,
+owns_resources: bool = true,
 
-    fn deinit(self: *DatabaseCtx) void {
-        if (!self.owns_resources) return;
-        if (self.pool) |pool| {
-            pool.deinit();
-        } else if (self.conn) |conn| {
-            conn.close();
-        }
-        self.allocator.free(self.path);
+fn deinitState(self: *Sqlite) void {
+    if (!self.owns_resources) return;
+    if (self.pool) |pool| {
+        pool.deinit();
+    } else if (self.conn) |conn| {
+        conn.close();
     }
+    self.allocator.free(self.path);
+}
 
-    fn acquire(self: *DatabaseCtx) !BorrowedConn {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        return switch (self.mode) {
-            .single => .{ .conn = self.conn orelse return db.DbError.InvalidState },
-            .pooled => .{ .conn = try (self.pool orelse return db.DbError.InvalidState).acquire(io), .pool = self.pool },
-        };
-    }
-};
+fn acquire(self: *Sqlite) !BorrowedConn {
+    return switch (self.mode) {
+        .single => .{ .conn = self.conn orelse return Db.DbError.InvalidState, .io = self.io },
+        .pooled => .{ .conn = try (self.pool orelse return Db.DbError.InvalidState).acquire(self.io), .io = self.io, .pool = self.pool },
+    };
+}
 
 const BorrowedConn = struct {
     conn: zqlite.Conn,
+    io: std.Io,
     pool: ?*zqlite.Pool = null,
 
     fn deinit(self: *BorrowedConn) void {
-        if (self.pool != null) self.conn.release(std.Io.Threaded.global_single_threaded.io());
+        if (self.pool != null) self.conn.release(self.io);
     }
 };
 
@@ -70,11 +74,11 @@ const PreparedExec = struct {
 
 const StatementCtx = struct {
     allocator: std.mem.Allocator,
-    db_ctx: *DatabaseCtx,
+    db_ctx: *Sqlite,
     sql: []u8,
     prototype: ?zqlite.Stmt = null,
     column_names: [][]const u8,
-    column_types: []db.ColumnType,
+    column_types: []Db.ColumnType,
     declared_types: []?[]const u8,
     params_count: usize,
 
@@ -95,35 +99,102 @@ const IteratorCtx = struct {
     allocator: std.mem.Allocator,
     exec: PreparedExec,
     done: bool = false,
+    current: ?Db.Row = null,
+
+    fn releaseCurrent(self: *IteratorCtx) void {
+        if (self.current) |row| {
+            freeRow(self.allocator, row);
+            self.current = null;
+        }
+    }
 };
 
 const PoolConnectionConfig = struct {
     busy_timeout_ms: c_int,
 };
 
-fn open(_: *anyopaque, filename: ?[]const u8, options: db.OpenOptions) !db.Connection {
-    const allocator = default_allocator;
-    const path = filename orelse ":memory:";
+// --- Options --- //
+pub const OpenOptions = struct {
+    readonly: bool = false,
+    create: bool = true,
+    readwrite: bool = true,
+    safe_integers: bool = false,
+    strict: bool = false,
+    max_pool_size: usize = 5,
+    busy_timeout_ms: u32 = 5_000,
+
+    pub fn fromNeutral(neutral: Db.OpenOptions) OpenOptions {
+        return .{
+            .readonly = neutral.readonly,
+            .create = neutral.create,
+            .readwrite = !neutral.readonly,
+            .max_pool_size = neutral.max_pool_size,
+        };
+    }
+};
+
+// --- Constructors --- //
+pub fn open(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    filename: []const u8,
+    opts: OpenOptions,
+) !Db {
+    const self = openState(allocator, io, filename, opts) catch |err| {
+        std.log.err("Failed to open SQLite database: {s}\n Path: {s}", .{
+            @errorName(err),
+            filename,
+        });
+        return err;
+    };
+    return self.db();
+}
+
+pub fn deserialize(allocator: std.mem.Allocator, io: std.Io, bytes: []const u8, options: OpenOptions) !Db {
+    const self = try deserializeState(allocator, io, bytes, options);
+    return self.db();
+}
+
+/// Construct a `Db` value over an existing backend instance.
+pub fn db(self: *Sqlite) Db {
+    return .{ .userdata = self, .vtable = &database_vtable };
+}
+
+pub fn from(database: Db) !*Sqlite {
+    if (database.vtable != &database_vtable) return Db.DbError.WrongBackend;
+    return @ptrCast(@alignCast(database.userdata orelse return Db.DbError.InvalidState));
+}
+
+pub const FileControlValue = union(enum) {
+    none,
+    integer: i64,
+    bytes: []u8,
+    const_bytes: []const u8,
+};
+
+fn openState(allocator: std.mem.Allocator, io: std.Io, filename: ?[]const u8, options: OpenOptions) !*Sqlite {
+    const path = resolvePath(filename orelse ":memory:");
     const flags = openFlags(options);
 
-    try ensureParentDir(path);
+    try ensureParentDir(io, path);
 
-    const ctx = try allocator.create(DatabaseCtx);
-    errdefer allocator.destroy(ctx);
+    const self = try allocator.create(Sqlite);
+    errdefer allocator.destroy(self);
 
     const path_copy = try allocator.dupe(u8, path);
-    errdefer allocator.free(path_copy);
+    // errdefer allocator.free(path_copy);
 
-    ctx.* = .{
+    self.* = .{
+        .io = io,
         .allocator = allocator,
         .mode = if (shouldPool(path, options)) .pooled else .single,
         .path = path_copy,
         .flags = flags,
         .busy_timeout_ms = @intCast(options.busy_timeout_ms),
     };
-    errdefer ctx.deinit();
+    errdefer self.deinitState();
 
-    if (ctx.mode == .pooled) {
+    if (self.mode == .pooled) {
         const path_z = try allocator.dupeSentinel(u8, path, 0);
         defer allocator.free(path_z);
 
@@ -131,7 +202,7 @@ fn open(_: *anyopaque, filename: ?[]const u8, options: db.OpenOptions) !db.Conne
         errdefer allocator.destroy(pool_config);
         pool_config.* = .{ .busy_timeout_ms = @intCast(options.busy_timeout_ms) };
 
-        ctx.pool = try zqlite.Pool.init(allocator, .{
+        self.pool = try zqlite.Pool.init(allocator, .{
             .size = @max(options.max_pool_size, 1),
             .flags = flags,
             .path = path_z,
@@ -145,20 +216,16 @@ fn open(_: *anyopaque, filename: ?[]const u8, options: db.OpenOptions) !db.Conne
         const path_z = try allocator.dupeSentinel(u8, path, 0);
         defer allocator.free(path_z);
 
-        ctx.conn = try zqlite.open(path_z, flags);
-        try configureConnection(ctx.conn.?, ctx.busy_timeout_ms);
+        self.conn = try zqlite.open(path_z, flags);
+        try configureConnection(self.conn.?, self.busy_timeout_ms);
     }
 
-    return .{
-        .backend_ctx = @ptrCast(ctx),
-        .vtable = &database_vtable,
-    };
+    return self;
 }
 
-fn deserialize(_: *anyopaque, bytes: []const u8, options: db.OpenOptions) !db.Connection {
-    const allocator = default_allocator;
-    const ctx = try allocator.create(DatabaseCtx);
-    errdefer allocator.destroy(ctx);
+fn deserializeState(allocator: std.mem.Allocator, io: std.Io, bytes: []const u8, options: OpenOptions) !*Sqlite {
+    const self = try allocator.create(Sqlite);
+    errdefer allocator.destroy(self);
 
     const path_copy = try allocator.dupe(u8, ":memory:");
     errdefer allocator.free(path_copy);
@@ -166,62 +233,53 @@ fn deserialize(_: *anyopaque, bytes: []const u8, options: db.OpenOptions) !db.Co
     const path_z = try allocator.dupeSentinel(u8, ":memory:", 0);
     defer allocator.free(path_z);
 
-    ctx.* = .{
+    const deser_flags = openFlags(.{
+        .readonly = false,
+        .create = true,
+        .readwrite = true,
+        .safe_integers = options.safe_integers,
+        .strict = options.strict,
+        .busy_timeout_ms = options.busy_timeout_ms,
+    });
+
+    self.* = .{
+        .io = io,
         .allocator = allocator,
         .mode = .single,
         .path = path_copy,
-        .flags = openFlags(.{
-            .readonly = false,
-            .create = true,
-            .readwrite = true,
-            .safe_integers = options.safe_integers,
-            .strict = options.strict,
-            .busy_timeout_ms = options.busy_timeout_ms,
-        }),
+        .flags = deser_flags,
         .busy_timeout_ms = @intCast(options.busy_timeout_ms),
-        .conn = try zqlite.open(path_z, openFlags(.{
-            .readonly = false,
-            .create = true,
-            .readwrite = true,
-            .safe_integers = options.safe_integers,
-            .strict = options.strict,
-            .busy_timeout_ms = options.busy_timeout_ms,
-        })),
+        .conn = try zqlite.open(path_z, deser_flags),
     };
-    errdefer ctx.deinit();
+    errdefer self.deinitState();
 
-    try configureConnection(ctx.conn.?, ctx.busy_timeout_ms);
+    try configureConnection(self.conn.?, self.busy_timeout_ms);
 
     const image = c.sqlite3_malloc64(bytes.len) orelse return error.NoMem;
     const image_bytes = @as([*]u8, @ptrCast(image))[0..bytes.len];
     @memcpy(image_bytes, bytes);
 
-    const flags: c_uint = c.SQLITE_DESERIALIZE_FREEONCLOSE | c.SQLITE_DESERIALIZE_RESIZEABLE;
+    const ds_flags: c_uint = c.SQLITE_DESERIALIZE_FREEONCLOSE | c.SQLITE_DESERIALIZE_RESIZEABLE;
     const rc = c.sqlite3_deserialize(
-        rawDbPtr(ctx.conn.?),
+        rawDbPtr(self.conn.?),
         main_schema,
         @ptrCast(image),
         @intCast(bytes.len),
         @intCast(bytes.len),
-        flags,
+        ds_flags,
     );
     if (rc != c.SQLITE_OK) {
         c.sqlite3_free(image);
         return mapSqliteError(rc);
     }
 
-    return .{
-        .backend_ctx = @ptrCast(ctx),
-        .vtable = &database_vtable,
-    };
+    return self;
 }
 
-fn query(ctx: *anyopaque, sql: []const u8) !db.Statement {
-    return prepare(ctx, sql);
-}
+// --- Connection vtable impls --- //
 
-fn prepare(ctx: *anyopaque, sql: []const u8) !db.Statement {
-    const db_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
+fn prepare(ud: ?*anyopaque, sql: []const u8) !Db.Statement {
+    const db_ctx: *Sqlite = @ptrCast(@alignCast(ud));
     const allocator = db_ctx.allocator;
 
     const stmt_ctx = try allocator.create(StatementCtx);
@@ -253,13 +311,13 @@ fn prepare(ctx: *anyopaque, sql: []const u8) !db.Statement {
     if (db_ctx.mode != .single) prepared.deinit();
 
     return .{
-        .backend_ctx = @ptrCast(stmt_ctx),
-        .vtable = &statement_vtable,
+        .db = .{ .userdata = ud, .vtable = &database_vtable },
+        .handle = @ptrCast(stmt_ctx),
     };
 }
 
-fn run(ctx: *anyopaque, sql: []const u8, bindings: db.Bindings) !db.RunResult {
-    const db_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
+fn run(ud: ?*anyopaque, sql: []const u8, bindings: Db.Bindings) !Db.RunResult {
+    const db_ctx: *Sqlite = @ptrCast(@alignCast(ud));
     var borrowed = try db_ctx.acquire();
     defer borrowed.deinit();
 
@@ -269,13 +327,13 @@ fn run(ctx: *anyopaque, sql: []const u8, bindings: db.Bindings) !db.RunResult {
     try bindStatement(stmt, bindings);
     try stmt.stepToCompletion();
     return .{
-        .last_insert_rowid = borrowed.conn.lastInsertedRowId(),
+        .last_insert_id = borrowed.conn.lastInsertedRowId(),
         .changes = borrowed.conn.changes(),
     };
 }
 
-fn transaction(ctx: *anyopaque, mode: db.TransactionMode, callback_ctx: *anyopaque, callback: db.TransactionCallback) !void {
-    const db_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
+fn transaction(ud: ?*anyopaque, mode: Db.TransactionMode, callback_ctx: *anyopaque, callback: Db.TransactionCallback) !void {
+    const db_ctx: *Sqlite = @ptrCast(@alignCast(ud));
     var borrowed = try db_ctx.acquire();
     defer borrowed.deinit();
 
@@ -285,8 +343,9 @@ fn transaction(ctx: *anyopaque, mode: db.TransactionMode, callback_ctx: *anyopaq
         .exclusive => borrowed.conn.execNoArgs("begin exclusive"),
     };
 
-    var tx_ctx = DatabaseCtx{
+    var tx_ctx = Sqlite{
         .allocator = db_ctx.allocator,
+        .io = db_ctx.io,
         .mode = .single,
         .path = "",
         .flags = db_ctx.flags,
@@ -296,8 +355,8 @@ fn transaction(ctx: *anyopaque, mode: db.TransactionMode, callback_ctx: *anyopaq
         .owns_resources = false,
     };
 
-    var handle = db.Connection{
-        .backend_ctx = @ptrCast(&tx_ctx),
+    var handle = Db{
+        .userdata = @ptrCast(&tx_ctx),
         .vtable = &database_vtable,
     };
 
@@ -309,18 +368,21 @@ fn transaction(ctx: *anyopaque, mode: db.TransactionMode, callback_ctx: *anyopaq
     try borrowed.conn.commit();
 }
 
-fn close(ctx: *anyopaque, _: bool) !void {
-    const db_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
+fn close(ud: ?*anyopaque, _: bool) !void {
+    const db_ctx: *Sqlite = @ptrCast(@alignCast(ud));
     if (!db_ctx.owns_resources) return;
 
     const allocator = db_ctx.allocator;
-    db_ctx.deinit();
+    db_ctx.deinitState();
     allocator.destroy(db_ctx);
 }
 
-fn serialize(ctx: *anyopaque, allocator: std.mem.Allocator) ![]u8 {
-    const db_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
-    var borrowed = try db_ctx.acquire();
+// --- SQLite-only extensions (reached via `Db.Sqlite.from(db)`) --- //
+
+/// Serialize the database to an in-memory image (SQLite `sqlite3_serialize`).
+/// SQLite-only.
+pub fn serialize(self: *Sqlite, allocator: std.mem.Allocator) ![]u8 {
+    var borrowed = try self.acquire();
     defer borrowed.deinit();
 
     var size: c.sqlite3_int64 = 0;
@@ -335,13 +397,15 @@ fn serialize(ctx: *anyopaque, allocator: std.mem.Allocator) ![]u8 {
     return result;
 }
 
-fn loadExtension(_: *anyopaque, _: []const u8, _: ?[]const u8) !void {
-    return db.DbError.Unsupported;
+/// Load a SQLite run-time loadable extension. SQLite-only; currently
+/// unsupported by this build.
+pub fn loadExtension(_: *Sqlite, _: []const u8, _: ?[]const u8) !void {
+    return Db.DbError.Unsupported;
 }
 
-fn fileControl(ctx: *anyopaque, cmd: i32, value: db.FileControlValue) !void {
-    const db_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
-    var borrowed = try db_ctx.acquire();
+/// Invoke `sqlite3_file_control`. SQLite-only.
+pub fn fileControl(self: *Sqlite, cmd: i32, value: FileControlValue) !void {
+    var borrowed = try self.acquire();
     defer borrowed.deinit();
 
     switch (value) {
@@ -365,21 +429,24 @@ fn fileControl(ctx: *anyopaque, cmd: i32, value: db.FileControlValue) !void {
     }
 }
 
-fn native(ctx: *anyopaque) ?*anyopaque {
-    const db_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
-    if (db_ctx.mode == .pooled) return null;
-    return @ptrCast(rawDbPtr(db_ctx.conn.?));
+/// Raw `*sqlite3` handle for single-connection databases (`null` for pooled).
+/// SQLite-only.
+pub fn nativeHandle(self: *Sqlite) ?*anyopaque {
+    if (self.mode == .pooled) return null;
+    return @ptrCast(rawDbPtr(self.conn.?));
 }
 
-fn all(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) ![]const db.Row {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+// --- Statement vtable impls --- //
+
+fn all(ud: ?*anyopaque, allocator: std.mem.Allocator, bindings: Db.Bindings) ![]const Db.Row {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     var exec = try prepareBoundStatement(stmt_ctx, bindings);
     defer exec.deinit();
     return readAllRows(allocator, exec.stmt);
 }
 
-fn get(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) !?db.Row {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn get(ud: ?*anyopaque, allocator: std.mem.Allocator, bindings: Db.Bindings) !?Db.Row {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     var exec = try prepareBoundStatement(stmt_ctx, bindings);
     defer exec.deinit();
 
@@ -387,27 +454,27 @@ fn get(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) !?d
     return try cloneRow(allocator, .{ .stmt = exec.stmt });
 }
 
-fn runStatement(ctx: *anyopaque, bindings: db.Bindings) !db.RunResult {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn runStatement(ud: ?*anyopaque, bindings: Db.Bindings) !Db.RunResult {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     var exec = try prepareBoundStatement(stmt_ctx, bindings);
     defer exec.deinit();
 
     try exec.stmt.stepToCompletion();
     return .{
-        .last_insert_rowid = exec.borrowed.conn.lastInsertedRowId(),
+        .last_insert_id = exec.borrowed.conn.lastInsertedRowId(),
         .changes = exec.borrowed.conn.changes(),
     };
 }
 
-fn values(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) ![]const []const db.Value {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn values(ud: ?*anyopaque, allocator: std.mem.Allocator, bindings: Db.Bindings) ![]const []const Db.Value {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     var exec = try prepareBoundStatement(stmt_ctx, bindings);
     defer exec.deinit();
     return readAllValues(allocator, exec.stmt);
 }
 
-fn iterate(ctx: *anyopaque, bindings: db.Bindings) !db.Statement.Iterator {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn iterate(ud: ?*anyopaque, bindings: Db.Bindings) !Db.Statement.Iterator {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     const allocator = stmt_ctx.allocator;
 
     const iter_ctx = try allocator.create(IteratorCtx);
@@ -419,70 +486,89 @@ fn iterate(ctx: *anyopaque, bindings: db.Bindings) !db.Statement.Iterator {
     };
 
     return .{
-        .backend_ctx = @ptrCast(iter_ctx),
+        .userdata = @ptrCast(iter_ctx),
         .next_fn = &iterateNext,
         .deinit_fn = &iterateDeinit,
     };
 }
 
-fn finalize(ctx: *anyopaque) void {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn finalize(ud: ?*anyopaque) void {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     const allocator = stmt_ctx.allocator;
     stmt_ctx.deinit();
     allocator.destroy(stmt_ctx);
 }
 
-fn toString(ctx: *anyopaque, allocator: std.mem.Allocator) ![]u8 {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn toString(ud: ?*anyopaque, allocator: std.mem.Allocator) ![]u8 {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return allocator.dupe(u8, stmt_ctx.sql);
 }
 
-fn columnNames(ctx: *anyopaque) []const []const u8 {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn columnNames(ud: ?*anyopaque) []const []const u8 {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return stmt_ctx.column_names;
 }
 
-fn columnTypes(ctx: *anyopaque) []const db.ColumnType {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn columnTypes(ud: ?*anyopaque) []const Db.ColumnType {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return stmt_ctx.column_types;
 }
 
-fn declaredTypes(ctx: *anyopaque) []const ?[]const u8 {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
-    return stmt_ctx.declared_types;
-}
-
-fn paramsCount(ctx: *anyopaque) usize {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn paramsCount(ud: ?*anyopaque) usize {
+    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return stmt_ctx.params_count;
 }
 
-fn nativeStatement(ctx: *anyopaque) ?*anyopaque {
-    const stmt_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+// --- SQLite-only statement extensions (reached via `Db.Sqlite.fromStatement`) --- //
+
+/// Recover the SQLite statement context from a `Db.Statement`. The statement's
+/// vtable pointer is the type witness — returns `DbError.WrongBackend` if the
+/// statement was not prepared on a SQLite connection.
+fn fromStatement(statement: Db.Statement) !*StatementCtx {
+    if (statement.db.vtable != &database_vtable) return Db.DbError.WrongBackend;
+    return @ptrCast(@alignCast(statement.handle orelse return Db.DbError.Closed));
+}
+
+/// SQLite's per-column declared type strings (`sqlite3_column_decltype`). This
+/// reflects SQLite's flexible typing and has no portable equivalent — use the
+/// neutral `Statement.columnTypes` for cross-backend type info.
+pub fn declaredTypes(statement: Db.Statement) ![]const ?[]const u8 {
+    const stmt_ctx = try fromStatement(statement);
+    return stmt_ctx.declared_types;
+}
+
+/// Raw `*sqlite3_stmt` for single-connection statements (`null` for pooled).
+pub fn nativeStatement(statement: Db.Statement) !?*anyopaque {
+    const stmt_ctx = try fromStatement(statement);
     if (stmt_ctx.prototype) |prototype| return @ptrCast(rawStmtPtr(prototype));
     return null;
 }
 
-fn iterateNext(ctx: *anyopaque) !?db.Row {
+fn iterateNext(ctx: *anyopaque) !?Db.Row {
     const iter_ctx: *IteratorCtx = @ptrCast(@alignCast(ctx));
+    // Advancing invalidates the previously yielded row; reclaim it.
+    iter_ctx.releaseCurrent();
     if (iter_ctx.done) return null;
     if (!try iter_ctx.exec.stmt.step()) {
         iter_ctx.done = true;
         return null;
     }
-    return try cloneRow(iter_ctx.allocator, .{ .stmt = iter_ctx.exec.stmt });
+    const row = try cloneRow(iter_ctx.allocator, .{ .stmt = iter_ctx.exec.stmt });
+    iter_ctx.current = row;
+    return row;
 }
 
 fn iterateDeinit(ctx: *anyopaque) void {
     const iter_ctx: *IteratorCtx = @ptrCast(@alignCast(ctx));
     const allocator = iter_ctx.allocator;
+    iter_ctx.releaseCurrent();
     iter_ctx.exec.deinit();
     allocator.destroy(iter_ctx);
 }
 
 const StatementMeta = struct {
     column_names: [][]const u8,
-    column_types: []db.ColumnType,
+    column_types: []Db.ColumnType,
     declared_types: []?[]const u8,
     params_count: usize,
 };
@@ -492,7 +578,7 @@ fn collectStatementMeta(allocator: std.mem.Allocator, stmt: zqlite.Stmt) !Statem
     const column_names = try allocator.alloc([]const u8, column_count);
     errdefer allocator.free(column_names);
 
-    const column_types = try allocator.alloc(db.ColumnType, column_count);
+    const column_types = try allocator.alloc(Db.ColumnType, column_count);
     errdefer allocator.free(column_types);
 
     const declared_types = try allocator.alloc(?[]const u8, column_count);
@@ -533,7 +619,7 @@ fn freeStatementMeta(allocator: std.mem.Allocator, meta: StatementMeta) void {
     allocator.free(meta.declared_types);
 }
 
-fn prepareBoundStatement(stmt_ctx: *StatementCtx, bindings: db.Bindings) !PreparedExec {
+fn prepareBoundStatement(stmt_ctx: *StatementCtx, bindings: Db.Bindings) !PreparedExec {
     var borrowed = try stmt_ctx.db_ctx.acquire();
     errdefer borrowed.deinit();
 
@@ -547,7 +633,7 @@ fn prepareBoundStatement(stmt_ctx: *StatementCtx, bindings: db.Bindings) !Prepar
     };
 }
 
-fn bindStatement(stmt: zqlite.Stmt, bindings: db.Bindings) !void {
+fn bindStatement(stmt: zqlite.Stmt, bindings: Db.Bindings) !void {
     try stmt.clearBindings();
     try stmt.reset();
 
@@ -560,21 +646,32 @@ fn bindStatement(stmt: zqlite.Stmt, bindings: db.Bindings) !void {
         },
         .named => |named_values| {
             for (named_values) |entry| {
-                const param_name = if (entry.name.len > 0 and (entry.name[0] == ':' or entry.name[0] == '@' or entry.name[0] == '$'))
-                    entry.name
-                else
-                    try std.fmt.allocPrint(default_allocator, ":{s}", .{entry.name});
-                defer if (param_name.ptr != entry.name.ptr) default_allocator.free(param_name);
-
-                const param_index = c.sqlite3_bind_parameter_index(rawStmtPtr(stmt), param_name.ptr);
-                if (param_index == 0) return db.DbError.InvalidBindings;
+                const param_index = try resolveNamedParam(stmt, entry.name);
+                if (param_index == 0) return Db.DbError.InvalidBindings;
                 try bindValue(rawStmtPtr(stmt).?, param_index, entry.value);
             }
         },
     }
 }
 
-fn bindValue(stmt: *c.sqlite3_stmt, index: c_int, value: db.Value) !void {
+fn resolveNamedParam(stmt: zqlite.Stmt, name: []const u8) !c_int {
+    if (name.len > 0 and (name[0] == ':' or name[0] == '@' or name[0] == '$')) {
+        const name_z = try default_allocator.dupeSentinel(u8, name, 0);
+        defer default_allocator.free(name_z);
+        return c.sqlite3_bind_parameter_index(rawStmtPtr(stmt), name_z.ptr);
+    }
+
+    var buf: [256]u8 = undefined;
+    for ([_]u8{ ':', '@', '$' }) |sigil| {
+        const candidate = std.fmt.bufPrintZ(&buf, "{c}{s}", .{ sigil, name }) catch
+            return Db.DbError.InvalidBindings;
+        const index = c.sqlite3_bind_parameter_index(rawStmtPtr(stmt), candidate.ptr);
+        if (index != 0) return index;
+    }
+    return 0;
+}
+
+fn bindValue(stmt: *c.sqlite3_stmt, index: c_int, value: Db.Value) !void {
     const rc: c_int = switch (value) {
         .null => c.sqlite3_bind_null(stmt, index),
         .integer => |v| c.sqlite3_bind_int64(stmt, index, @intCast(v)),
@@ -586,8 +683,8 @@ fn bindValue(stmt: *c.sqlite3_stmt, index: c_int, value: db.Value) !void {
     if (rc != c.SQLITE_OK) return mapSqliteError(rc);
 }
 
-fn readAllRows(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const db.Row {
-    var rows = std.ArrayList(db.Row).empty;
+fn readAllRows(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const Db.Row {
+    var rows = std.ArrayList(Db.Row).empty;
     errdefer {
         for (rows.items) |row| freeRow(allocator, row);
         rows.deinit(allocator);
@@ -599,8 +696,8 @@ fn readAllRows(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const db.Row 
     return rows.toOwnedSlice(allocator);
 }
 
-fn readAllValues(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const []const db.Value {
-    var rows = std.ArrayList([]const db.Value).empty;
+fn readAllValues(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const []const Db.Value {
+    var rows = std.ArrayList([]const Db.Value).empty;
     errdefer {
         for (rows.items) |row| allocator.free(row);
         rows.deinit(allocator);
@@ -612,9 +709,9 @@ fn readAllValues(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const []con
     return rows.toOwnedSlice(allocator);
 }
 
-fn cloneRow(allocator: std.mem.Allocator, row: zqlite.Row) !db.Row {
+fn cloneRow(allocator: std.mem.Allocator, row: zqlite.Row) !Db.Row {
     const column_count: usize = @intCast(row.columnCount());
-    const fields = try allocator.alloc(db.Field, column_count);
+    const fields = try allocator.alloc(Db.Field, column_count);
     errdefer allocator.free(fields);
 
     for (0..column_count) |index| {
@@ -627,9 +724,9 @@ fn cloneRow(allocator: std.mem.Allocator, row: zqlite.Row) !db.Row {
     return .{ .fields = fields };
 }
 
-fn cloneValueRow(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const db.Value {
+fn cloneValueRow(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const Db.Value {
     const column_count: usize = @intCast(stmt.columnCount());
-    const values_row = try allocator.alloc(db.Value, column_count);
+    const values_row = try allocator.alloc(Db.Value, column_count);
     errdefer allocator.free(values_row);
 
     const row: zqlite.Row = .{ .stmt = stmt };
@@ -640,7 +737,7 @@ fn cloneValueRow(allocator: std.mem.Allocator, stmt: zqlite.Stmt) ![]const db.Va
     return values_row;
 }
 
-fn cloneValue(allocator: std.mem.Allocator, row: zqlite.Row, index: usize) !db.Value {
+fn cloneValue(allocator: std.mem.Allocator, row: zqlite.Row, index: usize) !Db.Value {
     return switch (row.columnType(index)) {
         .int => .{ .integer = row.get(i64, index) },
         .float => .{ .float = row.get(f64, index) },
@@ -651,7 +748,7 @@ fn cloneValue(allocator: std.mem.Allocator, row: zqlite.Row, index: usize) !db.V
     };
 }
 
-fn freeRow(allocator: std.mem.Allocator, row: db.Row) void {
+fn freeRow(allocator: std.mem.Allocator, row: Db.Row) void {
     for (row.fields) |field| {
         allocator.free(field.name);
         switch (field.value) {
@@ -663,7 +760,7 @@ fn freeRow(allocator: std.mem.Allocator, row: db.Row) void {
     allocator.free(row.fields);
 }
 
-fn mapDeclaredColumnType(declared: []const u8) db.ColumnType {
+fn mapDeclaredColumnType(declared: []const u8) Db.ColumnType {
     if (declared.len == 0) return .unknown;
 
     var buf: [64]u8 = undefined;
@@ -682,7 +779,7 @@ fn mapDeclaredColumnType(declared: []const u8) db.ColumnType {
     return .unknown;
 }
 
-fn shouldPool(path: []const u8, options: db.OpenOptions) bool {
+fn shouldPool(path: []const u8, options: OpenOptions) bool {
     return options.max_pool_size > 1 and !isMemoryPath(path);
 }
 
@@ -692,11 +789,31 @@ fn isMemoryPath(path: []const u8) bool {
         std.mem.startsWith(u8, path, "file::memory:");
 }
 
-fn ensureParentDir(path: []const u8) !void {
+// TODO: get rid of this for stricter URI
+fn resolvePath(location: []const u8) []const u8 {
+    if (location.len == 0) return ":memory:";
+
+    if (std.mem.startsWith(u8, location, "mem://")) return ":memory:";
+    if (std.mem.eql(u8, location, "memory:") or
+        std.mem.eql(u8, location, "memory://") or
+        std.mem.eql(u8, location, "sqlite::memory:")) return ":memory:";
+
+    if (std.mem.startsWith(u8, location, "sqlite:///")) return location["sqlite://".len..];
+    if (std.mem.startsWith(u8, location, "sqlite://")) return trimOrMemory(location["sqlite://".len..]);
+    if (std.mem.startsWith(u8, location, "file://")) return trimOrMemory(location["file://".len..]);
+    if (std.mem.startsWith(u8, location, "file:")) return trimOrMemory(location["file:".len..]);
+
+    return location;
+}
+
+fn trimOrMemory(value: []const u8) []const u8 {
+    return if (value.len == 0) ":memory:" else value;
+}
+
+fn ensureParentDir(io: std.Io, path: []const u8) !void {
     if (isMemoryPath(path) or isUriPath(path)) return;
     const parent = std.fs.path.dirname(path) orelse return;
     if (parent.len == 0) return;
-    const io = std.Io.Threaded.global_single_threaded.io();
     if (std.Io.Dir.cwd().statFile(io, parent, .{ .follow_symlinks = true })) |st| {
         if (st.kind == .directory) return;
     } else |_| {}
@@ -732,7 +849,7 @@ fn configureFirstPoolConnection(conn: zqlite.Conn, raw_context: ?*anyopaque) !vo
     try conn.execNoArgs("pragma journal_mode=wal");
 }
 
-fn openFlags(options: db.OpenOptions) c_int {
+fn openFlags(options: OpenOptions) c_int {
     var flags: c_int = zqlite.OpenFlags.EXResCode | zqlite.OpenFlags.FullMutex;
     if (options.readonly) return flags | zqlite.OpenFlags.ReadOnly;
 
@@ -743,10 +860,10 @@ fn openFlags(options: db.OpenOptions) c_int {
 
 fn mapSqliteError(rc: c_int) anyerror {
     return switch (rc) {
-        c.SQLITE_BUSY, c.SQLITE_BUSY_RECOVERY, c.SQLITE_BUSY_SNAPSHOT, c.SQLITE_BUSY_TIMEOUT => db.DbError.Busy,
-        c.SQLITE_MISUSE => db.DbError.InvalidState,
-        c.SQLITE_NOTADB, c.SQLITE_CANTOPEN => db.DbError.InvalidQuery,
-        c.SQLITE_RANGE => db.DbError.InvalidBindings,
+        c.SQLITE_BUSY, c.SQLITE_BUSY_RECOVERY, c.SQLITE_BUSY_SNAPSHOT, c.SQLITE_BUSY_TIMEOUT => Db.DbError.Busy,
+        c.SQLITE_MISUSE => Db.DbError.InvalidState,
+        c.SQLITE_NOTADB, c.SQLITE_CANTOPEN => Db.DbError.InvalidQuery,
+        c.SQLITE_RANGE => Db.DbError.InvalidBindings,
         else => sqliteErrorFromCode(rc),
     };
 }
@@ -859,40 +976,19 @@ fn sqliteErrorFromCode(rc: c_int) anyerror {
     };
 }
 
-const database_vtable = db.Connection.VTable{
-    .query = &query,
+const database_vtable = Db.VTable{
     .prepare = &prepare,
     .run = &run,
     .transaction = &transaction,
     .close = &close,
-    .serialize = &serialize,
-    .load_extension = &loadExtension,
-    .file_control = &fileControl,
-    .native = &native,
+    .stmtAll = &all,
+    .stmtGet = &get,
+    .stmtRun = &runStatement,
+    .stmtValues = &values,
+    .stmtIterate = &iterate,
+    .stmtFinalize = &finalize,
+    .stmtToString = &toString,
+    .stmtColumnNames = &columnNames,
+    .stmtColumnTypes = &columnTypes,
+    .stmtParamsCount = &paramsCount,
 };
-
-const statement_vtable = db.Statement.VTable{
-    .all = &all,
-    .get = &get,
-    .run = &runStatement,
-    .values = &values,
-    .iterate = &iterate,
-    .finalize = &finalize,
-    .to_string = &toString,
-    .column_names = &columnNames,
-    .column_types = &columnTypes,
-    .declared_types = &declaredTypes,
-    .params_count = &paramsCount,
-    .native = &nativeStatement,
-};
-
-const driver_vtable = db.DriverVTable{
-    .open = &open,
-    .deserialize = &deserialize,
-};
-
-var _ctx: u8 = 0;
-
-pub fn use() void {
-    db.adapter(@ptrCast(&_ctx), &driver_vtable);
-}

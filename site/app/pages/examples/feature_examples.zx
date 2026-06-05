@@ -920,7 +920,7 @@ pub fn unwrap__ref_cache_invalidation() void {
 
     // Delete all entries matching a prefix
     // Useful for invalidating related content
-    _ = zx.cache.delPrefix("cmp:user");
+    _ = zx.cache.delPrefix("cmp:user") catch 0;
 }
 
 // --- Learn: state management ---

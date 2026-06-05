@@ -1,143 +1,35 @@
+pub const Cache = @This();
+
 const std = @import("std");
 const builtin = @import("builtin");
+const cachez = if (builtin.cpu.arch.isWasm())
+    // This is for satisfying Playground in which we don't have 'cachez' dep available.
+    cachez_failing
+else
+    @import("cachez");
+
 const zx = @import("../../root.zig");
 
 const Allocator = std.mem.Allocator;
-const kv = zx.kv;
+const Kv = zx.Kv;
 
-/// Global cache for components and pages
-const cachez = switch (builtin.os.tag) {
-    .freestanding, .wasi => struct {
-        pub fn Entry(comptime T: type) type {
-            return struct {
-                key: []const u8,
-                value: T,
-                expires: u32,
-
-                const Self = @This();
-
-                pub fn init(allocator: Allocator, key: []const u8, value: T, size: u32, expires: u32) Self {
-                    _ = allocator;
-                    _ = size;
-                    return .{
-                        .key = key,
-                        .value = value,
-                        .expires = expires,
-                    };
-                }
-
-                pub fn expired(self: *Self) bool {
-                    return self.ttl() <= 0;
-                }
-
-                pub fn ttl(self: *Self) i64 {
-                    _ = self;
-                    return 0;
-                }
-
-                pub fn hit(self: *Self) u8 {
-                    _ = self;
-                    return 0;
-                }
-
-                pub fn borrow(self: *Self) void {
-                    _ = self;
-                }
-
-                pub fn release(self: *Self) void {
-                    _ = self;
-                }
-            };
-        }
-
-        pub const Config = struct {
-            max_size: u32 = 8000,
-            segment_count: u16 = 8,
-            gets_per_promote: u8 = 5,
-            shrink_ratio: f32 = 0.2,
-        };
-
-        pub const PutConfig = struct {
-            ttl: u32 = 300,
-            size: u32 = 1,
-        };
-
-        pub fn Cache(comptime T: type) type {
-            return struct {
-                allocator: Allocator,
-
-                const Self = @This();
-
-                pub fn init(io: std.Io, allocator: Allocator, _: Config) !Self {
-                    _ = io;
-                    return .{
-                        .allocator = allocator,
-                    };
-                }
-
-                pub fn deinit(_: *Self) void {}
-
-                pub fn contains(self: *const Self, key: []const u8) bool {
-                    _ = key;
-                    _ = self;
-                    return false;
-                }
-
-                pub fn get(self: *Self, key: []const u8) ?*Entry(T) {
-                    _ = key;
-                    _ = self;
-                    return null;
-                }
-
-                pub fn getEntry(self: *const Self, key: []const u8) ?*Entry(T) {
-                    _ = key;
-                    _ = self;
-                    return null;
-                }
-
-                pub fn put(self: *Self, key: []const u8, value: T, config: PutConfig) !void {
-                    _ = key;
-                    _ = value;
-                    _ = config;
-                    _ = self;
-                }
-
-                pub fn del(self: *Self, key: []const u8) bool {
-                    _ = key;
-                    _ = self;
-                    return false;
-                }
-
-                pub fn delPrefix(self: *Self, prefix: []const u8) !usize {
-                    _ = prefix;
-                    _ = self;
-                    return 0;
-                }
-
-                pub fn fetch(self: *Self, comptime S: type, key: []const u8, loader: *const fn (loader_state: S, key: []const u8) anyerror!?T, loader_state: S, config: PutConfig) !?*Entry(T) {
-                    _ = key;
-                    _ = loader;
-                    _ = loader_state;
-                    _ = config;
-                    _ = self;
-                    return null;
-                }
-
-                pub fn maxSize(self: Self) usize {
-                    _ = self;
-                    return 0;
-                }
-            };
-        }
-    },
-    else => @import("cachez"),
-};
-
-pub const PutOptions = kv.PutOptions;
-
-const memory_namespace = ".cache";
 const entry_version: u8 = 1;
 const header_len = 9;
+
+backend: Kv = Kv.failing,
+namespace: []const u8 = "default",
+allocator: std.mem.Allocator,
+io: std.Io,
+memory: ?*cachez.Cache(CacheEntry) = null,
+
+pub const PutOptions = Kv.PutOptions;
+
+pub const Config = struct {
+    max_size: u32 = 8000,
+    segment_count: u16 = 8,
+    gets_per_promote: u8 = 5,
+    shrink_ratio: f32 = 0.2,
+};
 
 const CacheEntry = struct {
     bytes: []u8,
@@ -147,285 +39,228 @@ const CacheEntry = struct {
     }
 };
 
-const State = struct {
-    allocator: Allocator,
-    memory: cachez.Cache(CacheEntry),
-};
-
 const StoredEntry = struct {
     expires_at: ?u64,
     payload: []const u8,
 };
 
-var state: ?State = null;
-var state_mutex: struct {
-    inner: std.Io.Mutex = .init,
-    pub fn lock(self: *@This()) void {
-        self.inner.lockUncancelable(std.Io.Threaded.global_single_threaded.io());
-    }
-    pub fn unlock(self: *@This()) void {
-        self.inner.unlock(std.Io.Threaded.global_single_threaded.io());
-    }
-} = .{};
+pub fn init(io: std.Io, allocator: Allocator, kv: Kv, config: Config) !Cache {
+    const cachez_config = cachez.Config{
+        .max_size = config.max_size,
+        .segment_count = config.segment_count,
+        .gets_per_promote = config.gets_per_promote,
+        .shrink_ratio = config.shrink_ratio,
+    };
 
-/// Initialize the cache (called once at app startup)
-pub fn init(allocator: std.mem.Allocator, config: cachez.Config) !void {
-    state_mutex.lock();
-    defer state_mutex.unlock();
+    const memory = try allocator.create(cachez.Cache(CacheEntry));
+    errdefer allocator.destroy(memory);
+    memory.* = try cachez.Cache(CacheEntry).init(io, allocator, cachez_config);
 
-    if (state != null) return;
-    state = .{
+    return .{
+        .backend = kv,
+        .namespace = "default",
         .allocator = allocator,
-        .memory = try cachez.Cache(CacheEntry).init(std.Io.Threaded.global_single_threaded.io(), allocator, config),
+        .io = io,
+        .memory = memory,
     };
 }
 
-/// Deinitialize the cache
-pub fn deinit() void {
-    state_mutex.lock();
-    defer state_mutex.unlock();
-
-    if (state) |*s| {
-        s.memory.deinit();
-        state = null;
+pub fn deinit(self: *Cache) void {
+    if (self.memory) |mem| {
+        const allocator = mem.allocator;
+        mem.deinit();
+        allocator.destroy(mem);
+        self.memory = null;
     }
 }
 
-pub fn get(allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
-    return scope("default").get(allocator, key);
+pub fn scoped(self: Cache, comptime ns: @EnumLiteral()) Cache {
+    return .{
+        .backend = self.backend,
+        .namespace = @tagName(ns),
+        .allocator = self.allocator,
+        .io = self.io,
+        .memory = self.memory,
+    };
 }
 
-pub fn as(allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
-    return scope("default").as(allocator, key, T);
+fn boundBackend(self: Cache) Kv {
+    return .{
+        .vtable = self.backend.vtable,
+        .userdata = self.backend.userdata,
+        .namespace = if (self.namespace.len == 0) "default" else self.namespace,
+    };
 }
 
-pub fn put(key: []const u8, value: []const u8, opts: PutOptions) !void {
-    return scope("default").put(key, value, opts);
+pub fn get(self: Cache, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
+    const io = self.io;
+    const memory = self.memory orelse return error.CacheUnavailable;
+
+    const scoped_key = try scopedKey(allocator, self.namespace, key);
+    defer allocator.free(scoped_key);
+
+    if (memory.get(scoped_key)) |entry| {
+        defer entry.release();
+        return @as(?[]u8, try allocator.dupe(u8, entry.value.bytes));
+    }
+
+    const backend = self.boundBackend();
+    const encoded = (try backend.get(allocator, key)) orelse return null;
+    defer allocator.free(encoded);
+
+    const decoded = try decodeStoredEntry(encoded);
+    if (isExpired(io, decoded.expires_at)) {
+        try backend.delete(key);
+        _ = memory.del(scoped_key);
+        return null;
+    }
+
+    try putMemoryEntryLocked(self, scoped_key, decoded.payload, ttlFromExpiration(io, decoded.expires_at));
+    return @as(?[]u8, try allocator.dupe(u8, decoded.payload));
 }
 
-pub fn putAs(key: []const u8, value: anytype, opts: PutOptions) !void {
-    return scope("default").putAs(key, value, opts);
+pub fn as(self: Cache, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
+    const raw = (try self.get(allocator, key)) orelse return null;
+    defer allocator.free(raw);
+
+    const expected_hash = zx.util.zxon.schema(T).hash;
+    if (try storedTypeHash(raw) != expected_hash) return error.InvalidType;
+
+    const TypedValue = struct {
+        hash: u64,
+        value: T,
+    };
+
+    const parsed = try zx.util.zxon.parse(TypedValue, allocator, raw, .{});
+    return parsed.value;
 }
 
-pub fn delete(key: []const u8) !void {
-    return scope("default").delete(key);
+pub fn put(self: Cache, key: []const u8, value: []const u8, opts: PutOptions) !void {
+    _ = self.memory orelse return error.CacheUnavailable;
+
+    const io = self.io;
+    const allocator = self.allocator;
+    const encoded = try encodeStoredEntry(io, allocator, value, opts);
+    defer allocator.free(encoded);
+
+    try self.boundBackend().put(key, encoded, .{});
+
+    const scoped_key = try scopedKey(allocator, self.namespace, key);
+    defer allocator.free(scoped_key);
+    try putMemoryEntryLocked(self, scoped_key, value, ttlFromOptions(io, opts));
 }
 
-pub fn list(allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
-    return scope("default").list(allocator, prefix);
+pub fn putAs(self: Cache, key: []const u8, value: anytype, opts: PutOptions) !void {
+    _ = self.memory orelse return error.CacheUnavailable;
+
+    const ValueType = @TypeOf(value);
+    const TypedValue = struct {
+        hash: u64,
+        value: ValueType,
+    };
+
+    const allocator = self.allocator;
+    var writer = std.Io.Writer.Allocating.init(allocator);
+    defer writer.deinit();
+
+    try zx.util.zxon.serialize(TypedValue{
+        .hash = zx.util.zxon.schema(ValueType).hash,
+        .value = value,
+    }, &writer.writer, .{});
+
+    try self.put(key, writer.written(), opts);
 }
 
-pub fn del(key: []const u8) bool {
-    return scope("default").del(key);
+pub fn delete(self: Cache, key: []const u8) !void {
+    const memory = self.memory orelse return error.CacheUnavailable;
+    const allocator = self.allocator;
+    const scoped_key = try scopedKey(allocator, self.namespace, key);
+    defer allocator.free(scoped_key);
+
+    _ = memory.del(scoped_key);
+    try self.boundBackend().delete(key);
 }
 
-pub fn delPrefix(prefix: []const u8) usize {
-    return scope("default").delPrefix(prefix) catch 0;
-}
+pub fn list(self: Cache, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
+    const io = self.io;
+    const memory = self.memory orelse return error.CacheUnavailable;
+    const backend = self.boundBackend();
+    const keys = try backend.list(allocator, prefix);
+    defer {
+        for (keys) |key| allocator.free(key);
+        allocator.free(keys);
+    }
 
-pub fn scope(ns: []const u8) CacheScope {
-    return .{ .ns = ns };
-}
+    var live_keys: std.ArrayList([]u8) = .empty;
+    defer live_keys.deinit(allocator);
 
-pub const CacheScope = struct {
-    ns: []const u8,
-
-    pub fn get(self: CacheScope, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
-        state_mutex.lock();
-        defer state_mutex.unlock();
-
-        const s = if (state) |*current| current else return null;
-        const scoped_key = try scopedKey(s.allocator, self.ns, key);
-        defer s.allocator.free(scoped_key);
-
-        if (s.memory.get(scoped_key)) |entry| {
-            defer entry.release();
-            return @as(?[]u8, try allocator.dupe(u8, entry.value.bytes));
-        }
-
-        const backend_ns = try backendNamespace(s.allocator, self.ns);
-        defer s.allocator.free(backend_ns);
-
-        const backend = kv.scope(backend_ns);
-        const encoded = (try backend.get(s.allocator, key)) orelse return null;
-        defer s.allocator.free(encoded);
+    for (keys) |key| {
+        const encoded = (try backend.get(allocator, key)) orelse continue;
+        defer allocator.free(encoded);
 
         const decoded = try decodeStoredEntry(encoded);
-        if (isExpired(decoded.expires_at)) {
-            try backend.delete(key);
-            return null;
-        }
-
-        putMemoryEntryLocked(s, scoped_key, decoded.payload, ttlFromExpiration(decoded.expires_at)) catch {};
-        return @as(?[]u8, try allocator.dupe(u8, decoded.payload));
-    }
-
-    pub fn as(self: CacheScope, allocator: std.mem.Allocator, key: []const u8, comptime T: type) !?T {
-        const raw = (try self.get(allocator, key)) orelse return null;
-        defer allocator.free(raw);
-
-        const expected_hash = zx.util.zxon.schema(T).hash;
-        if (try storedTypeHash(raw) != expected_hash) return error.InvalidType;
-
-        const TypedValue = struct {
-            hash: u64,
-            value: T,
-        };
-
-        const parsed = try zx.util.zxon.parse(TypedValue, allocator, raw, .{});
-        return parsed.value;
-    }
-
-    pub fn put(self: CacheScope, key: []const u8, value: []const u8, opts: PutOptions) !void {
-        state_mutex.lock();
-        defer state_mutex.unlock();
-
-        const s = if (state) |*current| current else return;
-        const encoded = try encodeStoredEntry(s.allocator, value, opts);
-        defer s.allocator.free(encoded);
-
-        const backend_ns = try backendNamespace(s.allocator, self.ns);
-        defer s.allocator.free(backend_ns);
-        try kv.scope(backend_ns).put(key, encoded, .{});
-
-        const scoped_key = try scopedKey(s.allocator, self.ns, key);
-        defer s.allocator.free(scoped_key);
-        try putMemoryEntryLocked(s, scoped_key, value, ttlFromOptions(opts));
-    }
-
-    pub fn putAs(self: CacheScope, key: []const u8, value: anytype, opts: PutOptions) !void {
-        const ValueType = @TypeOf(value);
-        const TypedValue = struct {
-            hash: u64,
-            value: ValueType,
-        };
-
-        var writer = std.Io.Writer.Allocating.init(zx.allocator);
-        defer writer.deinit();
-
-        try zx.util.zxon.serialize(TypedValue{
-            .hash = zx.util.zxon.schema(ValueType).hash,
-            .value = value,
-        }, &writer.writer, .{});
-
-        try self.put(key, writer.written(), opts);
-    }
-
-    pub fn delete(self: CacheScope, key: []const u8) !void {
-        state_mutex.lock();
-        defer state_mutex.unlock();
-
-        const s = if (state) |*current| current else return;
-        const scoped_key = try scopedKey(s.allocator, self.ns, key);
-        defer s.allocator.free(scoped_key);
-
-        _ = s.memory.del(scoped_key);
-        const backend_ns = try backendNamespace(s.allocator, self.ns);
-        defer s.allocator.free(backend_ns);
-        try kv.scope(backend_ns).delete(key);
-    }
-
-    pub fn list(self: CacheScope, allocator: std.mem.Allocator, prefix: []const u8) ![][]u8 {
-        state_mutex.lock();
-        defer state_mutex.unlock();
-
-        const s = if (state) |*current| current else return &[_][]u8{};
-        const backend_ns = try backendNamespace(s.allocator, self.ns);
-        defer s.allocator.free(backend_ns);
-
-        const backend = kv.scope(backend_ns);
-        const keys = try backend.list(s.allocator, prefix);
-        defer {
-            for (keys) |key| s.allocator.free(key);
-            s.allocator.free(keys);
-        }
-
-        var live_keys: std.ArrayList([]u8) = .empty;
-        defer live_keys.deinit(allocator);
-
-        for (keys) |key| {
-            const encoded = (try backend.get(s.allocator, key)) orelse continue;
-            defer s.allocator.free(encoded);
-
-            const decoded = try decodeStoredEntry(encoded);
-            if (isExpired(decoded.expires_at)) {
-                try backend.delete(key);
-
-                const scoped_key = try scopedKey(s.allocator, self.ns, key);
-                defer s.allocator.free(scoped_key);
-                _ = s.memory.del(scoped_key);
-                continue;
-            }
-
-            try live_keys.append(allocator, try allocator.dupe(u8, key));
-        }
-
-        return live_keys.toOwnedSlice(allocator);
-    }
-
-    pub fn del(self: CacheScope, key: []const u8) bool {
-        state_mutex.lock();
-        defer state_mutex.unlock();
-
-        const s = if (state) |*current| current else return false;
-        const backend_ns = backendNamespace(s.allocator, self.ns) catch return false;
-        defer s.allocator.free(backend_ns);
-
-        const backend = kv.scope(backend_ns);
-        const existing = backend.get(s.allocator, key) catch null;
-        const existed = if (existing) |bytes| blk: {
-            s.allocator.free(bytes);
-            break :blk true;
-        } else false;
-
-        const scoped_key = scopedKey(s.allocator, self.ns, key) catch return existed;
-        defer s.allocator.free(scoped_key);
-
-        const memory_deleted = s.memory.del(scoped_key);
-        backend.delete(key) catch {};
-        return existed or memory_deleted;
-    }
-
-    pub fn delPrefix(self: CacheScope, prefix: []const u8) !usize {
-        state_mutex.lock();
-        defer state_mutex.unlock();
-
-        const s = if (state) |*current| current else return 0;
-        const backend_ns = try backendNamespace(s.allocator, self.ns);
-        defer s.allocator.free(backend_ns);
-
-        const backend = kv.scope(backend_ns);
-        const keys = try backend.list(s.allocator, prefix);
-        defer {
-            for (keys) |key| s.allocator.free(key);
-            s.allocator.free(keys);
-        }
-
-        var deleted: usize = 0;
-        for (keys) |key| {
+        if (isExpired(io, decoded.expires_at)) {
             try backend.delete(key);
 
-            const scoped_key = try scopedKey(s.allocator, self.ns, key);
-            defer s.allocator.free(scoped_key);
-            _ = s.memory.del(scoped_key);
-            deleted += 1;
+            const scoped_key = try scopedKey(allocator, self.namespace, key);
+            defer allocator.free(scoped_key);
+            _ = memory.del(scoped_key);
+            continue;
         }
 
-        return deleted;
+        try live_keys.append(allocator, try allocator.dupe(u8, key));
     }
-};
 
-fn backendNamespace(allocator: Allocator, ns: []const u8) ![]u8 {
-    const effective_ns = if (ns.len == 0) "default" else ns;
-    return std.fmt.allocPrint(allocator, "{s}" ++ std.fs.path.sep_str ++ "{s}", .{ memory_namespace, effective_ns });
+    return live_keys.toOwnedSlice(allocator);
+}
+
+pub fn del(self: Cache, key: []const u8) bool {
+    const memory = self.memory orelse return false;
+    const allocator = self.allocator;
+    const backend = self.boundBackend();
+    const existing = backend.get(allocator, key) catch null;
+    const existed = if (existing) |bytes| blk: {
+        allocator.free(bytes);
+        break :blk true;
+    } else false;
+
+    const scoped_key = scopedKey(allocator, self.namespace, key) catch return existed;
+    defer allocator.free(scoped_key);
+
+    const memory_deleted = memory.del(scoped_key);
+    backend.delete(key) catch {};
+    return existed or memory_deleted;
+}
+
+pub fn delPrefix(self: Cache, prefix: []const u8) !usize {
+    const memory = self.memory orelse return error.CacheUnavailable;
+    const allocator = self.allocator;
+    const backend = self.boundBackend();
+    const keys = try backend.list(allocator, prefix);
+    defer {
+        for (keys) |key| allocator.free(key);
+        allocator.free(keys);
+    }
+
+    var deleted: usize = 0;
+    for (keys) |key| {
+        try backend.delete(key);
+
+        const scoped_key = try scopedKey(allocator, self.namespace, key);
+        defer allocator.free(scoped_key);
+        _ = memory.del(scoped_key);
+        deleted += 1;
+    }
+
+    return deleted;
 }
 
 fn scopedKey(allocator: Allocator, ns: []const u8, key: []const u8) ![]u8 {
     return std.fmt.allocPrint(allocator, "{s}\x1f{s}", .{ ns, key });
 }
 
-fn encodeStoredEntry(allocator: Allocator, payload: []const u8, opts: PutOptions) ![]u8 {
-    const expires_at = try expirationFromOptions(opts);
+fn encodeStoredEntry(io: std.Io, allocator: Allocator, payload: []const u8, opts: PutOptions) ![]u8 {
+    const expires_at = try expirationFromOptions(io, opts);
     const encoded = try allocator.alloc(u8, header_len + payload.len);
     encoded[0] = entry_version;
     std.mem.writeInt(u64, encoded[1..header_len], expires_at orelse 0, .little);
@@ -443,29 +278,29 @@ fn decodeStoredEntry(encoded: []const u8) !StoredEntry {
     };
 }
 
-fn now() u64 {
+fn now(io: std.Io) u64 {
     if (comptime builtin.os.tag == .freestanding or builtin.os.tag == .wasi) return 0;
-    const ts = std.Io.Timestamp.now(std.Io.Threaded.global_single_threaded.io(), .real);
+    const ts = std.Io.Timestamp.now(io, .real);
     return @as(u64, @intCast(@divTrunc(ts.nanoseconds, 1_000_000_000)));
 }
 
-fn expirationFromOptions(opts: PutOptions) !?u64 {
+fn expirationFromOptions(io: std.Io, opts: PutOptions) !?u64 {
     if (opts.expiration) |expiration| return expiration;
     if (opts.expiration_ttl) |ttl| {
-        return now() + ttl;
+        return now(io) + ttl;
     }
     return null;
 }
 
-fn ttlFromOptions(opts: PutOptions) ?u32 {
+fn ttlFromOptions(io: std.Io, opts: PutOptions) ?u32 {
     if (opts.expiration_ttl) |ttl| return clampTtl(ttl);
-    if (opts.expiration) |expiration| return ttlFromExpiration(expiration);
+    if (opts.expiration) |expiration| return ttlFromExpiration(io, expiration);
     return null;
 }
 
-fn ttlFromExpiration(expires_at: ?u64) ?u32 {
+fn ttlFromExpiration(io: std.Io, expires_at: ?u64) ?u32 {
     const expiration = expires_at orelse return null;
-    const current_now = now();
+    const current_now = now(io);
     if (expiration <= current_now) return 0;
     return clampTtl(expiration - current_now);
 }
@@ -474,18 +309,29 @@ fn clampTtl(ttl: u64) u32 {
     return std.math.cast(u32, ttl) orelse std.math.maxInt(u32);
 }
 
-fn isExpired(expires_at: ?u64) bool {
+fn isExpired(io: std.Io, expires_at: ?u64) bool {
     const expiration = expires_at orelse return false;
-    return expiration <= now();
+    return expiration <= now(io);
 }
 
-fn putMemoryEntryLocked(s: *State, scoped_key: []const u8, value: []const u8, ttl_seconds: ?u32) !void {
-    const value_copy = try s.allocator.dupe(u8, value);
-    errdefer s.allocator.free(value_copy);
+fn putMemoryEntryLocked(self: Cache, scoped_key: []const u8, value: []const u8, ttl_seconds: ?u32) !void {
+    const io = self.io;
+    const memory = self.memory orelse return error.CacheUnavailable;
+    const value_copy = try memory.allocator.dupe(u8, value);
+    errdefer memory.allocator.free(value_copy);
 
-    try s.memory.put(scoped_key, .{ .bytes = value_copy }, .{
-        .ttl = ttl_seconds orelse std.math.maxInt(u32),
+    try memory.put(scoped_key, .{ .bytes = value_copy }, .{
+        .ttl = cachezSafeTtl(io, ttl_seconds),
     });
+}
+
+fn cachezSafeTtl(io: std.Io, ttl_seconds: ?u32) u32 {
+    const current_now = now(io);
+    const max_u32 = std.math.maxInt(u32);
+    if (current_now >= max_u32) return 0;
+
+    const max_ttl = max_u32 - @as(u32, @intCast(current_now));
+    return @min(ttl_seconds orelse max_ttl, max_ttl);
 }
 
 fn storedTypeHash(raw: []const u8) !u64 {
@@ -503,3 +349,126 @@ fn storedTypeHash(raw: []const u8) !u64 {
 
     return std.fmt.parseUnsigned(u64, raw[start..i], 10);
 }
+
+pub const failing: Cache = .{
+    .allocator = .failing,
+    .io = .failing,
+    .backend = .failing,
+};
+
+const cachez_failing = struct {
+    pub const PutConfig = struct {
+        ttl: u32 = 300,
+        size: u32 = 1,
+    };
+
+    pub fn Cache(comptime T: type) type {
+        return struct {
+            allocator: Allocator,
+
+            const Self = @This();
+
+            pub fn init(io: std.Io, allocator: Allocator, _: Config) !Self {
+                _ = io;
+                return .{
+                    .allocator = allocator,
+                };
+            }
+
+            pub fn deinit(_: *Self) void {}
+
+            pub fn contains(self: *const Self, key: []const u8) bool {
+                _ = key;
+                _ = self;
+                return false;
+            }
+
+            pub fn get(self: *Self, key: []const u8) ?*Entry(T) {
+                _ = key;
+                _ = self;
+                return null;
+            }
+
+            pub fn getEntry(self: *const Self, key: []const u8) ?*Entry(T) {
+                _ = key;
+                _ = self;
+                return null;
+            }
+
+            pub fn put(self: *Self, key: []const u8, value: T, config: PutConfig) !void {
+                _ = key;
+                _ = value;
+                _ = config;
+                _ = self;
+            }
+
+            pub fn del(self: *Self, key: []const u8) bool {
+                _ = key;
+                _ = self;
+                return false;
+            }
+
+            pub fn delPrefix(self: *Self, prefix: []const u8) !usize {
+                _ = prefix;
+                _ = self;
+                return 0;
+            }
+
+            pub fn fetch(self: *Self, comptime S: type, key: []const u8, loader: *const fn (loader_state: S, key: []const u8) anyerror!?T, loader_state: S, config: PutConfig) !?*Entry(T) {
+                _ = key;
+                _ = loader;
+                _ = loader_state;
+                _ = config;
+                _ = self;
+                return null;
+            }
+
+            pub fn maxSize(self: Self) usize {
+                _ = self;
+                return 0;
+            }
+        };
+    }
+
+    pub fn Entry(comptime T: type) type {
+        return struct {
+            key: []const u8,
+            value: T,
+            expires: u32,
+
+            const Self = @This();
+
+            pub fn init(allocator: Allocator, key: []const u8, value: T, size: u32, expires: u32) Self {
+                _ = allocator;
+                _ = size;
+                return .{
+                    .key = key,
+                    .value = value,
+                    .expires = expires,
+                };
+            }
+
+            pub fn expired(self: *Self) bool {
+                return self.ttl() <= 0;
+            }
+
+            pub fn ttl(self: *Self) i64 {
+                _ = self;
+                return 0;
+            }
+
+            pub fn hit(self: *Self) u8 {
+                _ = self;
+                return 0;
+            }
+
+            pub fn borrow(self: *Self) void {
+                _ = self;
+            }
+
+            pub fn release(self: *Self) void {
+                _ = self;
+            }
+        };
+    }
+};

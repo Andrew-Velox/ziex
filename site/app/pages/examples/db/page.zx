@@ -16,16 +16,13 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
         \\INSERT INTO page_visits (page) VALUES ('/examples/db')
     , .empty);
 
-    var statement = try zx.db.query(
+    const stats = (try zx.db.row(ctx.arena, VisitStats,
         \\SELECT
         \\  COUNT(*) AS total_visits,
         \\  MAX(created_at) AS latest_visit
         \\FROM page_visits
         \\WHERE page = '/examples/db'
-    );
-    defer statement.deinit();
-
-    const stats = (try statement.row(ctx.arena, VisitStats, .empty)).?;
+    , .{})).?;
     const latest_visit = stats.latest_visit orelse "n/a";
 
     return (

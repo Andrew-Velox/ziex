@@ -275,10 +275,6 @@ pub fn Handler(comptime AppCtxType: type) type {
 
         pub fn init(io: std.Io, allocator: std.mem.Allocator, meta: *App.Meta, config: AppConfig, app_ctx: *AppCtxType) !Self {
             const cache_config = config.cache;
-            // Initialize unified component cache
-            try zx.cache.init(allocator, .{
-                .max_size = cache_config.max_size,
-            });
 
             return Self{
                 .meta = meta,
@@ -842,7 +838,8 @@ pub fn Handler(comptime AppCtxType: type) type {
         }
 
         pub inline fn static(self: *Self, req: *httpz.Request, res: *httpz.Response) !void {
-            const assets_path = try std.fs.path.join(self.allocator, &.{ zx_options.staticdir, req.url.path });
+            const staticdir = self.config.staticdir orelse zx_options.staticdir;
+            const assets_path = try std.fs.path.join(self.allocator, &.{ staticdir, req.url.path });
             defer self.allocator.free(assets_path);
 
             const body = std.Io.Dir.cwd().readFileAlloc(self.io, assets_path, self.allocator, .unlimited) catch |err| {

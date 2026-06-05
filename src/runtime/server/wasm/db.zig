@@ -1,6 +1,14 @@
+const Wasm = @This();
+
 const std = @import("std");
-const db = @import("db");
+
+const zx = @import("../../../root.zig");
 const ext = @import("extern.zig");
+
+const Db = zx.Db;
+
+binding_name: []u8,
+allocator: std.mem.Allocator,
 
 const WireRunResult = struct {
     last_insert_rowid: i64 = 0,
@@ -34,15 +42,6 @@ const WireRow = struct {
     fields: []const WireField,
 };
 
-const DatabaseCtx = struct {
-    binding_name: []u8,
-    allocator: std.mem.Allocator,
-
-    fn deinit(self: *DatabaseCtx) void {
-        self.allocator.free(self.binding_name);
-    }
-};
-
 const StatementCtx = struct {
     binding_name: []u8,
     sql: []u8,
@@ -54,91 +53,84 @@ const StatementCtx = struct {
     }
 };
 
-fn open(_: *anyopaque, filename: ?[]const u8, _: db.OpenOptions) !db.Database {
-    const binding_name = filename orelse "default";
+// --- Constructors --- //
+
+/// `options` accepts `Db.OpenOptions` (the WASM/D1 backend has no extra knobs).
+/// `allocator`/`io` are accepted for signature parity with the other backends;
+/// the WASM allocator is always used.
+pub fn open(allocator_unused: ?std.mem.Allocator, io: ?std.Io, filename: []const u8, options: Db.OpenOptions) !Db {
+    _ = allocator_unused;
+    _ = io;
+    _ = options;
+    const binding_name = filename;
     if (ext.db_open(binding_name.ptr, binding_name.len) < 0) return error.DatabaseOpenFailed;
 
     const allocator = std.heap.wasm_allocator;
-    const ctx = try allocator.create(DatabaseCtx);
-    errdefer allocator.destroy(ctx);
+    const self = try allocator.create(Wasm);
+    errdefer allocator.destroy(self);
 
-    ctx.* = .{
+    self.* = .{
         .binding_name = try allocator.dupe(u8, binding_name),
         .allocator = allocator,
     };
 
-    return .{
-        .backend_ctx = @ptrCast(ctx),
-        .vtable = &database_vtable,
-    };
+    return self.db();
 }
 
-fn deserialize(_: *anyopaque, _: []const u8, _: db.OpenOptions) !db.Database {
+pub fn deserialize(_: ?std.mem.Allocator, _: ?std.Io, _: []const u8, _: Db.OpenOptions) !Db {
     return error.Unsupported;
 }
 
-fn query(ctx: *anyopaque, sql: []const u8) !db.Statement {
-    return prepare(ctx, sql);
+pub fn db(self: *Wasm) Db {
+    return .{ .userdata = self, .vtable = &database_vtable };
 }
 
-fn prepare(ctx: *anyopaque, sql: []const u8) !db.Statement {
-    const database_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
-    const allocator = database_ctx.allocator;
+fn deinitState(self: *Wasm) void {
+    self.allocator.free(self.binding_name);
+}
+
+fn prepare(ud: ?*anyopaque, sql: []const u8) !Db.Statement {
+    const self: *Wasm = @ptrCast(@alignCast(ud));
+    const allocator = self.allocator;
 
     const statement_ctx = try allocator.create(StatementCtx);
     errdefer allocator.destroy(statement_ctx);
 
     statement_ctx.* = .{
-        .binding_name = try allocator.dupe(u8, database_ctx.binding_name),
+        .binding_name = try allocator.dupe(u8, self.binding_name),
         .sql = try allocator.dupe(u8, sql),
         .allocator = allocator,
     };
 
     return .{
-        .backend_ctx = @ptrCast(statement_ctx),
-        .vtable = &statement_vtable,
+        .db = .{ .userdata = ud, .vtable = &database_vtable },
+        .handle = @ptrCast(statement_ctx),
     };
 }
 
-fn run(ctx: *anyopaque, sql: []const u8, bindings: db.Bindings) !db.RunResult {
-    const database_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
-    return runQuery(database_ctx.binding_name, sql, bindings);
+fn run(ud: ?*anyopaque, sql: []const u8, bindings: Db.Bindings) !Db.RunResult {
+    const self: *Wasm = @ptrCast(@alignCast(ud));
+    return runQuery(self.binding_name, sql, bindings);
 }
 
-fn transaction(_: *anyopaque, _: db.TransactionMode, _: *anyopaque, _: db.TransactionCallback) !void {
+fn transaction(_: ?*anyopaque, _: Db.TransactionMode, _: *anyopaque, _: Db.TransactionCallback) !void {
     return error.Unsupported;
 }
 
-fn close(ctx: *anyopaque, _: bool) !void {
-    const database_ctx: *DatabaseCtx = @ptrCast(@alignCast(ctx));
-    const allocator = database_ctx.allocator;
-    database_ctx.deinit();
-    allocator.destroy(database_ctx);
+fn close(ud: ?*anyopaque, _: bool) !void {
+    const self: *Wasm = @ptrCast(@alignCast(ud));
+    const allocator = self.allocator;
+    self.deinitState();
+    allocator.destroy(self);
 }
 
-fn serialize(_: *anyopaque, _: std.mem.Allocator) ![]u8 {
-    return error.Unsupported;
-}
-
-fn loadExtension(_: *anyopaque, _: []const u8, _: ?[]const u8) !void {
-    return error.Unsupported;
-}
-
-fn fileControl(_: *anyopaque, _: i32, _: db.FileControlValue) !void {
-    return error.Unsupported;
-}
-
-fn native(_: *anyopaque) ?*anyopaque {
-    return null;
-}
-
-fn all(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) ![]const db.Row {
-    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn all(ud: ?*anyopaque, allocator: std.mem.Allocator, bindings: Db.Bindings) ![]const Db.Row {
+    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return selectRows(allocator, ext.db_all, statement_ctx.binding_name, statement_ctx.sql, bindings);
 }
 
-fn get(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) !?db.Row {
-    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn get(ud: ?*anyopaque, allocator: std.mem.Allocator, bindings: Db.Bindings) !?Db.Row {
+    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     const rows = try selectRows(allocator, ext.db_get, statement_ctx.binding_name, statement_ctx.sql, bindings);
     if (rows.len == 0) {
         allocator.free(rows);
@@ -149,49 +141,45 @@ fn get(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) !?d
     return row;
 }
 
-fn runStatement(ctx: *anyopaque, bindings: db.Bindings) !db.RunResult {
-    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn runStatement(ud: ?*anyopaque, bindings: Db.Bindings) !Db.RunResult {
+    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return runQuery(statement_ctx.binding_name, statement_ctx.sql, bindings);
 }
 
-fn values(ctx: *anyopaque, allocator: std.mem.Allocator, bindings: db.Bindings) ![]const []const db.Value {
-    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn values(ud: ?*anyopaque, allocator: std.mem.Allocator, bindings: Db.Bindings) ![]const []const Db.Value {
+    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return selectValues(allocator, statement_ctx.binding_name, statement_ctx.sql, bindings);
 }
 
-fn iterate(_: *anyopaque, _: db.Bindings) !db.Statement.Iterator {
+fn iterate(_: ?*anyopaque, _: Db.Bindings) !Db.Statement.Iterator {
     return error.Unsupported;
 }
 
-fn finalize(ctx: *anyopaque) void {
-    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn finalize(ud: ?*anyopaque) void {
+    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     const allocator = statement_ctx.allocator;
     statement_ctx.deinit();
     allocator.destroy(statement_ctx);
 }
 
-fn toString(ctx: *anyopaque, allocator: std.mem.Allocator) ![]u8 {
-    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ctx));
+fn toString(ud: ?*anyopaque, allocator: std.mem.Allocator) ![]u8 {
+    const statement_ctx: *StatementCtx = @ptrCast(@alignCast(ud));
     return allocator.dupe(u8, statement_ctx.sql);
 }
 
-fn columnNames(_: *anyopaque) []const []const u8 {
+fn columnNames(_: ?*anyopaque) []const []const u8 {
     return &.{};
 }
 
-fn columnTypes(_: *anyopaque) []const db.ColumnType {
+fn columnTypes(_: ?*anyopaque) []const Db.ColumnType {
     return &.{};
 }
 
-fn declaredTypes(_: *anyopaque) []const ?[]const u8 {
-    return &.{};
-}
-
-fn paramsCount(_: *anyopaque) usize {
+fn paramsCount(_: ?*anyopaque) usize {
     return 0;
 }
 
-fn runQuery(binding_name: []const u8, sql: []const u8, bindings: db.Bindings) !db.RunResult {
+fn runQuery(binding_name: []const u8, sql: []const u8, bindings: Db.Bindings) !Db.RunResult {
     var bindings_writer = std.Io.Writer.Allocating.init(std.heap.wasm_allocator);
     defer bindings_writer.deinit();
     try writeBindingsJson(&bindings_writer.writer, bindings);
@@ -216,7 +204,7 @@ fn runQuery(binding_name: []const u8, sql: []const u8, bindings: db.Bindings) !d
     defer parsed.deinit();
 
     return .{
-        .last_insert_rowid = parsed.value.last_insert_rowid,
+        .last_insert_id = parsed.value.last_insert_rowid,
         .changes = parsed.value.changes,
     };
 }
@@ -226,8 +214,8 @@ fn selectRows(
     comptime op: anytype,
     binding_name: []const u8,
     sql: []const u8,
-    bindings: db.Bindings,
-) ![]const db.Row {
+    bindings: Db.Bindings,
+) ![]const Db.Row {
     var bindings_writer = std.Io.Writer.Allocating.init(std.heap.wasm_allocator);
     defer bindings_writer.deinit();
     try writeBindingsJson(&bindings_writer.writer, bindings);
@@ -244,7 +232,7 @@ fn selectRows(
         buf.len,
     );
     if (n < 0) return error.DatabaseQueryFailed;
-    if (n == 0) return &[_]db.Row{};
+    if (n == 0) return &[_]Db.Row{};
 
     const parsed = try std.json.parseFromSlice([]WireRow, allocator, buf[0..@intCast(n)], .{
         .ignore_unknown_fields = true,
@@ -255,7 +243,7 @@ fn selectRows(
     return cloneRows(allocator, parsed.value);
 }
 
-fn selectValues(allocator: std.mem.Allocator, binding_name: []const u8, sql: []const u8, bindings: db.Bindings) ![]const []const db.Value {
+fn selectValues(allocator: std.mem.Allocator, binding_name: []const u8, sql: []const u8, bindings: Db.Bindings) ![]const []const Db.Value {
     var bindings_writer = std.Io.Writer.Allocating.init(std.heap.wasm_allocator);
     defer bindings_writer.deinit();
     try writeBindingsJson(&bindings_writer.writer, bindings);
@@ -272,7 +260,7 @@ fn selectValues(allocator: std.mem.Allocator, binding_name: []const u8, sql: []c
         buf.len,
     );
     if (n < 0) return error.DatabaseQueryFailed;
-    if (n == 0) return &[_][]const db.Value{};
+    if (n == 0) return &[_][]const Db.Value{};
 
     const parsed = try std.json.parseFromSlice([][]WireValue, allocator, buf[0..@intCast(n)], .{
         .ignore_unknown_fields = true,
@@ -280,9 +268,9 @@ fn selectValues(allocator: std.mem.Allocator, binding_name: []const u8, sql: []c
     });
     defer parsed.deinit();
 
-    const rows = try allocator.alloc([]const db.Value, parsed.value.len);
+    const rows = try allocator.alloc([]const Db.Value, parsed.value.len);
     for (parsed.value, 0..) |wire_row, row_index| {
-        const values_row = try allocator.alloc(db.Value, wire_row.len);
+        const values_row = try allocator.alloc(Db.Value, wire_row.len);
         for (wire_row, 0..) |wire_value, value_index| {
             values_row[value_index] = try cloneValue(allocator, wire_value);
         }
@@ -291,10 +279,10 @@ fn selectValues(allocator: std.mem.Allocator, binding_name: []const u8, sql: []c
     return rows;
 }
 
-fn cloneRows(allocator: std.mem.Allocator, wire_rows: []const WireRow) ![]const db.Row {
-    const rows = try allocator.alloc(db.Row, wire_rows.len);
+fn cloneRows(allocator: std.mem.Allocator, wire_rows: []const WireRow) ![]const Db.Row {
+    const rows = try allocator.alloc(Db.Row, wire_rows.len);
     for (wire_rows, 0..) |wire_row, row_index| {
-        const fields = try allocator.alloc(db.Field, wire_row.fields.len);
+        const fields = try allocator.alloc(Db.Field, wire_row.fields.len);
         for (wire_row.fields, 0..) |wire_field, field_index| {
             fields[field_index] = .{
                 .name = try allocator.dupe(u8, wire_field.name),
@@ -306,7 +294,7 @@ fn cloneRows(allocator: std.mem.Allocator, wire_rows: []const WireRow) ![]const 
     return rows;
 }
 
-fn cloneValue(allocator: std.mem.Allocator, wire_value: WireValue) !db.Value {
+fn cloneValue(allocator: std.mem.Allocator, wire_value: WireValue) !Db.Value {
     return switch (wire_value.kind) {
         .null => .null,
         .integer => .{ .integer = wire_value.integer orelse 0 },
@@ -324,7 +312,7 @@ fn decodeBlob(allocator: std.mem.Allocator, encoded: []const u8) ![]const u8 {
     return bytes;
 }
 
-fn writeBindingsJson(writer: *std.Io.Writer, bindings: db.Bindings) !void {
+fn writeBindingsJson(writer: *std.Io.Writer, bindings: Db.Bindings) !void {
     try writer.writeByte('{');
     switch (bindings) {
         .none => try writer.writeAll("\"kind\":\"none\""),
@@ -352,7 +340,7 @@ fn writeBindingsJson(writer: *std.Io.Writer, bindings: db.Bindings) !void {
     try writer.writeByte('}');
 }
 
-fn writeValueJson(writer: *std.Io.Writer, value: db.Value) !void {
+fn writeValueJson(writer: *std.Io.Writer, value: Db.Value) !void {
     try writer.writeByte('{');
     switch (value) {
         .null => try writer.writeAll("\"kind\":\"null\""),
@@ -373,40 +361,19 @@ fn writeValueJson(writer: *std.Io.Writer, value: db.Value) !void {
     try writer.writeByte('}');
 }
 
-const database_vtable = db.Database.VTable{
-    .query = &query,
+const database_vtable = Db.VTable{
     .prepare = &prepare,
     .run = &run,
     .transaction = &transaction,
     .close = &close,
-    .serialize = &serialize,
-    .load_extension = &loadExtension,
-    .file_control = &fileControl,
-    .native = &native,
+    .stmtAll = &all,
+    .stmtGet = &get,
+    .stmtRun = &runStatement,
+    .stmtValues = &values,
+    .stmtIterate = &iterate,
+    .stmtFinalize = &finalize,
+    .stmtToString = &toString,
+    .stmtColumnNames = &columnNames,
+    .stmtColumnTypes = &columnTypes,
+    .stmtParamsCount = &paramsCount,
 };
-
-const statement_vtable = db.Statement.VTable{
-    .all = &all,
-    .get = &get,
-    .run = &runStatement,
-    .values = &values,
-    .iterate = &iterate,
-    .finalize = &finalize,
-    .to_string = &toString,
-    .column_names = &columnNames,
-    .column_types = &columnTypes,
-    .declared_types = &declaredTypes,
-    .params_count = &paramsCount,
-    .native = &native,
-};
-
-const driver_vtable = db.DriverVTable{
-    .open = &open,
-    .deserialize = &deserialize,
-};
-
-var _ctx: u8 = 0;
-
-pub fn use() void {
-    db.adapter(@ptrCast(&_ctx), &driver_vtable);
-}

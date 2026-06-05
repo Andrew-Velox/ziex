@@ -246,6 +246,17 @@ fn handleConnection(ds: *DevServer, stream: std.Io.net.Stream) void {
 
         switch (request.upgradeRequested()) {
             .websocket => |opt_key| {
+                var ws_target_split = std.mem.splitScalar(u8, request.head.target, '?');
+                const ws_target_path = ws_target_split.first();
+                if (!std.mem.eql(u8, ws_target_path, "/.well-known/_zx/devsocket")) {
+                    log.debug("proxying websocket upgrade to inner: {s}", .{request.head.target});
+                    const buffered_extra = request.server.reader.in.buffer[request.server.reader.in.seek..request.server.reader.in.end];
+                    proxyWebSocket(ds, stream, request.head_buffer, buffered_extra) catch |err| {
+                        log.debug("websocket proxy failed: {s}", .{@errorName(err)});
+                    };
+                    return;
+                }
+
                 const key = opt_key orelse return log.err("missing websocket key", .{});
                 var web_socket = request.respondWebSocket(.{ .key = key }) catch {
                     return log.err("failed to respond web socket", .{});
@@ -492,6 +503,33 @@ fn proxyToInner(
     inner.shutdown(ds.io, .recv) catch {};
 }
 
+fn proxyWebSocket(
+    ds: *DevServer,
+    client: std.Io.net.Stream,
+    head_buffer: []const u8,
+    buffered_extra: []const u8,
+) !void {
+    const inner_addr = try std.Io.net.IpAddress.parse("127.0.0.1", ds.inner_port);
+
+    // Retry while the inner server is (re)starting - up to 2 s.
+    const inner: std.Io.net.Stream = for (0..200) |_| {
+        if (inner_addr.connect(ds.io, .{ .mode = .stream })) |s| break s else |_| std.Io.sleep(ds.io, .fromMicroseconds(10), .real) catch {};
+    } else return error.ConnectionRefused;
+    defer inner.close(ds.io);
+
+    var inner_writer_buf: [4096]u8 = undefined;
+    var inner_writer = inner.writer(ds.io, &inner_writer_buf);
+    try inner_writer.interface.writeAll(head_buffer);
+    if (buffered_extra.len > 0) try inner_writer.interface.writeAll(buffered_extra);
+    try inner_writer.interface.flush();
+
+    const fwd = std.Thread.spawn(.{}, copyStreamThenShutdown, .{ ds.io, inner, client }) catch return;
+    defer fwd.join();
+
+    copyStream(ds.io, client, inner);
+    inner.shutdown(ds.io, .recv) catch {};
+}
+
 /// Copy src→dst, then shut down the dst send side so the peer's read unblocks.
 fn copyStreamThenShutdown(io: std.Io, src: std.Io.net.Stream, dst: std.Io.net.Stream) void {
     copyStream(io, src, dst);
@@ -506,7 +544,8 @@ fn copyStream(io: std.Io, src: std.Io.net.Stream, dst: std.Io.net.Stream) void {
     var writer = dst.writer(io, &writer_state);
 
     while (true) {
-        const n = reader.interface.readSliceShort(&read_buf) catch return;
+        var data: [1][]u8 = .{&read_buf};
+        const n = reader.interface.readVec(&data) catch return;
         if (n == 0) return;
         writer.interface.writeAll(read_buf[0..n]) catch return;
         writer.interface.flush() catch return;

@@ -192,7 +192,7 @@ function parseEdgeMeta(stderrText: string): { status: number; headers: Headers; 
  * Run a WASM module for a single request using JSPI.
  *
  * Pass `kv` as a map of binding names → KV namespaces. The Zig side selects
- * a binding via `zx.kv.scope("name")`; the top-level `zx.kv.*` functions use
+ * a binding via `zx.kv.scoped("name")`; the top-level `zx.kv.*` functions use
  * `"default"`.
  *
  * @example

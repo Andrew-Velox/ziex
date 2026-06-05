@@ -184,18 +184,18 @@ pub fn deinit(self: *Client) void {
     self.handler_registry.deinit();
 }
 
+var kv_wasm = zx.Kv.Wasm{};
+var clnt = init(zx.allocator, .{});
+
 fn mainClient() callconv(.c) void {
     if (zx.platform.role != .client) return;
-    kv_wasm.use();
 
+    zx.kv = kv_wasm.kv();
     clnt.info();
     clnt.renderAll();
 }
 
-var clnt = init(zx.allocator, .{});
-const kv_wasm = @import("../server/wasm/kv.zig");
 pub fn run() !void {
-    // kv_wasm.use();
     @export(&mainClient, .{ .name = "mainClient" });
 }
 

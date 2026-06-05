@@ -1,8 +1,23 @@
 const std = @import("std");
 const zx = @import("zx");
 
-const cache = zx.cache;
 const allocator = std.testing.allocator;
+
+var cache_fs = zx.Kv.Fs{
+    .io = std.testing.io,
+    .subdir = "zig-out" ++ std.fs.path.sep_str ++ "test-data" ++ std.fs.path.sep_str ++ "cache",
+};
+var cache: zx.Cache = .failing;
+
+fn scopedCache(namespace: []const u8) zx.Cache {
+    return .{
+        .backend = cache.backend,
+        .namespace = namespace,
+        .allocator = cache.allocator,
+        .io = cache.io,
+        .memory = cache.memory,
+    };
+}
 
 const Profile = struct {
     id: u32,
@@ -22,11 +37,17 @@ const WorkerContext = struct {
     err: ?anyerror = null,
 };
 
+const worker_iterations = 100;
+
 fn ensureCache() !void {
-    try cache.init(std.heap.page_allocator, .{
+    cache = try zx.Cache.init(std.testing.io, allocator, cache_fs.kv(), .{
         .max_size = 4096,
         .segment_count = 8,
     });
+}
+
+fn cleanupCache() void {
+    cache.deinit();
 }
 
 fn uniqueLabel(comptime prefix: []const u8, buf: []u8) ![]const u8 {
@@ -41,7 +62,7 @@ fn freeProfile(profile: Profile) void {
 
 test "put/get/delete roundtrip" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-roundtrip", &key_buf);
@@ -61,7 +82,7 @@ test "put/get/delete roundtrip" {
 
 test "del reports whether key existed" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-del", &key_buf);
@@ -73,9 +94,58 @@ test "del reports whether key existed" {
     try std.testing.expect(!cache.del(key));
 }
 
+test "put without expiration does not overflow memory ttl" {
+    try ensureCache();
+    defer cleanupCache();
+
+    var key_buf: [96]u8 = undefined;
+    const key = try uniqueLabel("cache-no-expiration", &key_buf);
+
+    defer cache.delete(key) catch {};
+
+    try cache.put(key, "no-expiration", .{});
+
+    const found = (try cache.get(allocator, key)).?;
+    defer allocator.free(found);
+
+    try std.testing.expectEqualStrings("no-expiration", found);
+}
+
+test "stress many entries without expiration" {
+    try ensureCache();
+    defer cleanupCache();
+
+    var prefix_buf: [96]u8 = undefined;
+    const prefix = try uniqueLabel("cache-stress", &prefix_buf);
+    const scoped = scopedCache(prefix);
+
+    defer _ = scoped.delPrefix("") catch 0;
+
+    var key_buf: [128]u8 = undefined;
+    var value_buf: [128]u8 = undefined;
+
+    for (0..512) |i| {
+        const key = try std.fmt.bufPrint(&key_buf, "stress-key-{d}", .{i});
+        const value = try std.fmt.bufPrint(&value_buf, "stress-value-{d}", .{i});
+        try scoped.put(key, value, .{});
+
+        const found = (try scoped.get(allocator, key)).?;
+        defer allocator.free(found);
+        try std.testing.expectEqualStrings(value, found);
+    }
+
+    const keys = try scoped.list(allocator, "");
+    defer {
+        for (keys) |key| allocator.free(key);
+        allocator.free(keys);
+    }
+
+    try std.testing.expectEqual(@as(usize, 512), keys.len);
+}
+
 test "list and delPrefix work for live entries" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var prefix_buf: [96]u8 = undefined;
     const prefix = try uniqueLabel("cache-prefix", &prefix_buf);
@@ -88,7 +158,7 @@ test "list and delPrefix work for live entries" {
     const key2 = try std.fmt.bufPrint(&key2_buf, "{s}-b", .{prefix});
     const other_key = try uniqueLabel("cache-other", &other_key_buf);
 
-    defer _ = cache.delPrefix(prefix);
+    defer _ = cache.delPrefix(prefix) catch 0;
     defer cache.delete(other_key) catch {};
 
     try cache.put(key1, "value-a", .{ .expiration_ttl = 30 });
@@ -112,18 +182,18 @@ test "list and delPrefix work for live entries" {
 
     try std.testing.expect(saw_key1);
     try std.testing.expect(saw_key2);
-    try std.testing.expectEqual(@as(usize, 2), try cache.scope("default").delPrefix(prefix));
+    try std.testing.expectEqual(@as(usize, 2), try scopedCache("default").delPrefix(prefix));
     try std.testing.expect((try cache.get(allocator, key1)) == null);
     try std.testing.expect((try cache.get(allocator, key2)) == null);
 }
 
 test "scoped namespaces are isolated" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var ns_buf: [96]u8 = undefined;
     const namespace = try uniqueLabel("cache-scope", &ns_buf);
-    const scoped = cache.scope(namespace);
+    const scoped = scopedCache(namespace);
     const key = "shared-key";
 
     defer scoped.delete(key) catch {};
@@ -144,7 +214,7 @@ test "scoped namespaces are isolated" {
 
 test "putAs/as roundtrip typed value" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-typed", &key_buf);
@@ -167,7 +237,7 @@ test "putAs/as roundtrip typed value" {
 
 test "as returns invalid type on schema mismatch" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var key_buf: [96]u8 = undefined;
     const key = try uniqueLabel("cache-typed-mismatch", &key_buf);
@@ -185,14 +255,14 @@ test "as returns invalid type on schema mismatch" {
 
 test "scoped putAs/as roundtrip typed value" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var ns_buf: [96]u8 = undefined;
     var key_buf: [96]u8 = undefined;
 
     const namespace = try uniqueLabel("cache-typed-scope", &ns_buf);
     const key = try uniqueLabel("profile", &key_buf);
-    const scoped = cache.scope(namespace);
+    const scoped = scopedCache(namespace);
 
     defer scoped.delete(key) catch {};
 
@@ -212,7 +282,7 @@ test "scoped putAs/as roundtrip typed value" {
 
 test "expired entries are filtered from get and list" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var prefix_buf: [96]u8 = undefined;
     const prefix = try uniqueLabel("cache-expired", &prefix_buf);
@@ -223,7 +293,7 @@ test "expired entries are filtered from get and list" {
     const expired_key = try std.fmt.bufPrint(&expired_key_buf, "{s}-expired", .{prefix});
     const live_key = try std.fmt.bufPrint(&live_key_buf, "{s}-live", .{prefix});
 
-    defer _ = cache.delPrefix(prefix);
+    defer _ = cache.delPrefix(prefix) catch 0;
 
     const now: u64 = @intCast(@divTrunc(std.Io.Clock.real.now(std.testing.io).nanoseconds, std.time.ns_per_s));
     try cache.put(expired_key, "stale", .{ .expiration = now });
@@ -242,12 +312,12 @@ test "expired entries are filtered from get and list" {
 }
 
 fn runConcurrentWorker(ctx: *WorkerContext) void {
-    const scoped = cache.scope(ctx.ns);
+    const scoped = scopedCache(ctx.ns);
 
     var key_buf: [96]u8 = undefined;
     var value_buf: [96]u8 = undefined;
 
-    for (0..25) |i| {
+    for (0..worker_iterations) |i| {
         const key = std.fmt.bufPrint(&key_buf, "worker-{d}-key-{d}", .{ ctx.worker_id, i }) catch {
             ctx.err = error.Unexpected;
             return;
@@ -281,11 +351,11 @@ fn runConcurrentWorker(ctx: *WorkerContext) void {
 
 test "concurrent reads and writes are threadsafe" {
     try ensureCache();
-    defer cache.deinit();
+    defer cleanupCache();
 
     var ns_buf: [96]u8 = undefined;
     const namespace = try uniqueLabel("cache-threadsafe", &ns_buf);
-    const scoped = cache.scope(namespace);
+    const scoped = scopedCache(namespace);
 
     defer {
         _ = scoped.delPrefix("") catch 0;
@@ -296,6 +366,10 @@ test "concurrent reads and writes are threadsafe" {
         .{ .ns = namespace, .worker_id = 1 },
         .{ .ns = namespace, .worker_id = 2 },
         .{ .ns = namespace, .worker_id = 3 },
+        .{ .ns = namespace, .worker_id = 4 },
+        .{ .ns = namespace, .worker_id = 5 },
+        .{ .ns = namespace, .worker_id = 6 },
+        .{ .ns = namespace, .worker_id = 7 },
     };
     var threads: [workers.len]std.Thread = undefined;
 
@@ -314,5 +388,5 @@ test "concurrent reads and writes are threadsafe" {
         allocator.free(keys);
     }
 
-    try std.testing.expectEqual(@as(usize, workers.len * 25), keys.len);
+    try std.testing.expectEqual(@as(usize, workers.len * worker_iterations), keys.len);
 }

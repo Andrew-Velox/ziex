@@ -27,9 +27,10 @@ pub const ElementTag = element.Tag;
 pub const Component = @import("Component.zig").Component;
 pub const Element = @import("Component.zig").Element;
 
-// Internal - Used by the .zx -> .zig transpiler
+// Internal - Used by the .zx to .zig transpiler
 pub const x = @import("x.zig");
 
+// TODO: move all generated zig files under zx.manifests
 pub const routes = @import("zx_meta").routes;
 pub const components = @import("zx_meta").components.components;
 pub const meta = @import("zx_meta").meta;
@@ -57,7 +58,6 @@ pub const app = struct {
 pub const client = @import("runtime/client.zig");
 pub const server = @import("runtime/server.zig");
 pub const util = @import("util.zig");
-pub const cache = @import("runtime/core//Cache.zig");
 
 // --- Reactivity --- //
 pub const EventHandler = @import("runtime/core/EventHandler.zig");
@@ -98,8 +98,13 @@ pub const Platform = plfm.Platform;
 pub const Router = @import("runtime/core/Router.zig");
 
 // --- Storage --- //
-pub const kv = @import("runtime/core/kv.zig");
-pub const db = if (!module_options.exclude_db) @import("db") else @compileError("db is excluded. Set exclude-db=false to enable.");
+pub const Db = @import("runtime/core/Db.zig");
+pub const Kv = @import("runtime/core/Kv.zig");
+pub const Cache = @import("runtime/core/Cache.zig");
+
+pub var db: Db = .failing;
+pub var kv: Kv = .failing;
+pub var cache: Cache = .failing;
 
 // --- Net --- //
 pub const Headers = @import("runtime/core/Headers.zig");

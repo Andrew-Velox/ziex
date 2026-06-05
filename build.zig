@@ -69,9 +69,7 @@ pub fn build(b: *std.Build) !void {
     // Imports (zx)
     {
         if (!is_client) {
-            mod.addImport("db", adapters_dep.module("db"));
-            mod.addImport("db_sqlite", adapters_dep.module("db_sqlite"));
-            mod.addImport("cachez", cachez_dep.module("cache"));
+            mod.addImport("zqlite", adapters_dep.module("zqlite"));
             mod.addImport("httpz", httpz_dep.module("httpz"));
         }
 
@@ -81,6 +79,7 @@ pub fn build(b: *std.Build) !void {
         }
 
         if (!exclude_core_lang) mod.addImport("zx_core_lang", zx_core_lang_mod);
+        mod.addImport("cachez", cachez_dep.module("cache"));
         mod.addImport("zx_style", zx_style_mod);
         mod.addOptions("zx_info", options);
         mod.addOptions("zx_options", zx_runtime_options);
@@ -284,6 +283,8 @@ pub fn build(b: *std.Build) !void {
             release_module_options.addOption(bool, "exclude_core_lang", false);
             release_module_options.addOption(bool, "exclude_db", false);
 
+            const release_adapters_dep = b.dependency("adapters", .{ .target = resolved_target, .optimize = .ReleaseSafe });
+            release_mod.addImport("zqlite", release_adapters_dep.module("zqlite"));
             release_mod.addImport("httpz", httpz_dep.module("httpz"));
             release_mod.addImport("zx_style", release_style_mod);
             release_mod.addImport("zx_core_lang", release_core_lang_mod);
