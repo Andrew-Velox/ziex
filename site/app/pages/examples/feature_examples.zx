@@ -950,7 +950,7 @@ pub fn Learn__GET(ctx: zx.RouteContext) !void {
 }
 
 // --- Learn: kv basic ---
-pub fn Learn__KVBasic(ctx: zx.PageContext) !zx.Component {
+pub fn Learn__KvBasic(ctx: zx.PageContext) !zx.Component {
     try zx.kv.put("greeting", "hello from kv", .{});
     const value = try zx.kv.get(ctx.arena, "greeting");
     try zx.kv.delete("greeting");
@@ -963,7 +963,7 @@ pub fn Learn__KVBasic(ctx: zx.PageContext) !zx.Component {
 }
 
 // --- Learn: kv typed ---
-pub fn Learn__KVTyped(ctx: zx.PageContext) !zx.Component {
+pub fn Learn__KvTyped(ctx: zx.PageContext) !zx.Component {
     const User = struct {
         id: u32,
         name: []const u8,
@@ -981,38 +981,29 @@ pub fn Learn__KVTyped(ctx: zx.PageContext) !zx.Component {
     return (
         <main @allocator={ctx.arena}>
             {if (user) |u| (
-                <div>
-                    <p>User: {u.name} (ID: {u.id})</p>
-                    <p>Active: {if (u.active) "yes" else "no"}</p>
-                </div>
+                <p>User: {u.name} (#{u.id})</p>
             ) else (
-                <p>User not found</p>
+                <p>Not found</p>
             )}
         </main>
     );
 }
 
-// --- Learn: kv scope ---
-pub fn Learn__KVScope(ctx: zx.PageContext) !zx.Component {
-    const sessions = zx.kv.scope("sessions");
-    const users = zx.kv.scope("users");
-
-    try sessions.put("sess:abc123", "token-xyz", .{});
-    try users.put("user:42", "alice", .{});
-
-    const session = try sessions.get(ctx.arena, "sess:abc123");
-    const user = try users.get(ctx.arena, "user:42");
+// --- Learn: kv scoped ---
+pub fn Learn__KvScoped(ctx: zx.PageContext) !zx.Component {
+    const sessions = zx.kv.scoped(.sessions);
+    try sessions.put("abc123", "token-xyz", .{});
+    const token = try sessions.get(ctx.arena, "abc123");
 
     return (
         <main @allocator={ctx.arena}>
-            <p>Session: {session orelse "none"}</p>
-            <p>User: {user orelse "none"}</p>
+            <p>Session token: {token orelse "none"}</p>
         </main>
     );
 }
 
 // --- Learn: db basic ---
-pub fn Learn__DBBasic(ctx: zx.PageContext) !zx.Component {
+pub fn Learn__DbBasic(ctx: zx.PageContext) !zx.Component {
     _ = try zx.db.run(
         \\CREATE TABLE IF NOT EXISTS posts (
         \\  id INTEGER PRIMARY KEY,
@@ -1020,26 +1011,19 @@ pub fn Learn__DBBasic(ctx: zx.PageContext) !zx.Component {
         \\)
     , .empty);
 
-    _ = try zx.db.run(
-        \\INSERT INTO posts (title) VALUES ('Hello World')
-    , .empty);
+    _ = try zx.db.run("INSERT INTO posts (title) VALUES (?1)", .{"Hello World"});
 
-    var stmt = try zx.db.query(
-        \\SELECT id, title FROM posts LIMIT 1
-    );
-    defer stmt.deinit();
-
-    const rows = try stmt.all(ctx.arena, .empty);
+    const row = try zx.db.get(ctx.arena, "SELECT title FROM posts ORDER BY id DESC LIMIT 1", .{});
 
     return (
         <main @allocator={ctx.arena}>
-            <p>Posted {rows.len} row(s)</p>
+            <p>Latest post: {if (row) |r| r.text("title") else "none"}</p>
         </main>
     );
 }
 
 // --- Learn: db typed ---
-pub fn Learn__DBTyped(ctx: zx.PageContext) !zx.Component {
+pub fn Learn__DbTyped(ctx: zx.PageContext) !zx.Component {
     const Post = struct {
         id: i64,
         title: []const u8,
@@ -1052,55 +1036,33 @@ pub fn Learn__DBTyped(ctx: zx.PageContext) !zx.Component {
         \\)
     , .empty);
 
-    _ = try zx.db.run(
-        \\INSERT INTO blog_posts (title) VALUES ('ZX Guide')
-    , .empty);
+    _ = try zx.db.run("INSERT INTO blog_posts (title) VALUES (?1)", .{"ZX Guide"});
 
-    var stmt = try zx.db.query(
-        \\SELECT id, title FROM blog_posts
-    );
-    defer stmt.deinit();
-
-    const posts = try stmt.rows(ctx.arena, Post, .empty);
+    const posts = try zx.db.rows(ctx.arena, Post, "SELECT id, title FROM blog_posts", .{});
 
     return (
         <main @allocator={ctx.arena}>
             {for (posts) |post| (
-                <div>
-                    <h3>{post.title}</h3>
-                    <p>ID: {post.id}</p>
-                </div>
+                <p>{post.title} (#{post.id})</p>
             )}
         </main>
     );
 }
 
 // --- Learn: db transaction ---
-pub fn Learn__DBTransaction(ctx: zx.PageContext) !zx.Component {
-    try zx.db.transaction(ctx, txn);
+pub fn Learn__DbTransaction(ctx: zx.PageContext) !zx.Component {
+    try zx.db.transaction({}, transfer);
 
     return (
         <main @allocator={ctx.arena}>
-            <p>Transaction completed</p>
+            <p>Transfer complete</p>
         </main>
     );
 }
 
-fn txn(_: zx.RouteContext) !void {
-    _ = try zx.db.run(
-        \\CREATE TABLE IF NOT EXISTS accounts (
-        \\  id INTEGER PRIMARY KEY,
-        \\  balance REAL NOT NULL
-        \\)
-    , .empty);
-
-    _ = try zx.db.run(
-        \\INSERT INTO accounts (balance) VALUES (100.0)
-    , .empty);
-
-    _ = try zx.db.run(
-        \\UPDATE accounts SET balance = balance - 10.0 WHERE id = 1
-    , .empty);
+fn transfer(_: void, db: zx.Db) !void {
+    _ = try db.run("UPDATE accounts SET balance = balance - 10 WHERE id = ?1", .{1});
+    _ = try db.run("UPDATE accounts SET balance = balance + 10 WHERE id = ?1", .{2});
 }
 
 // --- Imports ---
