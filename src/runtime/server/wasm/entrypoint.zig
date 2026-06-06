@@ -10,9 +10,6 @@ const Router = zx.Router;
 const Component = zx.Component;
 
 pub fn run(process_init: std.process.Init) !void {
-    if (!@import("zx_module_options").exclude_db) {
-        zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
-    }
     const allocator = std.heap.wasm_allocator;
 
     var args = try process_init.minimal.args.iterateAllocator(allocator);

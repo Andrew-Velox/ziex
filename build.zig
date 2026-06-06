@@ -277,7 +277,6 @@ pub fn build(b: *std.Build) !void {
             // Release module options (CLI needs core_lang)
             const release_module_options = b.addOptions();
             release_module_options.addOption(bool, "exclude_core_lang", false);
-            release_module_options.addOption(bool, "exclude_db", false);
 
             const release_adapters_dep = b.dependency("adapters", .{ .target = resolved_target, .optimize = .ReleaseSafe });
             release_mod.addImport("zqlite", release_adapters_dep.module("zqlite"));
