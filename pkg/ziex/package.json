@@ -44,19 +44,19 @@
     "check": "tsc"
   },
   "dependencies": {
-    "@ziex/cli": "0.1.0-dev"
+    "@ziex/cli": "0.1.0-dev.1138"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "zzon": "^0.1.0-dev",
+    "zzon": "^1.7.1",
     "jsz": "github:nurulhudaapon/jsz",
     "@types/react": "latest",
     "@types/react-dom": "latest"
   },
   "peerDependencies": {
-    "typescript": "^0.1.0-dev",
-    "react": ">=0.1.0-dev",
-    "react-dom": ">=0.1.0-dev"
+    "typescript": "^5.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
   },
   "peerDependenciesMeta": {
     "react": {

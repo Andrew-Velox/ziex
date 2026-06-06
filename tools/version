@@ -129,7 +129,7 @@ fi
 # pkg/ziex/package.json
 ZIEX_PACKAGE_JSON="$PROJECT_ROOT/pkg/ziex/package.json"
 if [ -f "$ZIEX_PACKAGE_JSON" ]; then
-    sed -i.bak -E "s/$VERSION_PATTERN/$NEW_VERSION/" "$ZIEX_PACKAGE_JSON"
+    sed -i.bak -E "/^[[:space:]]*\"version\"[[:space:]]*:/s/$VERSION_PATTERN/$NEW_VERSION/" "$ZIEX_PACKAGE_JSON"
     rm -f "$ZIEX_PACKAGE_JSON.bak"
     echo "Updated pkg/ziex/package.json"
 fi

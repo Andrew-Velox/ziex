@@ -6,24 +6,25 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (leave empty to use version from build.zig.zon)"
+        description: "Version"
         required: false
         type: string
       tag:
-        description: "npm dist-tag (e.g. dev, latest). Defaults to dev"
+        description: "Distribution"
         required: false
         type: string
         default: dev
       target:
-        description: "Release target"
+        description: "Target"
         required: true
         type: choice
-        default: npm
+        default: all
         options:
+          - all
           - npm
           - gh
       from:
-        description: "How to compute the pre-release number when no explicit version is given"
+        description: "Pre-release number"
         required: false
         type: choice
         default: commits
@@ -186,7 +187,7 @@ jobs:
     name: Create Release Assets
     runs-on: ubuntu-latest
     needs: build-release
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'gh')
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'gh' || inputs.target == 'all'))
     permissions:
       contents: write
 
@@ -222,7 +223,7 @@ jobs:
     name: Smoke Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: [resolve-version, build-release]
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'npm')
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'npm' || inputs.target == 'all'))
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -283,7 +284,7 @@ jobs:
     name: Publish to NPM
     runs-on: ubuntu-latest
     needs: [resolve-version, build-release, smoke-test]
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'npm')
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'npm' || inputs.target == 'all'))
     permissions:
       contents: read
       id-token: write
