@@ -335,7 +335,8 @@ jobs:
           zig fetch --save "git+https://github.com/ziex-dev/ziex#${TAG}"
           cd ../..
 
-          ALL_TEMPLATES=$(ls -d templates/*/ | grep -v "_base" | xargs -n 1 basename)
+          # Exclude all internal templates (prefixed with '_', e.g. _base, _docker)
+          ALL_TEMPLATES=$(ls -d templates/*/ | xargs -n 1 basename | grep -v '^_')
 
           for TEMPLATE in $ALL_TEMPLATES; do
             REPO_NAME="template-${TEMPLATE}"
