@@ -4,9 +4,7 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
         .description = "Build the app (equivalent to `zig build`)",
     }, build);
 
-    var build_args_flag = flags.build_args;
-    build_args_flag.default_value = .{ .String = "-Doptimize=ReleaseFast" };
-    try cmd.addFlag(build_args_flag);
+    try cmd.addFlag(flags.build_args);
 
     return cmd;
 }
@@ -34,21 +32,45 @@ fn build(ctx: zli.CommandContext) !void {
     });
     defer system.kill(io);
 
-    try formatBuildErrors(io, allocator, ctx.writer, &system);
+    var spinner = ctx.spinner;
+    spinner.updateStyle(.{ .frames = zli.Spinner.SpinnerStyles.dots2, .refresh_rate_ms = 80 });
+    try spinner.start("{s}Building...{s}", .{ Colors.cyan, Colors.reset });
+
+    const start_ts = std.Io.Timestamp.now(io, .awake);
+
+    const formatted = formatBuildErrors(io, allocator, &system) catch |err| {
+        spinner.fail("{s}Build failed{s}", .{ Colors.red, Colors.reset }) catch {};
+        return err;
+    };
+    defer if (formatted) |f| allocator.free(f);
 
     const term = try system.wait(io);
-    switch (term) {
-        .exited => |code| if (code != 0) std.process.exit(code),
-        else => std.process.exit(1),
+    const elapsed_ms: u64 = @intCast(start_ts.durationTo(std.Io.Timestamp.now(io, .awake)).toMilliseconds());
+    const elapsed_s = @as(f64, @floatFromInt(elapsed_ms)) / 1000.0;
+
+    const failed = switch (term) {
+        .exited => |code| code != 0,
+        else => true,
+    };
+
+    if (failed) {
+        try spinner.fail("{s}Build failed {s}({d:.2}s){s}", .{ Colors.red, Colors.gray, elapsed_s, Colors.reset });
+        if (formatted) |f| try ctx.writer.writeAll(f);
+        switch (term) {
+            .exited => |code| std.process.exit(code),
+            else => std.process.exit(1),
+        }
     }
+
+    try spinner.succeed("{s}Built {s}({d:.2}s){s}", .{ Colors.green, Colors.gray, elapsed_s, Colors.reset });
+    if (formatted) |f| try ctx.writer.writeAll(f);
 }
 
 fn formatBuildErrors(
     io: std.Io,
     allocator: std.mem.Allocator,
-    writer: *std.Io.Writer,
     system: *std.process.Child,
-) !void {
+) !?[]u8 {
     var stderr_file = system.stderr.?;
     var raw_buf: [8192]u8 = undefined;
     var streaming_reader = stderr_file.readerStreaming(io, &raw_buf);
@@ -96,16 +118,13 @@ fn formatBuildErrors(
         if (err != error.EndOfStream) return err;
     }
 
-    if (diagnostics.items.len == 0) return;
+    if (diagnostics.items.len == 0) return null;
 
     Diagnostics.remap(allocator, diagnostics.items);
     const deduped = Diagnostics.dedupe(allocator, diagnostics.items);
     diagnostics.shrinkRetainingCapacity(deduped.len);
 
-    const formatted = try Diagnostics.formatOxlint(allocator, deduped);
-    defer allocator.free(formatted);
-
-    try writer.writeAll(formatted);
+    return try Diagnostics.formatOxlint(allocator, deduped);
 }
 
 const std = @import("std");
@@ -115,4 +134,6 @@ const AppContext = @import("shared/context.zig").AppContext;
 const cli_options = @import("cli_options");
 const Builder = @import("dev/Builder.zig");
 const Diagnostics = @import("dev/Diagnostics.zig");
+const tui = @import("../tui/main.zig");
+const Colors = tui.Colors;
 const log = std.log.scoped(.cli);
