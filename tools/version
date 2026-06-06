@@ -64,6 +64,14 @@ rm -f "$BUILD_ZON_PATH.bak"
 echo "Version: $CURRENT_VERSION -> $NEW_VERSION"
 echo "Updated $BUILD_ZON_FILE"
 
+# Update pkg/ziex/build.zig.zon version
+ZIEX_BUILD_ZON="$PROJECT_ROOT/pkg/ziex/build.zig.zon"
+if [ -f "$ZIEX_BUILD_ZON" ]; then
+    sed -i.bak -E "/^[[:space:]]*\.version[[:space:]]*=/s/$VERSION_PATTERN/$NEW_VERSION/" "$ZIEX_BUILD_ZON"
+    rm -f "$ZIEX_BUILD_ZON.bak"
+    echo "Updated pkg/ziex/build.zig.zon"
+fi
+
 # Update pkg/ziex/package.json version
 ZIEX_PACKAGE_JSON="$PROJECT_ROOT/pkg/ziex/package.json"
 if [ -f "$ZIEX_PACKAGE_JSON" ]; then
@@ -95,6 +103,7 @@ fi
 
 # Stage the updated files for commit
 git add "$BUILD_ZON_PATH"
+git add "$ZIEX_BUILD_ZON" 2>/dev/null || true
 git add "$ZIEX_PACKAGE_JSON" 2>/dev/null || true
 git add "$ZED_EXTENSION_TOML" 2>/dev/null || true
 git add "$VSCODE_PACKAGE_JSON" 2>/dev/null || true
