@@ -1,7 +1,7 @@
 .{
     .name = .ziex_js,
     .fingerprint = 0x3428b4e119b455bf,
-    .version = "0.1.0-dev.1138",
+    .version = "0.1.0-dev",
     .minimum_zig_version = "0.16.0",
     .paths = .{""},
 }

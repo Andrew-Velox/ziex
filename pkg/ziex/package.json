@@ -1,6 +1,6 @@
 {
   "name": "ziex",
-  "version": "0.1.0-dev.1138",
+  "version": "0.1.0-dev",
   "private": true,
   "description": "ZX is a framework for building web applications with Zig.",
   "main": "src/index.ts",
@@ -44,19 +44,19 @@
     "check": "tsc"
   },
   "dependencies": {
-    "@ziex/cli": "0.1.0-dev.1138"
+    "@ziex/cli": "0.1.0-dev"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "zzon": "^1.7.1",
+    "zzon": "^0.1.0-dev",
     "jsz": "github:nurulhudaapon/jsz",
     "@types/react": "latest",
     "@types/react-dom": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0",
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "typescript": "^0.1.0-dev",
+    "react": ">=0.1.0-dev",
+    "react-dom": ">=0.1.0-dev"
   },
   "peerDependenciesMeta": {
     "react": {

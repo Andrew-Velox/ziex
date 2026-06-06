@@ -22,6 +22,14 @@ on:
         options:
           - npm
           - gh
+      from:
+        description: "How to compute the pre-release number when no explicit version is given"
+        required: false
+        type: choice
+        default: commits
+        options:
+          - commits
+          - tag
 
 jobs:
   resolve-version:
@@ -31,13 +39,21 @@ jobs:
       version: ${{ steps.resolve.outputs.version }}
       dist-tag: ${{ steps.resolve.outputs.dist_tag }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Resolve and validate version
         id: resolve
         run: |
           RAW_VERSION="${{ inputs.version || github.event.release.tag_name }}"
           if [ -z "$RAW_VERSION" ]; then
-            echo "No version provided, will use version from build.zig.zon"
-            exit 0
+            # No explicit version: compute the full version from the numberless
+            # base in build.zig.zon (e.g. 0.1.0-dev -> 0.1.0-dev.<N>).
+            FROM="${{ inputs.from || 'commits' }}"
+            RAW_VERSION=$(bash tools/version --resolve --from="$FROM")
+            echo "Computed version from --from=$FROM: $RAW_VERSION"
           fi
           # Trim v prefix
           VERSION="${RAW_VERSION#v}"
