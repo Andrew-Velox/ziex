@@ -10,6 +10,7 @@ pub fn build(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.mem.
         try init.register(writer, reader, allocator),
         try dev.register(writer, reader, allocator),
         try serve.register(writer, reader, allocator),
+        try build_cmd.register(writer, reader, allocator),
         try transpile.register(writer, reader, allocator),
         try fmt.register(writer, reader, allocator),
         try @"export".register(writer, reader, allocator),
@@ -27,6 +28,7 @@ fn showHelp(ctx: zli.CommandContext) !void {
 
 const dev = @import("dev.zig");
 const serve = @import("serve.zig");
+const build_cmd = @import("build.zig");
 const init = @import("init.zig");
 const version = @import("version.zig");
 const transpile = @import("transpile.zig");

@@ -863,6 +863,15 @@ const cli_commands = [_]CLICommandInfo{
         },
     },
     .{
+        .name = "build",
+        .id = "cli-build",
+        .description = "Build the project (equivalent to zig build). Any compilation errors are pretty-printed in the same format as dev mode and zx fmt --error, with locations mapped back to the original .zx source.",
+        .usage = "zx build [flags]",
+        .flags = &[_]CLIFlag{
+            .{ .name = "--build-args, -a <args>", .description = "Additional arguments to pass to zig build (default: \"-Doptimize=ReleaseFast\")" },
+        },
+    },
+    .{
         .name = "transpile",
         .id = "cli-transpile",
         .description = "Transpile .zx files to Zig source code. Useful for debugging or inspecting generated code.",
