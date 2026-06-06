@@ -194,6 +194,20 @@ pub fn findFreePort() !u16 {
     return server.socket.address.getPort();
 }
 
+pub fn waitUntilInnerReady(ds: *DevServer, timeout_ms: u64) bool {
+    const inner_addr = std.Io.net.IpAddress.parse("127.0.0.1", ds.inner_port) catch return false;
+    const begin = std.Io.Timestamp.now(ds.io, .awake);
+    while (true) {
+        if (inner_addr.connect(ds.io, .{ .mode = .stream })) |s| {
+            s.close(ds.io);
+            return true;
+        } else |_| {}
+        const elapsed: u64 = @intCast(begin.durationTo(std.Io.Timestamp.now(ds.io, .awake)).toMilliseconds());
+        if (elapsed >= timeout_ms) return false;
+        std.Io.sleep(ds.io, .fromMilliseconds(5), .awake) catch {};
+    }
+}
+
 fn serve(ds: *DevServer) void {
     var retry_count: u8 = 0;
 

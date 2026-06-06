@@ -400,6 +400,8 @@ fn dev(ctx: zli.CommandContext) !void {
                     }
                     printFirstLine(&runner_output.?, is_first_run);
                     is_first_run = false;
+
+                    _ = dev_server.waitUntilInnerReady(5000);
                     dev_server.notify(.{ .type = .reload });
 
                     rebuilding_shown = false;
