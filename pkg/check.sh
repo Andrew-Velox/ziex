@@ -14,6 +14,25 @@ case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=true ;; esac
 
 RESULTS_DIR=$(mktemp -d)
 
+publish_idempotent() {
+  local pkg="$1"; shift
+  local out
+  if out=$(npm publish --access public --tag dev --registry "$REGISTRY" "$@" 2>&1); then
+    echo "$out"
+    return 0
+  fi
+  echo "$out"
+  if echo "$out" | grep -qiE 'E409|already present|cannot publish over'; then
+    echo "==> $pkg already present at this version; ensuring dist-tag and continuing"
+    # Best-effort: keep the 'dev' dist-tag pointed at this version. Don't fail
+    # the smoke test if even this is a no-op.
+    npm dist-tag add "${pkg}@${VERSION}" dev --registry "$REGISTRY" 2>&1 || true
+    return 0
+  fi
+  echo "==> Publish failed for $pkg (not a conflict)" >&2
+  return 1
+}
+
 cleanup() {
   if [ -n "${VERDACCIO_PID:-}" ]; then
     kill "$VERDACCIO_PID" 2>/dev/null || true
@@ -52,10 +71,19 @@ else
   echo "==> Skipping Verdaccio startup in CI"
 fi
 
-# Publish @ziex/cli* packages to local registry
+# Publish @ziex/cli* packages to local registry.
+# --workspaces publishes all @ziex/cli* at once; if some are already present
+# (E409 on re-run), that's fine for a smoke test — tolerate it and continue.
 echo "==> Publishing @ziex/cli* to local registry..."
 cd "$VERDACCIO_DIR"
-npm publish --workspaces --access public --tag dev --registry "$REGISTRY" 2>&1
+cli_out=$(npm publish --workspaces --access public --tag dev --registry "$REGISTRY" 2>&1) || true
+echo "$cli_out"
+# Fail only on an npm error code that is NOT 409 (already present). This way a
+# real error still fails even if other packages in the batch merely conflicted.
+if echo "$cli_out" | grep -oiE 'E[0-9]{3}' | grep -qvi 'E409'; then
+  echo "==> @ziex/cli* publish failed with a non-conflict error" >&2
+  exit 1
+fi
 
 # Build and publish ziex to local registry (skip on Windows - bun build crashes)
 if [ "$IS_WINDOWS" = false ]; then
@@ -65,7 +93,7 @@ if [ "$IS_WINDOWS" = false ]; then
   BUN_CONFIG_REGISTRY="$REGISTRY" bun install --registry "$REGISTRY" 2>&1
   bun run build
   cd dist
-  npm publish --access public --tag dev --registry "$REGISTRY" 2>&1
+  publish_idempotent ziex
 else
   echo "==> Skipping ziex build on Windows (bun build not supported)"
 fi
