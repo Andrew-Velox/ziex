@@ -1051,11 +1051,25 @@ pub fn Learn__DbTyped(ctx: zx.PageContext) !zx.Component {
 
 // --- Learn: db transaction ---
 pub fn Learn__DbTransaction(ctx: zx.PageContext) !zx.Component {
+    const Account = struct { id: i64, balance: i64 };
+
+    _ = try zx.db.run(
+        \\CREATE TABLE IF NOT EXISTS accounts (
+        \\  id INTEGER PRIMARY KEY,
+        \\  balance INTEGER NOT NULL
+        \\)
+    , .empty);
+    _ = try zx.db.run("INSERT OR REPLACE INTO accounts (id, balance) VALUES (1, 100), (2, 100)", .empty);
+
     try zx.db.transaction({}, transfer);
+
+    const accounts = try zx.db.rows(ctx.arena, Account, "SELECT id, balance FROM accounts ORDER BY id", .{});
 
     return (
         <main @allocator={ctx.arena}>
-            <p>Transfer complete</p>
+            {for (accounts) |account| (
+                <p>Account #{account.id}: {account.balance}</p>
+            )}
         </main>
     );
 }
