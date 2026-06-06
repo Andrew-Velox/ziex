@@ -415,7 +415,7 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
                 <p>Comments are stripped from the output and do not appear in the rendered HTML.</p>
             </section>
             <CachingSection />
-            <PluginsSection />
+            // <PluginsSection />
             <CLISection />
             // <ExamplesSection />
         </div>

@@ -61,12 +61,12 @@ const categories = [_]SidebarProps.Category{
                     .{ .href = "/learn#api-routes", .text = "API Routes" },
                 },
             },
-            .{
-                .title = "Plugins",
-                .items = &[_]SidebarProps.Link{
-                    .{ .href = "/learn#plugins", .text = "Using Plugins" },
-                },
-            },
+            // .{
+            //     .title = "Plugins",
+            //     .items = &[_]SidebarProps.Link{
+            //         .{ .href = "/learn#plugins", .text = "Using Plugins" },
+            //     },
+            // },
             .{
                 .title = "Data & Storage",
                 .items = &[_]SidebarProps.Link{

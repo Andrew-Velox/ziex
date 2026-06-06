@@ -109,7 +109,7 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
             <ChildrenProps zx_code={zx_children} zig_code={zig_children} html_code={html_children} />
             <PagesAndLayouts zx_page={zx_page} zig_page={zig_page} html_page={html_page} zx_layout={zx_layout} zx_dynamic={zx_dynamic} zig_dynamic={zig_dynamic} html_dynamic={html_dynamic} />
             <APIRoutes zig_code={zig_api} />
-            <Plugins />
+            // <Plugins />
             <KVStorage kv_basic={kv_basic} kv_typed={kv_typed} kv_scoped={kv_scoped} />
             <Database db_basic={db_basic} db_typed={db_typed} db_transaction={db_transaction} />
             <Deployment />
@@ -742,7 +742,7 @@ fn Database(allocator: zx.Allocator, props: DatabaseProps) zx.Component {
     return (
         <section id="database" class="section" @allocator={allocator}>
             <h2>Database</h2>
-            <p>ZX ships with a SQL database layer accessed through <code>zx.db</code>. The API mirrors the shape of <code>std.Io</code> — small, explicit methods that prepare and run statements for you.</p>
+            <p>ZX ships with a SQL database layer accessed through <code>zx.db</code>.</p>
             <p>Create tables and insert rows with <code>zx.db.run</code>:</p>
             <CodeBlock code={props.db_basic} />
             <p>Pass bindings as an inline literal: <code>.empty</code> for none, a tuple for positional <code>?1</code> placeholders, or a struct for named <code>$name</code> placeholders. Read a single row with <code>zx.db.get</code>, then pull columns with <code>row.text</code>, <code>row.int</code>, <code>row.float</code>, or <code>row.boolean</code>.</p>
@@ -774,7 +774,7 @@ fn Deployment(allocator: zx.Allocator) zx.Component {
             <p>Compile your app to a single, self-contained binary with zero runtime dependencies. Build for production, then bundle the binary with its static assets:</p>
             <CodeBlock code="zig build -Doptimize=ReleaseSafe" />
             <CodeBlock code="zig build zx -- bundle" />
-            <p>This creates a <code>bundle/</code> directory containing your binary and <code>static/</code> assets. Copy the whole directory to your server and run the binary — no interpreter or external dependencies needed.</p>
+            <p>This creates a <code>bundle/</code> directory containing your binary and <code>static/</code> assets. Copy the whole directory to your server and run the binary.</p>
 
             <h4 id="deployment-docker">Docker</h4>
             <p>Scaffold a project with a ready-to-use Dockerfile using the <code>docker</code> template:</p>
@@ -809,7 +809,7 @@ fn Deployment(allocator: zx.Allocator) zx.Component {
 
             <div class="callout note">
                 <strong>Others:</strong>
-                 AWS Lambda and additional edge providers are in progress.
+                 Deployment to other edge platforms is possible with custom build scripts. Guides for Fly.io, AWS Lambda, and more are coming soon.
             </div>
         </section>
     );

@@ -143,18 +143,18 @@ const categories = [_]SidebarProps.Category{
                     .{ .href = "/reference#cli-version", .text = "version" },
                 },
             },
-            .{
-                .title = "Plugins",
-                .href = "/reference#plugins",
-                .items = &[_]SidebarProps.Link{
-                    .{ .href = "/reference#plugin-overview", .text = "Overview" },
-                    .{ .href = "/reference#builtin-plugins", .text = "Builtin Plugins" },
-                    .{ .href = "/reference#tailwind-plugin", .text = "Tailwind CSS" },
-                    .{ .href = "/reference#esbuild-plugin", .text = "esbuild" },
-                    // .{ .href = "/reference#combining-plugins", .text = "Combining Plugins" },
-                    // .{ .href = "/reference#custom-plugins", .text = "Custom Plugins" },
-                },
-            },
+            // .{
+            //     .title = "Plugins",
+            //     .href = "/reference#plugins",
+            //     .items = &[_]SidebarProps.Link{
+            //         .{ .href = "/reference#plugin-overview", .text = "Overview" },
+            //         .{ .href = "/reference#builtin-plugins", .text = "Builtin Plugins" },
+            //         .{ .href = "/reference#tailwind-plugin", .text = "Tailwind CSS" },
+            //         .{ .href = "/reference#esbuild-plugin", .text = "esbuild" },
+            //         // .{ .href = "/reference#combining-plugins", .text = "Combining Plugins" },
+            //         // .{ .href = "/reference#custom-plugins", .text = "Custom Plugins" },
+            //     },
+            // },
         },
     },
 };
