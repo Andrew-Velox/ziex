@@ -47,8 +47,8 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
     resolved.staticdir = staticdir;
 
     switch (platform.os) {
-        .freestanding, .wasi => {
-            zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+        .freestanding, .wasi => |os| {
+            if (os == .wasi) zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
 
             var kv_wasm = zx.Kv.Wasm{};
             zx.kv = kv_wasm.kv();
