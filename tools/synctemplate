@@ -7,17 +7,6 @@ else
     VERSION="${CURRENT_VERSION}"
 fi
 
-cd src/cli/init/template
-
-# Since we are releasing as pre-release it takes the last latest releases
-# LATEST_RELEASE_VERSION=$(curl -s https://api.github.com/repos/ziex-dev/ziex/releases/latest | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
-# zig fetch --save "git+https://github.com/ziex-dev/ziex#${LATEST_RELEASE_VERSION}"
-
-
-echo "Updating template to ziex version: ${VERSION} of init template"
-zig fetch --save "git+https://github.com/ziex-dev/ziex#${VERSION}"
-
-cd ../../../../
 cd templates/_base
 echo "Updating template to ziex version: ${VERSION} of base template"
 zig fetch --save "git+https://github.com/ziex-dev/ziex#${VERSION}"
