@@ -61,6 +61,14 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
 
     const zig_api = util.extractSection(allocator, examples_content, "Learn: api route");
 
+    const kv_basic = util.extractSection(allocator, examples_content, "Learn: kv basic");
+    const kv_typed = util.extractSection(allocator, examples_content, "Learn: kv typed");
+    const kv_scoped = util.extractSection(allocator, examples_content, "Learn: kv scoped");
+
+    const db_basic = util.extractSection(allocator, examples_content, "Learn: db basic");
+    const db_typed = util.extractSection(allocator, examples_content, "Learn: db typed");
+    const db_transaction = util.extractSection(allocator, examples_content, "Learn: db transaction");
+
     const html_greeting = util.renderComponentToHtml(allocator, examples.Learn__HelloWorld(allocator));
     const html_markup = util.renderComponentToHtml(allocator, examples.Learn__AboutSection(allocator));
     const html_text = util.renderComponentToHtml(allocator, examples.Learn__UserGreeting(allocator));
@@ -102,6 +110,9 @@ pub fn Page(ctx: zx.PageContext) !zx.Component {
             <PagesAndLayouts zx_page={zx_page} zig_page={zig_page} html_page={html_page} zx_layout={zx_layout} zx_dynamic={zx_dynamic} zig_dynamic={zig_dynamic} html_dynamic={html_dynamic} />
             <APIRoutes zig_code={zig_api} />
             <Plugins />
+            <KVStorage kv_basic={kv_basic} kv_typed={kv_typed} kv_scoped={kv_scoped} />
+            <Database db_basic={db_basic} db_typed={db_typed} db_transaction={db_transaction} />
+            <Deployment />
             <NextSteps />
         </fragment>
     );
@@ -684,6 +695,122 @@ fn Plugins(allocator: zx.Allocator) zx.Component {
             </div>
 
             <p>See the <a href="/reference#plugins">Plugins documentation</a> for all available options and how to create your own custom plugins.</p>
+        </section>
+    );
+}
+
+const KVStorageProps = struct {
+    kv_basic: []const u8,
+    kv_typed: []const u8,
+    kv_scoped: []const u8,
+};
+
+fn KVStorage(allocator: zx.Allocator, props: KVStorageProps) zx.Component {
+    return (
+        <section id="kv" class="section" @allocator={allocator}>
+            <h2>Key-Value Storage</h2>
+            <p>ZX includes a key-value store for persisting small pieces of data across requests and restarts. Access it through <code>zx.kv</code>.</p>
+            <p>Store and retrieve raw bytes:</p>
+            <CodeBlock code={props.kv_basic} />
+            <p><code>zx.kv.get</code> returns owned bytes (or <code>null</code>), so free them when you're done — or use the request arena as shown. List keys with a prefix using <code>zx.kv.list</code>.</p>
+
+            <h3>Typed values</h3>
+            <p>Use <code>zx.kv.putAs</code> and <code>zx.kv.as</code> to store and read typed Zig structs directly:</p>
+            <CodeBlock code={props.kv_typed} />
+            <p>If the stored value's type doesn't match, <code>zx.kv.as</code> returns <code>error.InvalidType</code>.</p>
+
+            <h3>Scoped namespaces</h3>
+            <p>Group keys into separate namespaces with <code>zx.kv.scoped</code>, passing an enum literal for the namespace name:</p>
+            <CodeBlock code={props.kv_scoped} />
+            <p>A scoped store exposes the same methods as the default one.</p>
+
+            <div class="callout note">
+                <strong>Storage backend:</strong>
+                 On native platforms, data is stored on the filesystem under <code>datadir/kv/</code>. On edge runtimes like Cloudflare Workers, ZX uses the platform's KV binding instead.
+            </div>
+        </section>
+    );
+}
+
+const DatabaseProps = struct {
+    db_basic: []const u8,
+    db_typed: []const u8,
+    db_transaction: []const u8,
+};
+
+fn Database(allocator: zx.Allocator, props: DatabaseProps) zx.Component {
+    return (
+        <section id="database" class="section" @allocator={allocator}>
+            <h2>Database</h2>
+            <p>ZX ships with a SQL database layer accessed through <code>zx.db</code>. The API mirrors the shape of <code>std.Io</code> — small, explicit methods that prepare and run statements for you.</p>
+            <p>Create tables and insert rows with <code>zx.db.run</code>:</p>
+            <CodeBlock code={props.db_basic} />
+            <p>Pass bindings as an inline literal: <code>.empty</code> for none, a tuple for positional <code>?1</code> placeholders, or a struct for named <code>$name</code> placeholders. Read a single row with <code>zx.db.get</code>, then pull columns with <code>row.text</code>, <code>row.int</code>, <code>row.float</code>, or <code>row.boolean</code>.</p>
+
+            <h3>Reading typed rows</h3>
+            <p>Map query results straight into Zig structs with <code>zx.db.rows</code> (or <code>zx.db.row</code> for a single result). Column names are matched to struct fields:</p>
+            <CodeBlock code={props.db_typed} />
+
+            <h3>Transactions</h3>
+            <p>Run multiple statements atomically with <code>zx.db.transaction</code>. It takes a context value and a callback that receives that value plus a <code>zx.Db</code> handle:</p>
+            <CodeBlock code={props.db_transaction} />
+            <p>If the callback returns an error, the transaction rolls back. Use <code>zx.db.transactionWith</code> to pick an explicit mode (<code>.deferred</code>, <code>.immediate</code>, or <code>.exclusive</code>).</p>
+
+            <div class="callout note">
+                <strong>Backends:</strong>
+                 ZX uses SQLite on native platforms and Cloudflare D1 on Workers. The same <code>zx.db</code> API works across both.
+            </div>
+        </section>
+    );
+}
+
+fn Deployment(allocator: zx.Allocator) zx.Component {
+    return (
+        <section id="deployment" class="section" @allocator={allocator}>
+            <h2>Deployment</h2>
+            <p>ZX apps can be deployed in three ways: as a <strong>standalone</strong> binary on your own server, as a <strong>static</strong> site on a CDN, or to an <strong>edge</strong> runtime like Cloudflare Workers or Vercel.</p>
+
+            <h3 id="deployment-standalone">Standalone</h3>
+            <p>Compile your app to a single, self-contained binary with zero runtime dependencies. Build for production, then bundle the binary with its static assets:</p>
+            <CodeBlock code="zig build -Doptimize=ReleaseSafe" />
+            <CodeBlock code="zig build zx -- bundle" />
+            <p>This creates a <code>bundle/</code> directory containing your binary and <code>static/</code> assets. Copy the whole directory to your server and run the binary — no interpreter or external dependencies needed.</p>
+
+            <h4 id="deployment-docker">Docker</h4>
+            <p>Scaffold a project with a ready-to-use Dockerfile using the <code>docker</code> template:</p>
+            <CodeBlock code="zx init --template docker" />
+            <p>It uses a two-stage Alpine build that compiles your app and ships only the final binary and assets. Build and run the image:</p>
+            <CodeBlock code="docker build -t myapp ." />
+
+            <div class="callout note">
+                <strong>Others:</strong>
+                 More standalone deployment guides (systemd, bare VPS) are coming soon.
+            </div>
+
+            <h3 id="deployment-static">Static</h3>
+            <p>For sites without per-request server logic, export every route to static HTML:</p>
+            <CodeBlock code="zig build zx -- export" />
+            <p>This crawls all routes and writes the output to a <code>dist/</code> directory, ready to upload to any static host like Netlify, GitHub Pages, or a CDN.</p>
+
+            <h3 id="deployment-edge">Edge</h3>
+            <p>ZX compiles to WebAssembly (WASI), so it runs on edge runtimes close to your users. Edge targets use the <code>KV</code> binding for storage instead of the filesystem.</p>
+
+            <h4 id="deployment-cloudflare">Cloudflare</h4>
+            <p>Scaffold a Cloudflare Workers project with the <code>cloudflare</code> template:</p>
+            <CodeBlock code="zx init --template cloudflare" />
+            <p>The template includes a <code>wrangler.jsonc</code> that builds your app to WASM and wires up KV and static assets. Deploy with Wrangler:</p>
+            <CodeBlock code="npx wrangler deploy" />
+
+            <h4 id="deployment-vercel">Vercel</h4>
+            <p>Scaffold a Vercel project with the <code>vercel</code> template:</p>
+            <CodeBlock code="zx init --template vercel" />
+            <p>It ships a <code>vercel.json</code> configured for Edge Functions (with an optional Node.js runtime). Deploy with the Vercel CLI:</p>
+            <CodeBlock code="vercel deploy" />
+
+            <div class="callout note">
+                <strong>Others:</strong>
+                 AWS Lambda and additional edge providers are in progress.
+            </div>
         </section>
     );
 }
