@@ -35,6 +35,8 @@ jobs:
   resolve-version:
     name: Resolve Version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       dist-tag: ${{ steps.resolve.outputs.dist_tag }}
@@ -76,6 +78,24 @@ jobs:
           fi
           echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
           echo "Resolved dist-tag: $DIST_TAG"
+
+      - name: Create release tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.resolve.outputs.version }}"
+          TAG="v$VERSION"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG already exists, skipping."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          REMOTE_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push "$REMOTE_URL" "$TAG"
+          echo "Created and pushed tag $TAG"
 
   build-release:
     name: Build Release Binaries
