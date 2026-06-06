@@ -12,12 +12,11 @@ pub const init = initlib.init;
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
     const exclude_lsp = b.option(bool, "exclude-lsp", "Exclude the LSP server to speed up builds") orelse false;
     const exclude_core_lang = b.option(bool, "exclude-core-lang", "Exclude core language tools (Ast/Parse/sourcemap) - only needed by CLI") orelse false;
-    const exclude_db = b.option(bool, "exclude-db", "Exclude database adapter to speed up builds") orelse false;
+
     const is_client = b.option(bool, "is-client", "Building for the browser (client)") orelse false;
-    const is_edge = b.option(bool, "is-edge", "Building for a WASI-based edge runtime") orelse false;
-    const is_playground = b.option(bool, "is-playground", "Building for the ZX Playground (WASM)") orelse false;
 
     // Options
     const options = b.addOptions();
@@ -61,10 +60,7 @@ pub fn build(b: *std.Build) !void {
     // Module feature flags (controls what gets compiled)
     const zx_module_options = b.addOptions();
     zx_module_options.addOption(bool, "exclude_core_lang", exclude_core_lang);
-    zx_module_options.addOption(bool, "exclude_db", exclude_db);
     zx_module_options.addOption(bool, "is_client", is_client);
-    zx_module_options.addOption(bool, "is_edge", is_edge);
-    zx_module_options.addOption(bool, "is_playground", is_playground);
 
     // Imports (zx)
     {

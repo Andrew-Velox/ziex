@@ -121,6 +121,6 @@ pub const io = app_mod.io;
 pub const platform: Platform = plfm.platform;
 pub const std_options = opts.std_options;
 
-// --- StyleSheet (separate cached module) --- //
+// --- Styling --- //
 pub const style = @import("zx_style");
 pub const Style = style.Style;

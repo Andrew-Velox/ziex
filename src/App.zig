@@ -37,7 +37,6 @@ var cache_fs: zx.Kv.Fs = undefined;
 
 fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Config {
     const zx_options = @import("zx_options"); // Remove and from build system pass these as env var
-    const module_options = @import("zx_module_options");
 
     var resolved = config;
 
@@ -47,16 +46,18 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
     resolved.datadir = datadir;
     resolved.staticdir = staticdir;
 
-    if (!module_options.exclude_db and platform.os == .wasi) {
-        zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+    switch (platform.os) {
+        .freestanding, .wasi => {
+            zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+
+            var kv_wasm = zx.Kv.Wasm{};
+            zx.kv = kv_wasm.kv();
+
+            return resolved;
+        },
+        else => {},
     }
 
-    if (platform.os == .freestanding or platform.os == .wasi) {
-        var kv_wasm = zx.Kv.Wasm{};
-        zx.kv = kv_wasm.kv();
-
-        return resolved;
-    }
     kv_fs = .{
         .io = init.io,
         .subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" }),
@@ -72,14 +73,12 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
         .max_size = resolved.cache.max_size,
     });
 
-    if (!module_options.exclude_db) {
-        zx.db = try zx.Db.Sqlite.open(
-            alloc,
-            init.io,
-            try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir}),
-            .{},
-        );
-    }
+    zx.db = try zx.Db.Sqlite.open(
+        alloc,
+        init.io,
+        try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir}),
+        .{},
+    );
 
     return resolved;
 }
