@@ -22,7 +22,6 @@ pub const files = [_]TemplateFile{
     .{ .path = "README.md", .content = @embedFile(base ++ "README.md") },
     .{ .path = "app/assets/style.css", .content = @embedFile(base ++ "app/assets/style.css") },
     .{ .path = "app/public/favicon.ico", .content = @embedFile(base ++ "app/public/favicon.ico") },
-    .{ .path = "app/scripts/client.ts", .content = @embedFile(base ++ "app/scripts/client.ts") },
     .{ .path = "app/pages/layout.zx", .content = @embedFile(base ++ "app/pages/layout.zx") },
     .{ .path = "app/pages/page.zx", .content = @embedFile(base ++ "app/pages/page.zx") },
     .{ .path = "app/pages/client.zx", .content = @embedFile(base ++ "app/pages/client.zx") },
