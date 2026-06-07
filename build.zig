@@ -303,9 +303,14 @@ pub fn build(b: *std.Build) !void {
                 }),
             });
             const release_exe_build_options = b.addOptions();
-            release_exe_build_options.addOption(bool, "exclude_lsp", true);
+            release_exe_build_options.addOption(bool, "exclude_lsp", false);
             release_exe.root_module.addOptions("build_options", release_exe_build_options);
             release_exe.root_module.addAnonymousImport("app_template", .{ .root_source_file = b.path("templates/Template.zig") });
+
+            if (!exclude_lsp) {
+                const zls_dep = b.dependency("zls", .{ .target = target, .optimize = .ReleaseSafe });
+                release_exe.root_module.addImport("zls", zls_dep.module("zls"));
+            }
 
             const exe_ext = if (resolved_target.result.os.tag == .windows) ".exe" else "";
             const install_release = b.addInstallArtifact(release_exe, .{
