@@ -16,20 +16,19 @@ RESULTS_DIR=$(mktemp -d)
 
 publish_idempotent() {
   local pkg="$1"; shift
-  local out
-  if out=$(npm publish --access public --tag dev --registry "$REGISTRY" "$@" 2>&1); then
-    echo "$out"
-    return 0
-  fi
+  local out rc=0 codes
+  out=$(npm publish --access public --tag dev --registry "$REGISTRY" "$@" 2>&1) || rc=$?
   echo "$out"
-  if echo "$out" | grep -qiE 'E409|already present|cannot publish over'; then
+  [ "$rc" -eq 0 ] && return 0
+  codes=$(printf '%s\n' "$out" | grep -E 'npm (error|ERR!) code ' | grep -oE 'E[0-9]{3}' || true)
+  if [ -n "$codes" ] && ! printf '%s\n' "$codes" | grep -qv '^E409$'; then
     echo "==> $pkg already present at this version; ensuring dist-tag and continuing"
     # Best-effort: keep the 'dev' dist-tag pointed at this version. Don't fail
     # the smoke test if even this is a no-op.
     npm dist-tag add "${pkg}@${VERSION}" dev --registry "$REGISTRY" 2>&1 || true
     return 0
   fi
-  echo "==> Publish failed for $pkg (not a conflict)" >&2
+  echo "==> Publish failed for $pkg (not a conflict, rc=$rc)" >&2
   return 1
 }
 
@@ -76,13 +75,16 @@ fi
 # (E409 on re-run), that's fine for a smoke test — tolerate it and continue.
 echo "==> Publishing @ziex/cli* to local registry..."
 cd "$VERDACCIO_DIR"
-cli_out=$(npm publish --workspaces --access public --tag dev --registry "$REGISTRY" 2>&1) || true
+cli_rc=0
+cli_out=$(npm publish --workspaces --access public --tag dev --registry "$REGISTRY" 2>&1) || cli_rc=$?
 echo "$cli_out"
-# Fail only on an npm error code that is NOT 409 (already present). This way a
-# real error still fails even if other packages in the batch merely conflicted.
-if echo "$cli_out" | grep -oiE 'E[0-9]{3}' | grep -qvi 'E409'; then
-  echo "==> @ziex/cli* publish failed with a non-conflict error" >&2
-  exit 1
+if [ "$cli_rc" -ne 0 ]; then
+  codes=$(printf '%s\n' "$cli_out" | grep -E 'npm (error|ERR!) code ' | grep -oE 'E[0-9]{3}' || true)
+  if [ -z "$codes" ] || printf '%s\n' "$codes" | grep -qv '^E409$'; then
+    echo "==> @ziex/cli* publish failed with a non-conflict error (rc=$cli_rc)" >&2
+    exit 1
+  fi
+  echo "==> @ziex/cli* already present at this version; continuing"
 fi
 
 # Build and publish ziex to local registry (skip on Windows - bun build crashes)
