@@ -143,18 +143,6 @@ const categories = [_]SidebarProps.Category{
                     .{ .href = "/reference#cli-version", .text = "version" },
                 },
             },
-            // .{
-            //     .title = "Plugins",
-            //     .href = "/reference#plugins",
-            //     .items = &[_]SidebarProps.Link{
-            //         .{ .href = "/reference#plugin-overview", .text = "Overview" },
-            //         .{ .href = "/reference#builtin-plugins", .text = "Builtin Plugins" },
-            //         .{ .href = "/reference#tailwind-plugin", .text = "Tailwind CSS" },
-            //         .{ .href = "/reference#esbuild-plugin", .text = "esbuild" },
-            //         // .{ .href = "/reference#combining-plugins", .text = "Combining Plugins" },
-            //         // .{ .href = "/reference#custom-plugins", .text = "Custom Plugins" },
-            //     },
-            // },
         },
     },
 };
@@ -174,7 +162,6 @@ const toc_links = [_]SidebarProps.Link{
     .{ .href = "/reference#children-props", .text = "Children Props" },
     .{ .href = "/reference#syntax", .text = "Syntax" },
     .{ .href = "/reference#caching", .text = "Caching" },
-    .{ .href = "/reference#plugins", .text = "Plugins" },
     .{ .href = "/reference#cli", .text = "CLI" },
 };
 
