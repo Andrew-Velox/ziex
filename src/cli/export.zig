@@ -24,6 +24,21 @@ fn @"export"(ctx: zli.CommandContext) !void {
     const outdir = ctx.flag("outdir", []const u8);
     const binpath = ctx.flag("binpath", []const u8);
 
+    var build_proc = try std.process.spawn(io, .{
+        .argv = &.{ cli_options.zig_exe, "build", "-Dcli-command=export" },
+        .environ_map = app.environ_map,
+    });
+    switch (try build_proc.wait(io)) {
+        .exited => |code| if (code != 0) {
+            try ctx.writer.print("Failed to build the ZX executable for export (exit {d})!\n", .{code});
+            return;
+        },
+        else => {
+            try ctx.writer.print("Failed to build the ZX executable for export!\n", .{});
+            return;
+        },
+    }
+
     var app_meta = util.findprogram(io, ctx.allocator, binpath) catch |err| {
         if (err == error.FileNotFound or err == error.ProgramNotFound or err == error.EmptyBinDir) {
             try ctx.writer.print("Run \x1b[34mzig build\x1b[0m to build the ZX executable first!\n", .{});
@@ -379,6 +394,7 @@ fn expandDynamicPath(allocator: std.mem.Allocator, route_path: []const u8, param
 
 const std = @import("std");
 const zli = @import("zli");
+const cli_options = @import("cli_options");
 const util = @import("shared/util.zig");
 const flag = @import("shared/flag.zig");
 const AppContext = @import("shared/context.zig").AppContext;
