@@ -324,19 +324,41 @@ jobs:
       - name: Publish @ziex/cli* to NPM
         env:
           NODE_AUTH_TOKEN: ""
+          DIST_TAG: ${{ needs.resolve-version.outputs.dist-tag }}
         run: |
           cd pkg/@ziex
-          npm publish --workspaces --access public --provenance --tag ${{ needs.resolve-version.outputs.dist-tag }}
+          rc=0
+          out=$(npm publish --workspaces --access public --provenance --tag "$DIST_TAG" 2>&1) || rc=$?
+          echo "$out"
+          [ "$rc" -eq 0 ] && exit 0
+          # Tolerate "cannot publish over previously published versions" (E403 on
+          # npmjs.org). Re-running a release at the same dev.<N> version is a no-op.
+          if printf '%s\n' "$out" | grep -qE 'You cannot publish over the previously published versions'; then
+            echo "==> @ziex/cli* already published at this version; continuing"
+            exit 0
+          fi
+          echo "==> @ziex/cli* publish failed (rc=$rc)" >&2
+          exit "$rc"
 
       - name: Build and publish ziex to NPM
         env:
           NODE_AUTH_TOKEN: ""
+          DIST_TAG: ${{ needs.resolve-version.outputs.dist-tag }}
         run: |
           cd pkg/ziex
           bun install
           bun run build
           cd dist
-          npm publish --access public --provenance --tag ${{ needs.resolve-version.outputs.dist-tag }}
+          rc=0
+          out=$(npm publish --access public --provenance --tag "$DIST_TAG" 2>&1) || rc=$?
+          echo "$out"
+          [ "$rc" -eq 0 ] && exit 0
+          if printf '%s\n' "$out" | grep -qE 'You cannot publish over the previously published versions'; then
+            echo "==> ziex already published at this version; continuing"
+            exit 0
+          fi
+          echo "==> ziex publish failed (rc=$rc)" >&2
+          exit "$rc"
 
   sync-templates:
     name: Sync & Release Templates
