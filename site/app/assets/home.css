@@ -3031,29 +3031,4 @@ body {
     background-color: rgba(74, 222, 128, 0.1);
     outline: none;
 }
-
-/* Tooltip for the button */
-.code-example-open-playground[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.9);
-    color: #fff;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    margin-bottom: 0.5rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-    z-index: 1000;
-}
-
-.code-example-open-playground:hover[data-tooltip]::after,
-.code-example-open-playground:focus[data-tooltip]::after {
-    opacity: 1;
-}
 }
