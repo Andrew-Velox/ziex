@@ -11,7 +11,7 @@ test "api > module surface compiles" {
         .create = false,
         .max_pool_size = 1,
     };
-    // SQLite-only tuning lives on the backend's own options type now.
+
     const sqlite_options = Db.Sqlite.OpenOptions{
         .readonly = true,
         .safe_integers = true,
@@ -37,7 +37,7 @@ test "api > module surface compiles" {
     _ = Db.transactionDeferred;
     _ = Db.transactionWith;
     _ = Db.close;
-    // SQLite-only features are reached through the backend, not the neutral Db.
+
     _ = Db.Sqlite.open;
     _ = Db.Sqlite.deserialize;
     _ = Db.Sqlite.from;

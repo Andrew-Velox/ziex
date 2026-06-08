@@ -5,6 +5,7 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
     }, update);
 
     try cmd.addFlag(version_flag);
+    try cmd.addFlag(dev_flag);
 
     return cmd;
 }
@@ -12,15 +13,84 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 fn update(ctx: zli.CommandContext) !void {
     const app = AppContext.from(&ctx);
     const version = ctx.flag("version", []const u8);
-    const version_str = if (std.mem.eql(u8, version, "latest")) "" else try std.fmt.allocPrint(ctx.allocator, "#v{s}", .{version});
-    defer ctx.allocator.free(version_str);
+    const dev = ctx.flag("dev", bool);
 
-    const fetch_uri = try std.fmt.allocPrint(ctx.allocator, "git+{s}{s}", .{ zx.info.repository, version_str });
+    const ref = if (!std.mem.eql(u8, version, "latest"))
+        try std.fmt.allocPrint(ctx.allocator, "#v{s}", .{version})
+    else if (dev)
+        try ctx.allocator.dupe(u8, "")
+    else blk: {
+        const tag = try fetchLatestReleaseTag(app.io, ctx.allocator, app.environ_map);
+        defer ctx.allocator.free(tag);
+        break :blk try std.fmt.allocPrint(ctx.allocator, "#{s}", .{tag});
+    };
+    defer ctx.allocator.free(ref);
+
+    const fetch_uri = try std.fmt.allocPrint(ctx.allocator, "git+{s}{s}", .{ zx.info.repository, ref });
     defer ctx.allocator.free(fetch_uri);
 
     var system = try std.process.spawn(app.io, .{ .argv = &.{ cli_options.zig_exe, "fetch", "--save", fetch_uri } });
     const term = try system.wait(app.io);
     _ = term;
+}
+
+fn fetchLatestReleaseTag(
+    io: std.Io,
+    allocator: std.mem.Allocator,
+    environ_map: *std.process.Environ.Map,
+) ![]const u8 {
+    var client: std.http.Client = .{ .allocator = allocator, .io = io };
+    defer client.deinit();
+
+    const auth_header: ?std.http.Header = if (environ_map.get("GITHUB_TOKEN")) |token| blk: {
+        if (token.len == 0) break :blk null;
+        break :blk .{
+            .name = "authorization",
+            .value = try std.fmt.allocPrint(allocator, "Bearer {s}", .{token}),
+        };
+    } else null;
+    defer if (auth_header) |h| allocator.free(h.value);
+
+    const slug = std.mem.trimEnd(u8, zx.info.repository, "/");
+    const owner_repo = if (std.mem.lastIndexOfScalar(u8, slug, '/')) |i|
+        if (std.mem.lastIndexOfScalar(u8, slug[0..i], '/')) |j| slug[j + 1 ..] else slug
+    else
+        slug;
+
+    const url = try std.fmt.allocPrint(
+        allocator,
+        "https://api.github.com/repos/{s}/releases/latest",
+        .{owner_repo},
+    );
+    defer allocator.free(url);
+
+    var aw = std.Io.Writer.Allocating.init(allocator);
+    defer aw.deinit();
+
+    var headers: std.ArrayList(std.http.Header) = .empty;
+    defer headers.deinit(allocator);
+    try headers.appendSlice(allocator, &.{
+        .{ .name = "user-agent", .value = "ziex-cli" },
+        .{ .name = "accept", .value = "application/vnd.github+json" },
+    });
+    if (auth_header) |h| try headers.append(allocator, h);
+
+    const result = client.fetch(.{
+        .location = .{ .url = url },
+        .method = .GET,
+        .redirect_behavior = @enumFromInt(5),
+        .response_writer = &aw.writer,
+        .extra_headers = headers.items,
+    }) catch return error.NetworkError;
+
+    if (result.status != .ok) return error.NoReleaseFound;
+
+    const parsed = std.json.parseFromSlice(struct {
+        tag_name: []const u8,
+    }, allocator, aw.written(), .{ .ignore_unknown_fields = true }) catch return error.NoReleaseFound;
+    defer parsed.deinit();
+
+    return allocator.dupe(u8, parsed.value.tag_name);
 }
 
 const version_flag = zli.Flag{
@@ -29,6 +99,13 @@ const version_flag = zli.Flag{
     .description = "Version to update to",
     .type = .String,
     .default_value = .{ .String = "latest" },
+};
+
+const dev_flag = zli.Flag{
+    .name = "dev",
+    .description = "Update to the latest commit on the main branch instead of the latest release",
+    .type = .Bool,
+    .default_value = .{ .Bool = false },
 };
 
 const std = @import("std");
