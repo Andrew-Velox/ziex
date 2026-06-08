@@ -11,29 +11,20 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
 }
 
 pub const options = zx.PageOptions{
-    .static = .{
-        .params = &.{
-            &.{.{ .key = "slug", .value = "hello-world" }},
-            &.{.{ .key = "slug", .value = "intro" }},
-            &.{.{ .key = "slug", .value = "start-1" }},
-            &.{.{ .key = "slug", .value = "start-2" }},
-            &.{.{ .key = "slug", .value = "start-3" }},
-            &.{.{ .key = "slug", .value = "start-4" }},
-        },
-        .getParams = getStaticParams,
-    },
+    .static = staticParams,
 };
 
-fn getStaticParams(allocator: zx.Allocator) ![]const []const zx.PageOptions.StaticParam {
-    var params = std.ArrayList([] const zx.PageOptions.StaticParam).empty;
+fn staticParams(ctx: *zx.StaticContext) !void {
+    try ctx.params.add(.{ .slug = "hello-world" });
+    try ctx.params.add(.{ .slug = "intro" });
+    try ctx.params.add(.{ .slug = "start-1" });
+    try ctx.params.add(.{ .slug = "start-2" });
+    try ctx.params.add(.{ .slug = "start-3" });
+    try ctx.params.add(.{ .slug = "start-4" });
 
-    try params.appendSlice(allocator, &.{
-        &.{.{ .key = "slug", .value = "dynamic-1" }},
-        &.{.{ .key = "slug", .value = "dynamic-2" }},
-        &.{.{ .key = "slug", .value = "dynamic-3" }},
-    });
-
-    return params.items;
+    // Params can also be added dynamically (e.g. from a database or filesystem).
+    const dynamic = [_][]const u8{ "dynamic-1", "dynamic-2", "dynamic-3" };
+    for (dynamic) |slug| try ctx.params.add(.{ .slug = slug });
 }
 
 const std = @import("std");

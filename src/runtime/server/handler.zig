@@ -690,19 +690,11 @@ pub fn Handler(comptime AppCtxType: type) type {
             }
         }
 
-        fn resolveStaticParams(self: *Self, allocator_arg: Allocator, static_opts: zx.PageOptions.Static) ![]const []const zx.PageOptions.StaticParam {
+        fn resolveStaticParams(self: *Self, allocator_arg: Allocator, static_fn: zx.StaticFn) ![]const []const zx.StaticParam {
             _ = self;
-            var params = std.ArrayList([]const zx.PageOptions.StaticParam).empty;
-            if (static_opts.params) |p| {
-                try params.appendSlice(allocator_arg, p);
-            }
-
-            if (static_opts.getParams) |getter| {
-                const p = try getter(allocator_arg);
-                try params.appendSlice(allocator_arg, p);
-            }
-
-            return try params.toOwnedSlice(allocator_arg);
+            var ctx = zx.StaticContext.init(allocator_arg);
+            try static_fn(&ctx);
+            return try ctx.params.entries.toOwnedSlice(allocator_arg);
         }
 
         /// Render a page with streaming SSR support

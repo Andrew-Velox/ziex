@@ -19,23 +19,73 @@ pub const PageMethod = enum {
     TRACE,
     ALL,
 };
+
+pub const StaticParam = struct {
+    key: []const u8,
+    value: []const u8,
+};
+
+pub const StaticParams = struct {
+    allocator: std.mem.Allocator,
+    entries: std.ArrayList([]const StaticParam) = .empty,
+
+    /// Add one parameter combination to pre-render. Pass an anonymous struct
+    /// whose fields name the dynamic segments:
+    /// ```zig
+    /// try ctx.params.add(.{ .slug = "hello-world" });
+    /// try ctx.params.add(.{ .category = "zig", .slug = "intro" });
+    /// ```
+    pub fn add(self: *StaticParams, params: anytype) !void {
+        const T = @TypeOf(params);
+        const fields = @typeInfo(T).@"struct".fields;
+        const set = try self.allocator.alloc(StaticParam, fields.len);
+        inline for (fields, 0..) |field, i| {
+            set[i] = .{ .key = field.name, .value = @field(params, field.name) };
+        }
+        try self.entries.append(self.allocator, set);
+    }
+
+    /// Add a raw key/value parameter set. Use this when segment names are not
+    /// known at comptime; otherwise prefer `add`.
+    pub fn addRaw(self: *StaticParams, set: []const StaticParam) !void {
+        try self.entries.append(self.allocator, set);
+    }
+};
+
+/// Context passed to a page or route's `static` function during `zx export`.
+/// Use `ctx.params.add(...)` to declare which dynamic parameter combinations
+/// should be pre-rendered to static HTML.
+///
+/// ```zig
+/// pub const options = zx.PageOptions{
+///     .static = staticParams,
+/// };
+///
+/// fn staticParams(ctx: *zx.StaticContext) !void {
+///     try ctx.params.add(.{ .slug = "hello-world" });
+///     try ctx.params.add(.{ .slug = "intro" });
+/// }
+/// ```
+pub const StaticContext = struct {
+    arena: std.mem.Allocator,
+    params: StaticParams,
+
+    pub fn init(arena: std.mem.Allocator) StaticContext {
+        return .{ .arena = arena, .params = .{ .allocator = arena } };
+    }
+};
+
+/// A `static` function: receives a `StaticContext` and declares the dynamic
+/// parameter combinations to pre-render via `ctx.params.add(...)`.
+pub const StaticFn = *const fn (ctx: *StaticContext) anyerror!void;
+
 pub const PageOptions = struct {
     pub const Method = PageMethod;
-    pub const StaticParam = struct {
-        key: []const u8,
-        value: []const u8,
-    };
-
-    /// Options for static page generation during `zx export`
-    pub const Static = struct {
-        params: ?[]const []const StaticParam = null,
-        getParams: ?*const fn (std.mem.Allocator) anyerror![]const []const StaticParam = null,
-    };
 
     rendering: ?BuiltinAttribute.Rendering = null,
     caching: BuiltinAttribute.Caching = .none,
     methods: []const PageMethod = &.{.GET},
-    static: ?Static = null,
+    static: ?StaticFn = null,
     /// Enable streaming SSR with async components
     streaming: bool = false,
 };
@@ -50,18 +100,8 @@ pub const NotFoundOptions = struct {
 };
 pub const ErrorOptions = struct {};
 pub const RouteOptions = struct {
-    pub const StaticParam = struct {
-        key: []const u8,
-        value: []const u8,
-    };
-
-    pub const Static = struct {
-        params: ?[]const []const StaticParam = null,
-        getParams: ?*const fn (std.mem.Allocator) anyerror![]const []const StaticParam = null,
-    };
-
     caching: BuiltinAttribute.Caching = .none,
-    static: ?Static = null,
+    static: ?StaticFn = null,
 };
 
 /// Options for proxy middleware

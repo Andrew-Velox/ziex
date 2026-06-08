@@ -340,7 +340,7 @@ fn fetchStaticParams(io: std.Io, allocator: std.mem.Allocator, host: []const u8,
     const response_z = try allocator.dupeSentinel(u8, response, 0);
     defer allocator.free(response_z);
 
-    const parsed = std.zon.parse.fromSliceAlloc([]const []const zx.PageOptions.StaticParam, allocator, response_z, null, .{}) catch |err| {
+    const parsed = std.zon.parse.fromSliceAlloc([]const []const zx.StaticParam, allocator, response_z, null, .{}) catch |err| {
         log.warn("Failed to parse static params ZON: {any}", .{err});
         return .{ .items = &.{}, .allocator = null };
     };
@@ -371,7 +371,7 @@ fn fetchStaticParams(io: std.Io, allocator: std.mem.Allocator, host: []const u8,
 }
 
 /// Replace :param placeholders in a route path with actual values
-fn expandDynamicPath(allocator: std.mem.Allocator, route_path: []const u8, params: []const zx.PageOptions.StaticParam) ![]const u8 {
+fn expandDynamicPath(allocator: std.mem.Allocator, route_path: []const u8, params: []const zx.StaticParam) ![]const u8 {
     var result = try allocator.dupe(u8, route_path);
 
     for (params) |param| {

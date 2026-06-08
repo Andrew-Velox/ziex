@@ -45,9 +45,7 @@ const custom_paths = [_][]const u8{
     "/vs/jetzig",
 };
 
-const options: zx.RouteOptions = .{
-    .static = .{},
-};
+const options: zx.RouteOptions = .{};
 
 const zx = @import("zx");
 const std = @import("std");

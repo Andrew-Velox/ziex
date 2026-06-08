@@ -33,7 +33,7 @@ const jetzig_comparisons = [_]ComparisonRow{
     .{ .aspect = "Routing", .ziex = "File-system routing for pages/layouts + co-located route handlers", .framework = "File-based view routing to Zig functions + custom routes" },
     .{ .aspect = "HTML Rendering", .ziex = "Component-driven rendering with JSX-like syntax", .framework = "Zmpl templates with layouts/partials and static rendering support" },
     .{ .aspect = "Response Defaults", .ziex = "Page rendering by default; API behavior via route handlers", .framework = "HTML default, with automatic JSON endpoints (.json/Accept header)" },
-    .{ .aspect = "Static Generation", .ziex = "Static export with options.static params/getParams", .framework = "Static content generation and static param definitions" },
+    .{ .aspect = "Static Generation", .ziex = "Static export with options.static and ctx.params.add()", .framework = "Static content generation and static param definitions" },
     .{ .aspect = "Middleware", .ziex = "Route/page middleware in app stack", .framework = "Custom middleware chain with built-in htmx middleware" },
     .{ .aspect = "State/Auth", .ziex = "Cookie APIs + proxy state patterns for auth/session flows", .framework = "Built-in cookies and sessions" },
     .{ .aspect = "Database", .ziex = "Bring your own data layer/integration", .framework = "JetQuery integration (PostgreSQL adapter available)" },
@@ -213,17 +213,11 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
 }
 
 pub const options = zx.PageOptions{
-    .static = .{
-        .getParams = getStaticParams,
-    },
+    .static = staticParams,
 };
 
-fn getStaticParams(allocator: zx.Allocator) ![]const []const zx.PageOptions.StaticParam {
-    var params = std.ArrayList([]const zx.PageOptions.StaticParam).empty;
+fn staticParams(ctx: *zx.StaticContext) !void {
     for (frameworks) |framework| {
-        const sp = try allocator.alloc(zx.PageOptions.StaticParam, 1);
-        sp[0] = .{ .key = "framework", .value = framework.slug };
-        try params.append(allocator, sp);
+        try ctx.params.add(.{ .framework = framework.slug });
     }
-    return params.items;
 }

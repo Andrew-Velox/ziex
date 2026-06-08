@@ -74,6 +74,10 @@ pub const SocketOptions = routing.SocketOptions;
 
 /// --- Contexts --- //
 pub const ProxyContext = ctxs.ProxyContext;
+pub const StaticContext = opts.StaticContext;
+pub const StaticParams = opts.StaticParams;
+pub const StaticParam = opts.StaticParam;
+pub const StaticFn = opts.StaticFn;
 pub const PageContext = routing.PageContext;
 pub const LayoutContext = routing.LayoutContext;
 pub const NotFoundContext = routing.NotFoundContext;
