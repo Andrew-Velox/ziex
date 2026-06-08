@@ -6,6 +6,7 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 
     try cmd.addFlag(outdir_flag);
     try cmd.addFlag(flag.binpath_flag);
+    try cmd.addFlag(build_args_flag);
 
     return cmd;
 }
@@ -18,14 +19,33 @@ const outdir_flag = zli.Flag{
     .default_value = .{ .String = "dist" },
 };
 
+const build_args_flag = zli.Flag{
+    .name = "build-args",
+    .shortcut = null,
+    .description = "Additional arguments to pass to zig build (e.g., -Doptimize=ReleaseFast)",
+    .type = .String,
+    .default_value = .{ .String = "" },
+};
+
 fn @"export"(ctx: zli.CommandContext) !void {
     const app = AppContext.from(&ctx);
     const io = app.io;
     const outdir = ctx.flag("outdir", []const u8);
     const binpath = ctx.flag("binpath", []const u8);
 
+    var build_argv = std.ArrayList([]const u8).empty;
+    defer build_argv.deinit(ctx.allocator);
+    try build_argv.appendSlice(ctx.allocator, &.{ cli_options.zig_exe, "build", "-Dcli-command=export" });
+
+    var i_build_args = std.mem.splitSequence(u8, ctx.flag("build-args", []const u8), " ");
+    while (i_build_args.next()) |arg| {
+        const trimmed_arg = std.mem.trim(u8, arg, " ");
+        if (std.mem.eql(u8, trimmed_arg, "")) continue;
+        try build_argv.append(ctx.allocator, trimmed_arg);
+    }
+
     var build_proc = try std.process.spawn(io, .{
-        .argv = &.{ cli_options.zig_exe, "build", "-Dcli-command=export" },
+        .argv = build_argv.items,
         .environ_map = app.environ_map,
     });
     switch (try build_proc.wait(io)) {
