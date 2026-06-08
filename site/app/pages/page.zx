@@ -610,7 +610,7 @@ fn BenchmarksPanel(allocator: zx.Allocator, tab: BenchmarkTab) zx.Component {
     const panel_id = std.fmt.allocPrint(allocator, "panel-{s}", .{tab.id}) catch unreachable;
     const tab_id = std.fmt.allocPrint(allocator, "tab-{s}", .{tab.id}) catch unreachable;
     return (
-        <div @allocator={allocator} class="benchmarks-panel" data-tab={tab.id} role="tabpanel" id={panel_id} aria-labelledby={tab_id}>
+        <div @allocator={allocator} class="benchmarks-panel" data-tab={tab.id} data-lower-is-better={if (tab.lower_is_better) "true" else "false"} role="tabpanel" id={panel_id} aria-labelledby={tab_id}>
             <div class="benchmarks-metric">{tab.metric}</div>
             <div class="benchmarks-chart">
                 {for (tab.rows) |row| (

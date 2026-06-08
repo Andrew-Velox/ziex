@@ -2552,6 +2552,15 @@ a.hero-badge:hover {
     box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
 }
 
+.benchmarks-panel[data-lower-is-better="true"] .bench-bar-fill {
+    background: linear-gradient(90deg, #4ade80, rgba(74, 222, 128, 0.3));
+}
+
+.benchmarks-panel[data-lower-is-better="true"] .bench-row:first-child .bench-bar-fill {
+    background: linear-gradient(90deg, #86efac, #4ade80, rgba(74, 222, 128, 0.5));
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
+}
+
 .bench-value {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
