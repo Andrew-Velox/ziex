@@ -42,7 +42,7 @@ pub fn Layout(ctx: zx.LayoutContext, children: zx.Component) zx.Component {
                 <meta name="theme-color" content="#0055b3" />
 
                 <link rel="canonical" href={site_url} />
-                <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+                <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
                 {if (needs_js) (<link rel="preload" href={js_href} as="script" />)}
 
