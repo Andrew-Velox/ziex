@@ -2572,6 +2572,52 @@ a.hero-badge:hover {
     box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
 }
 
+/* Start of the magnifying lens effect for the last benchmark bar in the SSR tab. */
+.benchmarks-panel[data-tab="bench-tab-ssr"] .bench-row:last-child .bench-bar {
+    overflow: visible;
+}
+
+/* The lens disc: a circle clipped over the bar tip that magnifies the thin
+   10px bar into a thick, clearly-visible green segment. */
+.benchmarks-panel[data-tab="bench-tab-ssr"] .bench-row:last-child .bench-bar::before {
+    content: "";
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    top: 50%;
+    left: calc(var(--value) * 100%);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    /* Zoomed view of the bar */
+    background:
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.18) 0%, transparent 55%),
+        linear-gradient(90deg, #4ade80 0%, #86efac 48%, rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0.06) 100%);
+    box-shadow:
+        inset 0 0 0 3px rgba(220, 230, 240, 0.85),
+        inset 0 2px 6px rgba(255, 255, 255, 0.35),
+        inset 0 -3px 8px rgba(0, 0, 0, 0.35),
+        0 3px 8px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* The handle, angled off the lower-right of the lens. */
+.benchmarks-panel[data-tab="bench-tab-ssr"] .bench-row:last-child .bench-bar::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 4px;
+    top: 50%;
+    left: calc(var(--value) * 100%);
+    transform: translate(8px, 9px) rotate(45deg);
+    transform-origin: left center;
+    border-radius: 2px;
+    background: linear-gradient(180deg, rgba(220, 230, 240, 0.95), rgba(150, 165, 180, 0.95));
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    z-index: 1;
+}
+
 .benchmarks-panel[data-lower-is-better="true"] .bench-bar-fill {
     background: linear-gradient(90deg, #4ade80, rgba(74, 222, 128, 0.3));
 }
