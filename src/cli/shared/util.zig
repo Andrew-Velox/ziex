@@ -160,8 +160,10 @@ pub fn copydirs(
             const src_path = try std.fs.path.join(allocator, &.{ source_path, entry.path });
             defer allocator.free(src_path);
 
+            const rel_base = if ((public_to_root and std.mem.eql(u8, source_dir, "public")) or
+                std.mem.eql(u8, source_dir, ".")) "" else source_dir;
             const dst_rel_path = try std.fs.path.join(allocator, &.{
-                if (public_to_root and std.mem.eql(u8, source_dir, "public")) "" else source_dir,
+                rel_base,
                 entry.path,
             });
             defer allocator.free(dst_rel_path);
