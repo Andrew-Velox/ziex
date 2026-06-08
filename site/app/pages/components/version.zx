@@ -1,0 +1,74 @@
+pub fn Version(allocator: zx.Allocator) !zx.Component {
+    return (<VersionBadge @{allocator} @caching="1h" />);
+}
+
+fn VersionBadge(allocator: zx.Allocator) zx.Component {
+    const release = fetchLatestRelease(allocator);
+    const version = if (release) |r| r.version else zx.info.version;
+    const url = if (release) |r| r.url else releasesUrl(allocator) orelse zx.info.repository;
+    return (
+        <a @{allocator} class="hero-badge" href={url} target="_blank" rel="noopener noreferrer">v{version}</a>
+    );
+}
+
+const Release = struct {
+    version: []const u8,
+    url: []const u8,
+};
+
+const GithubRelease = struct {
+    tag_name: []const u8,
+    html_url: []const u8 = "",
+};
+
+fn fetchLatestRelease(allocator: zx.Allocator) ?Release {
+    zx.log.info("Fetching version from GH...", .{});
+    const slug = repoSlug() orelse return null;
+
+    const url = std.fmt.allocPrint(
+        allocator,
+        "https://api.github.com/repos/{s}/releases/latest",
+        .{slug},
+    ) catch return null;
+
+    var response = (zx.fetch(.blocking, allocator, url, .{
+        .headers = &.{
+            .{ .name = "Accept", .value = "application/vnd.github+json" },
+            .{ .name = "User-Agent", .value = "ziex-site" },
+        },
+    }) catch return null) orelse return null;
+    defer response.deinit();
+
+    if (!response.ok()) return null;
+
+    const parsed = response.json(GithubRelease) catch return null;
+    defer parsed.deinit();
+
+    const tag = parsed.value.tag_name;
+    if (tag.len == 0) return null;
+
+    const version = if (tag[0] == 'v') tag[1..] else tag;
+    const html_url = if (parsed.value.html_url.len > 0)
+        parsed.value.html_url
+    else
+        std.fmt.allocPrint(allocator, "{s}/releases/tag/{s}", .{ zx.info.repository, tag }) catch return null;
+
+    return .{
+        .version = allocator.dupe(u8, version) catch return null,
+        .url = allocator.dupe(u8, html_url) catch return null,
+    };
+}
+
+fn repoSlug() ?[]const u8 {
+    const prefix = "https://github.com/";
+    const repo = zx.info.repository;
+    if (!std.mem.startsWith(u8, repo, prefix)) return null;
+    return repo[prefix.len..];
+}
+
+fn releasesUrl(allocator: zx.Allocator) ?[]const u8 {
+    return std.fmt.allocPrint(allocator, "{s}/releases", .{zx.info.repository}) catch null;
+}
+
+const std = @import("std");
+const zx = @import("zx");

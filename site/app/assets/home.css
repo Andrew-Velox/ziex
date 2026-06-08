@@ -398,7 +398,14 @@ body {
     margin-bottom: 3rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    text-decoration: none;
+    transition: color 0.2s ease, border-color 0.2s ease;
     animation: fadeIn 1s ease-out 0.2s both;
+}
+
+a.hero-badge:hover {
+    color: var(--zx-white);
+    border-color: var(--zx-primary);
 }
 
 @keyframes fadeIn {

@@ -407,7 +407,7 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
                     </div>
                     <div class="hero-inner">
                         <div class="hero-content">
-                            <div class="hero-badge">v{zx.info.version}</div>
+                            <Version allocator={allocator} />
                             <div class="hero-title-wrapper">
                                 <h1 class="hero-title-main">Ziex</h1>
                                 <div class="hero-title-accent">/</div>
@@ -416,7 +416,7 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
                                 The full-stack web framework for Zig.
                             </p>
                             <p class="hero-description">
-                                Compile-time safety, deterministic performance, and zero-dependency deployment. Build once, run everywhere.
+                                Compile-time safety, deterministic performance, absolute simplicity, and a delightful developer experience.
                             </p>
                             <div class="hero-install">
                                 <InstallCLI allocator={allocator} />
@@ -965,5 +965,6 @@ const icons = @import("./components/icons.zx");
 const GitHubIcon = icons.GitHub;
 const DiscordIcon = icons.Discord;
 const InstallCLI = @import("./components/install_guide.zx").InstallCLI;
+const Version = @import("./components/version.zx").Version;
 const Examples = @import("./examples/feature_examples.zx");
 const root = @import("root");
