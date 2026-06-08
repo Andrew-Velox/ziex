@@ -2507,6 +2507,26 @@ a.hero-badge:hover {
     position: relative;
 }
 
+.bench-row[data-self="true"] {
+    background: rgba(74, 222, 128, 0.06);
+    border-radius: 6px;
+}
+
+.bench-row[data-self="true"]::before {
+    content: "";
+    position: absolute;
+    left: -0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--zx-primary);
+}
+
+.bench-row[data-self="true"] .bench-label {
+    color: var(--zx-primary-light);
+}
+
 .bench-label {
     font-weight: 600;
     color: rgba(255, 255, 255, 0.85);

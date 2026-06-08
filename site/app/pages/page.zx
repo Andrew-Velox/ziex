@@ -572,7 +572,7 @@ fn buildBenchTabStyles(allocator: zx.Allocator, container_id: []const u8, tabs: 
 fn BenchmarkRowView(allocator: zx.Allocator, props: BenchmarkRowViewProps) zx.Component {
     const style_value = std.fmt.allocPrint(allocator, "--value: {d:.3};", .{props.normalized_value}) catch unreachable;
     return (
-        <div @allocator={allocator} class="bench-row" style={style_value}>
+        <div @allocator={allocator} class="bench-row" style={style_value} data-self={if (props.row.url.len == 0) "true" else "false"}>
             <div class="bench-label">
                 {if (props.row.url.len > 0) (
                     <a href={props.row.url} target="_blank" rel="noopener noreferrer" class="bench-label-link">{props.row.label}</a>
