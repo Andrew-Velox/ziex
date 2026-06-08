@@ -61,12 +61,6 @@ const categories = [_]SidebarProps.Category{
                     .{ .href = "/learn#api-routes", .text = "API Routes" },
                 },
             },
-            // .{
-            //     .title = "Plugins",
-            //     .items = &[_]SidebarProps.Link{
-            //         .{ .href = "/learn#plugins", .text = "Using Plugins" },
-            //     },
-            // },
             .{
                 .title = "Data & Storage",
                 .items = &[_]SidebarProps.Link{
@@ -117,7 +111,6 @@ const toc_links = [_]SidebarProps.Link{
     .{ .href = "/learn#children", .text = "Children Props" },
     .{ .href = "/learn#pages-layouts", .text = "Pages and Layouts" },
     .{ .href = "/learn#api-routes", .text = "API Routes" },
-    .{ .href = "/learn#plugins", .text = "Using Plugins" },
     .{ .href = "/learn#kv", .text = "Key-Value Storage" },
     .{ .href = "/learn#database", .text = "Database" },
     .{ .href = "/learn#deployment", .text = "Deployment" },
