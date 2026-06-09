@@ -89,7 +89,7 @@ pub fn Layout(ctx: zx.LayoutContext, children: zx.Component) zx.Component {
 
 fn getCss(ctx: zx.LayoutContext) []const u8 {
     const req_path = ctx.request.pathname;
-    return if (std.mem.eql(u8, req_path, "/"))
+    return if (std.mem.eql(u8, req_path, "/") or std.mem.eql(u8, req_path, "/stats"))
         @embedFile("../assets/home.css")
     else if (std.mem.eql(u8, req_path, "/overview"))
         ""

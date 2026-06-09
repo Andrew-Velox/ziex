@@ -1,0 +1,242 @@
+pub fn Page(ctx: zx.PageContext) !zx.Component {
+    const allocator = ctx.arena;
+
+    const s = try loadStats(allocator);
+
+    const cards = buildStatCards(allocator, s);
+    const lang_rows = buildLanguageRows(allocator, s);
+    const lang_max = maxValue(lang_rows);
+
+    const trends = [_]Trend{
+        .{ .title = "Commits", .latest = formatInt(allocator, s.commits), .points = timelineColumn(allocator, s, "commits") },
+        .{ .title = "Stars", .latest = formatInt(allocator, s.stars), .points = starsColumn(allocator, s) },
+        .{ .title = "Contributors", .latest = formatInt(allocator, s.contributors), .points = timelineColumn(allocator, s, "contributors") },
+        .{ .title = "Lines of code", .latest = formatCompact(allocator, @floatFromInt(s.lines)), .points = timelineColumn(allocator, s, "lines") },
+        .{ .title = "Files", .latest = formatInt(allocator, s.files), .points = timelineColumn(allocator, s, "files") },
+        .{ .title = "Checkout size", .latest = formatSize(allocator, @floatFromInt(s.size_kb)), .points = timelineColumn(allocator, s, "size_kb") },
+    };
+
+    const age_str = formatAge(allocator, s.first_commit, s.last_commit);
+    const since_str = std.fmt.allocPrint(allocator, "Since {s} · {s}", .{ s.first_commit[0..@min(10, s.first_commit.len)], age_str }) catch "";
+
+    return (
+        <div @allocator={allocator}>
+            <style @escaping={.none}>{@embedFile("stats.css")}</style>
+            <main class="stats-page">
+                <header class="stats-header">
+                    <h1 class="stats-title">Ziex Stats</h1>
+                    <p class="stats-subtitle">{since_str}</p>
+                </header>
+
+                <section class="stats-cards" aria-label="Key metrics">
+                    {for (cards) |card| (
+                        <div class="stats-card">
+                            <span class="stats-card-value">{card.value}</span>
+                            <span class="stats-card-label">{card.label}</span>
+                        </div>
+                    )}
+                </section>
+
+                <section class="stats-trends" aria-label="Growth over time">
+                    {for (trends) |t| (
+                        <div class="stats-trend">
+                            <div class="stats-trend-head">
+                                <span class="stats-trend-title">{t.title}</span>
+                                <span class="stats-trend-latest">{t.latest}</span>
+                            </div>
+                            <svg class="stats-spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">
+                                <polyline points={sparkPath(allocator, t.points)} />
+                            </svg>
+                        </div>
+                    )}
+                </section>
+
+                <section class="stats-panel">
+                    <h2 class="stats-panel-title">Lines by language</h2>
+                    <div class="stats-bars">
+                        {for (lang_rows) |row| (
+                            <div class="stats-bar-row" style={std.fmt.allocPrint(allocator, "--value: {d:.4};", .{row.value / lang_max}) catch ""}>
+                                <span class="stats-bar-label">{row.label}</span>
+                                <div class="stats-bar-track"><span class="stats-bar-fill"></span></div>
+                                <span class="stats-bar-value">{row.display}</span>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            </main>
+        </div>
+    );
+}
+
+const KV_KEY = "stats:data";
+const TTL_SECONDS = 60 * 60; // 1 hour
+
+const StatCard = struct {
+    label: []const u8,
+    value: []const u8,
+};
+
+const BarRow = struct {
+    label: []const u8,
+    value: f64,
+    display: []const u8,
+};
+
+const Trend = struct {
+    title: []const u8,
+    latest: []const u8,
+    points: []const f64,
+};
+
+fn loadStats(arena: zx.Allocator) !Stats {
+    if (zx.kv.as(arena, KV_KEY, Stats)) |cached| {
+        if (cached) |s| return s;
+    } else |_| {} // stale/invalid type — fall through and regenerate
+
+    const fresh = try stats_gen.collect(arena, zx.io());
+    zx.kv.putAs(KV_KEY, fresh, .{ .expiration_ttl = TTL_SECONDS }) catch {};
+    return fresh;
+}
+
+fn formatInt(allocator: zx.Allocator, n: u64) []const u8 {
+    var buf: [32]u8 = undefined;
+    const s = std.fmt.bufPrint(&buf, "{d}", .{n}) catch return "0";
+    var out = std.array_list.Managed(u8).init(allocator);
+    const len = s.len;
+    for (s, 0..) |c, i| {
+        if (i != 0 and (len - i) % 3 == 0) out.append(',') catch {};
+        out.append(c) catch {};
+    }
+    return out.items;
+}
+
+fn formatCompact(allocator: zx.Allocator, n: f64) []const u8 {
+    if (n >= 1000) {
+        const k = n / 1000;
+        if (k >= 100) return std.fmt.allocPrint(allocator, "{d:.0}k", .{k}) catch "0";
+        return std.fmt.allocPrint(allocator, "{d:.1}k", .{k}) catch "0";
+    }
+    return std.fmt.allocPrint(allocator, "{d:.0}", .{n}) catch "0";
+}
+
+fn formatSize(allocator: zx.Allocator, kb: f64) []const u8 {
+    if (kb >= 1024) return std.fmt.allocPrint(allocator, "{d:.1} MB", .{kb / 1024}) catch "0 MB";
+    return std.fmt.allocPrint(allocator, "{d:.0} KB", .{kb}) catch "0 KB";
+}
+
+fn parseYmd(iso: []const u8) ?struct { y: i32, m: i32, d: i32 } {
+    if (iso.len < 10) return null;
+    const y = std.fmt.parseInt(i32, iso[0..4], 10) catch return null;
+    const m = std.fmt.parseInt(i32, iso[5..7], 10) catch return null;
+    const d = std.fmt.parseInt(i32, iso[8..10], 10) catch return null;
+    return .{ .y = y, .m = m, .d = d };
+}
+
+fn formatAge(allocator: zx.Allocator, first: []const u8, last: []const u8) []const u8 {
+    const a = parseYmd(first) orelse return "";
+    const b = parseYmd(last) orelse return "";
+
+    var years = b.y - a.y;
+    var months = b.m - a.m;
+    var days = b.d - a.d;
+
+    if (days < 0) {
+        months -= 1;
+        days += daysInMonth(if (b.m == 1) 12 else b.m - 1, if (b.m == 1) b.y - 1 else b.y);
+    }
+    if (months < 0) {
+        years -= 1;
+        months += 12;
+    }
+
+    var aw = std.Io.Writer.Allocating.init(allocator);
+    const w = &aw.writer;
+    if (years > 0) w.print("{d}y ", .{years}) catch {};
+    if (months > 0) w.print("{d}mo ", .{months}) catch {};
+    w.print("{d}d", .{days}) catch {};
+    return std.mem.trim(u8, aw.written(), " ");
+}
+
+fn daysInMonth(month: i32, year: i32) i32 {
+    return switch (month) {
+        1, 3, 5, 7, 8, 10, 12 => 31,
+        4, 6, 9, 11 => 30,
+        2 => if (@rem(year, 4) == 0 and (@rem(year, 100) != 0 or @rem(year, 400) == 0)) @as(i32, 29) else 28,
+        else => 30,
+    };
+}
+
+fn buildStatCards(allocator: zx.Allocator, s: Stats) [6]StatCard {
+    return .{
+        .{ .label = "Commits", .value = formatInt(allocator, s.commits) },
+        .{ .label = "Contributors", .value = formatInt(allocator, s.contributors) },
+        .{ .label = "Stars", .value = formatInt(allocator, s.stars) },
+        .{ .label = "Lines of code", .value = formatInt(allocator, s.lines) },
+        .{ .label = "Files", .value = formatInt(allocator, s.files) },
+        .{ .label = "Checkout size", .value = formatSize(allocator, @floatFromInt(s.size_kb)) },
+    };
+}
+
+fn buildLanguageRows(allocator: zx.Allocator, s: Stats) []BarRow {
+    var rows = std.array_list.Managed(BarRow).init(allocator);
+    for (s.languages) |lang| {
+        rows.append(.{ .label = lang.name, .value = @floatFromInt(lang.lines), .display = formatInt(allocator, lang.lines) }) catch {};
+    }
+    return rows.items;
+}
+
+fn timelineColumn(allocator: zx.Allocator, s: Stats, comptime name: []const u8) []f64 {
+    var out = std.array_list.Managed(f64).init(allocator);
+    for (s.timeline) |entry| {
+        out.append(@floatFromInt(@field(entry, name))) catch {};
+    }
+    return out.items;
+}
+
+fn starsColumn(allocator: zx.Allocator, s: Stats) []f64 {
+    var out = std.array_list.Managed(f64).init(allocator);
+    for (s.stars_per_month) |entry| {
+        out.append(@floatFromInt(entry.stars)) catch {};
+    }
+    return out.items;
+}
+
+fn maxValue(rows: []const BarRow) f64 {
+    var m: f64 = 0;
+    for (rows) |r| if (r.value > m) {
+        m = r.value;
+    };
+    return if (m == 0) 1 else m;
+}
+
+fn sparkPath(allocator: zx.Allocator, points: []const f64) []const u8 {
+    if (points.len < 2) return "";
+    var max: f64 = 0;
+    for (points) |p| if (p > max) {
+        max = p;
+    };
+    if (max == 0) max = 1;
+    var out = std.array_list.Managed(u8).init(allocator);
+    const step: f64 = 100.0 / @as(f64, @floatFromInt(points.len - 1));
+    for (points, 0..) |p, i| {
+        const x = step * @as(f64, @floatFromInt(i));
+        const y = 32.0 - (p / max) * 30.0 - 1.0;
+        const seg = std.fmt.allocPrint(allocator, "{d:.2},{d:.2} ", .{ x, y }) catch "";
+        out.appendSlice(seg) catch {};
+    }
+    return out.items;
+}
+
+pub const options = zx.PageOptions{
+    .rendering = .server,
+};
+
+const Stats = stats_gen.Stats;
+const GitHubIcon = icons.GitHub;
+
+const stats_gen = @import("stats.zig");
+const icons = @import("../components/icons.zx");
+
+const root = @import("root");
+const std = @import("std");
+const zx = @import("zx");
