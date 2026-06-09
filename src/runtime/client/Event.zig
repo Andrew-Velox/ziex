@@ -28,13 +28,16 @@ pub fn getEvent(self: Event) client.Event {
     return client.Event.fromRef(self._internal.event_ref);
 }
 
-/// Get the underlying js.Object with data loaded (value, key, etc)
-pub fn getEventWithData(self: Event, allocator: Allocator) client.Event {
-    return client.Event.fromRefWithData(allocator, self._internal.event_ref);
-}
-
 pub fn preventDefault(self: Event) void {
     self.getEvent().preventDefault();
+}
+
+pub fn stopPropagation(self: Event) void {
+    self.getEvent().stopPropagation();
+}
+
+pub fn stopImmediatePropagation(self: Event) void {
+    self.getEvent().stopImmediatePropagation();
 }
 
 /// Get the input value from event.target.value
@@ -132,12 +135,16 @@ pub const Stateful = struct {
         return self.inner.getEvent();
     }
 
-    pub fn getEventWithData(self: Stateful, allocator: Allocator) client.Event {
-        return self.inner.getEventWithData(allocator);
-    }
-
     pub fn preventDefault(self: Stateful) void {
         self.inner.preventDefault();
+    }
+
+    pub fn stopPropagation(self: Stateful) void {
+        self.inner.stopPropagation();
+    }
+
+    pub fn stopImmediatePropagation(self: Stateful) void {
+        self.inner.stopImmediatePropagation();
     }
 
     pub fn value(self: Stateful) ?[]const u8 {

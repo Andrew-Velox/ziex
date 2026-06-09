@@ -1,13 +1,12 @@
-//! Browser Object Model (BOM) bindings for client-side JavaScript interop.
-//! These types provide Zig interfaces to browser APIs like console, events, and document.
-//! On server builds, these types exist but their methods are no-ops.
-
 const std = @import("std");
 const builtin = @import("builtin");
-pub const ext = @import("window/extern.zig");
 
 const zx = @import("../../root.zig");
-/// Whether we're running in a browser environment (WASM)
+pub const ext = @import("window/extern.zig");
+pub const reactivity = @import("reactivity.zig");
+pub const WebSocket = @import("../core/WebSocket.zig");
+pub const Document = @import("window/document.zig");
+
 pub const is_wasm = zx.platform.role == .client;
 
 /// JS bindings - only available in WASM builds
@@ -85,29 +84,6 @@ pub const Event = struct {
         };
     }
 
-    /// Create an Event from a u64 reference and load target/data properties
-    pub fn fromRefWithData(allocator: std.mem.Allocator, event_ref: u64) Event {
-        if (!is_wasm) return .{ .ref = {}, .target = null, .data = null };
-        const real_js = @import("js");
-
-        // Convert the u64 reference to a js.Value, then wrap in js.Object
-        const event_value: real_js.Value = @enumFromInt(event_ref);
-        const event_obj = real_js.Object{ .value = event_value };
-
-        // Get target and its value
-        const target: ?real_js.Object = event_obj.get(real_js.Object, "target") catch null;
-        const target_value: ?[]const u8 = if (target) |t| t.getAlloc(real_js.String, allocator, "value") catch null else null;
-
-        const event_target: ?EventTarget = if (target_value) |v| .{ .value = v } else null;
-        const event_data: ?[]const u8 = event_obj.getAlloc(real_js.String, allocator, "data") catch null;
-
-        return .{
-            .ref = event_obj,
-            .target = event_target,
-            .data = event_data,
-        };
-    }
-
     /// Call preventDefault on the event
     pub fn preventDefault(self: Event) void {
         if (!is_wasm) return;
@@ -118,6 +94,12 @@ pub const Event = struct {
     pub fn stopPropagation(self: Event) void {
         if (!is_wasm) return;
         self.ref.call(void, "stopPropagation", .{}) catch @panic("Failed to call stopPropagation");
+    }
+
+    /// Call stopImmediatePropagation on the event
+    pub fn stopImmediatePropagation(self: Event) void {
+        if (!is_wasm) return;
+        self.ref.call(void, "stopImmediatePropagation", .{}) catch @panic("Failed to call stopImmediatePropagation");
     }
 
     /// Get the event type as a string
@@ -142,24 +124,17 @@ pub const Event = struct {
 };
 
 pub fn eval(T: type, code: []const u8) !T {
-    // Use @as to "touch" the parameter and prevent unused warning
     _ = @as([]const u8, code);
     if (!is_wasm) return error.NotInBrowser;
     const real_js = @import("js");
     return try real_js.global.call(T, "eval", .{real_js.string(code)});
 }
 
-pub const Document = @import("window/document.zig");
-
-// =============================================================================
-// Async APIs: setTimeout, setInterval
-// =============================================================================
-
 /// Callback types for async operations (must match bridge.ts CallbackType)
 pub const CallbackType = enum(u8) {
     event = 0,
-    fetch_success = 1, // kept for compatibility with dispatchCallback
-    fetch_error = 2, // kept for compatibility with dispatchCallback
+    fetch_success = 1,
+    fetch_error = 2,
     timeout = 3,
     interval = 4,
 };
@@ -264,7 +239,7 @@ pub fn dispatchCallback(callback_type: CallbackType, callback_id: u64, data_ref:
         .timeout => {
             if (entry.timeout_fn) |cb| {
                 cb();
-                entry.active = false; // One-shot
+                entry.active = false;
                 return true;
             }
         },
@@ -280,11 +255,3 @@ pub fn dispatchCallback(callback_type: CallbackType, callback_id: u64, data_ref:
 
     return false;
 }
-
-// =============================================================================
-// WebSocket Client API (re-export from core)
-// =============================================================================
-
-/// Re-export the core WebSocket for client-side use
-pub const WebSocket = @import("../core/WebSocket.zig");
-pub const reactivity = @import("reactivity.zig");
