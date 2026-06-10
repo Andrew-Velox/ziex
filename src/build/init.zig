@@ -439,7 +439,9 @@ pub fn initInner(
     // --- Build-time App Metadata ---
     const is_dev_build = std.mem.eql(u8, cli_command_opt orelse "--", "dev");
     const can_introspect_exe = if (target) |resolved| resolved.query.isNative() else true;
-    if (can_introspect_exe and !is_dev_build) {
+    const is_official_build_runner = @hasDecl(@import("root"), "printErrorMessages");
+
+    if (is_official_build_runner and can_introspect_exe and !is_dev_build) {
         const introspect_src = try genIntrospectRoot(b, zx_module.owner, exe.root_module, target);
 
         const introspect_root = b.createModule(.{
