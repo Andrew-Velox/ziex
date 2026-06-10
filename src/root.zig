@@ -10,6 +10,7 @@ const plfm = @import("platform.zig");
 const prp = @import("props.zig");
 
 const routing = @import("runtime/core/routing.zig");
+const event = @import("runtime/core/Event.zig");
 const opts = @import("options.zig");
 const ctxs = @import("contexts.zig");
 const reactivity = @import("runtime/client/reactivity.zig");
@@ -86,8 +87,8 @@ pub const SocketCloseCtx = routing.SocketCloseCtx;
 pub const SocketMessageType = routing.SocketMessageType;
 pub const ComponentCtx = ctxs.ComponentCtx;
 pub const ComponentContext = ComponentCtx(void);
-pub const StateContext = @import("runtime/core/Event.zig").StateContext;
-pub const StateHandle = @import("runtime/core/Event.zig").StateHandle;
+pub const StateContext = event.StateContext;
+pub const StateHandle = event.StateHandle;
 
 pub const BuiltinAttribute = @import("attributes.zig").builtin;
 pub const Platform = plfm.Platform;
@@ -120,5 +121,5 @@ pub const platform: Platform = plfm.platform;
 pub const std_options = opts.std_options;
 
 // --- Styling --- //
-pub const style = @import("zx_style");
+pub const style = @import("style/root.zig");
 pub const Style = style.Style;

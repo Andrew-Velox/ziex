@@ -46,7 +46,6 @@ pub fn build(b: *std.Build) !void {
     const adapters_dep = b.dependency("adapters", .{ .target = target, .optimize = optimize });
 
     // --- Features Module --- //
-    const zx_style_mod = b.addModule("zx_style", .{ .root_source_file = b.path("src/style/root.zig"), .target = target, .optimize = optimize });
     const zx_core_lang_mod = b.addModule("zx_core_lang", .{ .root_source_file = b.path("src/core/root.zig"), .target = target, .optimize = optimize });
     zx_core_lang_mod.addImport("tree_sitter", tree_sitter_dep.module("tree_sitter"));
     zx_core_lang_mod.addImport("tree_sitter_zx", tree_sitter_zx_dep.module("tree_sitter_zx"));
@@ -74,7 +73,6 @@ pub fn build(b: *std.Build) !void {
 
         if (!exclude_core_lang) mod.addImport("zx_core_lang", zx_core_lang_mod);
         mod.addImport("cachez", cachez_dep.module("cache"));
-        mod.addImport("zx_style", zx_style_mod);
         mod.addOptions("zx_info", options);
         mod.addOptions("zx_options", zx_runtime_options);
         mod.addOptions("zx_module_options", zx_module_options);
@@ -264,7 +262,6 @@ pub fn build(b: *std.Build) !void {
             const release_tree_sitter_mdzx_dep = b.dependency("tree_sitter_mdzx", .{ .target = resolved_target, .optimize = .ReleaseSafe, .@"build-shared" = false });
 
             // Sub-modules for release
-            const release_style_mod = b.createModule(.{ .root_source_file = b.path("src/style/root.zig"), .target = resolved_target, .optimize = .ReleaseSafe });
             const release_core_lang_mod = b.createModule(.{ .root_source_file = b.path("src/core/root.zig"), .target = resolved_target, .optimize = .ReleaseSafe });
             release_core_lang_mod.addImport("tree_sitter", release_tree_sitter_dep.module("tree_sitter"));
             release_core_lang_mod.addImport("tree_sitter_zx", release_tree_sitter_zx_dep.module("tree_sitter_zx"));
@@ -279,7 +276,6 @@ pub fn build(b: *std.Build) !void {
             const release_adapters_dep = b.dependency("adapters", .{ .target = resolved_target, .optimize = .ReleaseSafe });
             release_mod.addImport("zqlite", release_adapters_dep.module("zqlite"));
             release_mod.addImport("httpz", httpz_dep.module("httpz"));
-            release_mod.addImport("zx_style", release_style_mod);
             release_mod.addImport("zx_core_lang", release_core_lang_mod);
             release_mod.addOptions("zx_info", options);
             release_mod.addOptions("zx_options", zx_runtime_options);
