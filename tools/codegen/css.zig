@@ -149,6 +149,10 @@ pub fn generate(io: std.Io, allocator: std.mem.Allocator) ![]const u8 {
             try prop_union.addField(fa, "", "px_", "[4]f32", null);
             try prop_union.addField(fa, "", "em_", "[4]f32", null);
             try prop_union.addField(fa, "", "rem_", "[4]f32", null);
+            try prop_union.addField(fa, "", "vh_", "f32", null);
+            try prop_union.addField(fa, "", "vw_", "f32", null);
+            try prop_union.addField(fa, "", "vmin_", "f32", null);
+            try prop_union.addField(fa, "", "vmax_", "f32", null);
         }
         if (data.units.percentage) try prop_union.addField(fa, "", "percent_", "[4]f32", null);
         if (data.units.color) try prop_union.addField(fa, "", "hex_", "u32", null);
@@ -180,6 +184,18 @@ pub fn generate(io: std.Io, allocator: std.mem.Allocator) ![]const u8 {
 
             const rem2_sig = try std.fmt.allocPrint(fa, "(v1: f32, v2: f32) {s}", .{final_type_name});
             _ = try prop_union.addMethod(fa, "", "rem2", rem2_sig, "return .{ .rem_ = .{ v1, v2, v1, v2 } };");
+
+            const vh_sig = try std.fmt.allocPrint(fa, "(v: f32) {s}", .{final_type_name});
+            _ = try prop_union.addMethod(fa, "", "vh", vh_sig, "return .{ .vh_ = v };");
+
+            const vw_sig = try std.fmt.allocPrint(fa, "(v: f32) {s}", .{final_type_name});
+            _ = try prop_union.addMethod(fa, "", "vw", vw_sig, "return .{ .vw_ = v };");
+
+            const vmin_sig = try std.fmt.allocPrint(fa, "(v: f32) {s}", .{final_type_name});
+            _ = try prop_union.addMethod(fa, "", "vmin", vmin_sig, "return .{ .vmin_ = v };");
+
+            const vmax_sig = try std.fmt.allocPrint(fa, "(v: f32) {s}", .{final_type_name});
+            _ = try prop_union.addMethod(fa, "", "vmax", vmax_sig, "return .{ .vmax_ = v };");
         }
         if (data.units.percentage) {
             const pct_sig = try std.fmt.allocPrint(fa, "(v: f32) {s}", .{final_type_name});

@@ -43,7 +43,7 @@ pub fn calcExprSource(allocator: std.mem.Allocator) ![]const u8 {
         \\        return self;
         \\    }
         \\
-        \\    fn text(self: Self) []const u8 {
+        \\    fn text(self: *const Self) []const u8 {
         \\        return self.buf[0..self.len];
         \\    }
         \\
@@ -134,7 +134,7 @@ pub fn calcExprSource(allocator: std.mem.Allocator) ![]const u8 {
         \\        return self.combine(Self.numberLeaf(factor), .div);
         \\    }
         \\
-        \\    pub fn format(self: Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
+        \\    pub fn format(self: *const Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
         \\        try w.writeAll(self.text());
         \\    }
         \\};

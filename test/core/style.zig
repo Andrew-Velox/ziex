@@ -88,3 +88,19 @@ test "shorthands" {
     try std.testing.expect(std.mem.indexOf(u8, result, "padding: 10px 20px;") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "margin: 5px 10px 15px 20px;") != null);
 }
+
+test "viewport units and calc" {
+    const Calc = zx.style.Calc;
+    const style: S = .{
+        .min_height = .vh(60),
+        .width = .vw(100),
+        .max_width = .calc(Calc.px(960).sub(Calc.px(48))),
+    };
+
+    const result = try std.fmt.allocPrint(std.testing.allocator, "{f}", .{style});
+    defer std.testing.allocator.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-height: 60vh;") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "width: 100vw;") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "max-width: calc((960px - 48px));") != null);
+}

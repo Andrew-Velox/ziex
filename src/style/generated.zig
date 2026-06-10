@@ -46,7 +46,7 @@ pub const CalcExpr = struct {
         return self;
     }
 
-    fn text(self: Self) []const u8 {
+    fn text(self: *const Self) []const u8 {
         return self.buf[0..self.len];
     }
 
@@ -137,7 +137,7 @@ pub const CalcExpr = struct {
         return self.combine(Self.numberLeaf(factor), .div);
     }
 
-    pub fn format(self: Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
+    pub fn format(self: *const Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
         try w.writeAll(self.text());
     }
 };
@@ -512,6 +512,10 @@ pub const WebkitBackgroundSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -539,6 +543,18 @@ pub const WebkitBackgroundSize = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitBackgroundSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitBackgroundSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitBackgroundSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitBackgroundSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitBackgroundSize {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) WebkitBackgroundSize {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -562,6 +578,10 @@ pub const WebkitBorderBottomLeftRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -589,6 +609,18 @@ pub const WebkitBorderBottomLeftRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitBorderBottomLeftRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitBorderBottomLeftRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitBorderBottomLeftRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitBorderBottomLeftRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitBorderBottomLeftRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) WebkitBorderBottomLeftRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -612,6 +644,10 @@ pub const WebkitBorderBottomRightRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -639,6 +675,18 @@ pub const WebkitBorderBottomRightRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitBorderBottomRightRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitBorderBottomRightRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitBorderBottomRightRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitBorderBottomRightRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitBorderBottomRightRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) WebkitBorderBottomRightRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -662,6 +710,10 @@ pub const WebkitBorderRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -689,6 +741,18 @@ pub const WebkitBorderRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitBorderRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitBorderRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitBorderRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitBorderRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitBorderRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) WebkitBorderRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -712,6 +776,10 @@ pub const WebkitBorderTopLeftRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -739,6 +807,18 @@ pub const WebkitBorderTopLeftRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitBorderTopLeftRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitBorderTopLeftRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitBorderTopLeftRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitBorderTopLeftRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitBorderTopLeftRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) WebkitBorderTopLeftRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -762,6 +842,10 @@ pub const WebkitBorderTopRightRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -788,6 +872,18 @@ pub const WebkitBorderTopRightRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitBorderTopRightRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitBorderTopRightRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitBorderTopRightRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitBorderTopRightRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitBorderTopRightRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) WebkitBorderTopRightRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -887,6 +983,10 @@ pub const WebkitBoxShadow = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitBoxShadow {
@@ -912,6 +1012,18 @@ pub const WebkitBoxShadow = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitBoxShadow {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitBoxShadow {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitBoxShadow {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitBoxShadow {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitBoxShadow {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: WebkitBoxShadow, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -1162,6 +1274,10 @@ pub const WebkitMask = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -1189,6 +1305,18 @@ pub const WebkitMask = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitMask {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitMask {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMask {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMask {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMask {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) WebkitMask {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -1212,6 +1340,10 @@ pub const WebkitMaskBoxImage = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImage {
@@ -1238,6 +1370,18 @@ pub const WebkitMaskBoxImage = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImage {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitMaskBoxImage {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskBoxImage {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskBoxImage {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskBoxImage {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: WebkitMaskBoxImage, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -1255,6 +1399,10 @@ pub const WebkitMaskBoxImageOutset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImageOutset {
@@ -1281,6 +1429,18 @@ pub const WebkitMaskBoxImageOutset = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageOutset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitMaskBoxImageOutset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskBoxImageOutset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskBoxImageOutset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskBoxImageOutset {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: WebkitMaskBoxImageOutset, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -1298,6 +1458,10 @@ pub const WebkitMaskBoxImageRepeat = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImageRepeat {
@@ -1324,6 +1488,18 @@ pub const WebkitMaskBoxImageRepeat = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageRepeat {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitMaskBoxImageRepeat {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskBoxImageRepeat {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskBoxImageRepeat {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskBoxImageRepeat {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: WebkitMaskBoxImageRepeat, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -1341,6 +1517,10 @@ pub const WebkitMaskBoxImageSlice = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImageSlice {
@@ -1367,6 +1547,18 @@ pub const WebkitMaskBoxImageSlice = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageSlice {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitMaskBoxImageSlice {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskBoxImageSlice {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskBoxImageSlice {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskBoxImageSlice {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: WebkitMaskBoxImageSlice, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -1384,6 +1576,10 @@ pub const WebkitMaskBoxImageSource = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImageSource {
@@ -1410,6 +1606,18 @@ pub const WebkitMaskBoxImageSource = union(enum) {
     pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageSource {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) WebkitMaskBoxImageSource {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskBoxImageSource {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskBoxImageSource {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskBoxImageSource {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: WebkitMaskBoxImageSource, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -1427,6 +1635,10 @@ pub const WebkitMaskBoxImageWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImageWidth {
@@ -1452,6 +1664,18 @@ pub const WebkitMaskBoxImageWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitMaskBoxImageWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskBoxImageWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskBoxImageWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskBoxImageWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: WebkitMaskBoxImageWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -1562,6 +1786,10 @@ pub const WebkitMaskPosition = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -1588,6 +1816,18 @@ pub const WebkitMaskPosition = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitMaskPosition {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitMaskPosition {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskPosition {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskPosition {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskPosition {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) WebkitMaskPosition {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -1638,6 +1878,10 @@ pub const WebkitMaskSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -1664,6 +1908,18 @@ pub const WebkitMaskSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitMaskSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitMaskSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitMaskSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitMaskSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitMaskSize {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) WebkitMaskSize {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -1703,6 +1959,10 @@ pub const WebkitPerspective = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitPerspective {
@@ -1728,6 +1988,18 @@ pub const WebkitPerspective = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitPerspective {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitPerspective {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitPerspective {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitPerspective {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitPerspective {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: WebkitPerspective, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -1761,6 +2033,10 @@ pub const WebkitPerspectiveOrigin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -1787,6 +2063,18 @@ pub const WebkitPerspectiveOrigin = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitPerspectiveOrigin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitPerspectiveOrigin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitPerspectiveOrigin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitPerspectiveOrigin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitPerspectiveOrigin {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) WebkitPerspectiveOrigin {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -2245,6 +2533,10 @@ pub const WebkitTextStroke = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -2271,6 +2563,18 @@ pub const WebkitTextStroke = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitTextStroke {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitTextStroke {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitTextStroke {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitTextStroke {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitTextStroke {
+        return .{ .vmax_ = v };
     }
     pub fn hex(v: u32) WebkitTextStroke {
         return .{ .hex_ = v };
@@ -2507,6 +2811,10 @@ pub const WebkitTextStrokeWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitTextStrokeWidth {
@@ -2532,6 +2840,18 @@ pub const WebkitTextStrokeWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitTextStrokeWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitTextStrokeWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitTextStrokeWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitTextStrokeWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitTextStrokeWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: WebkitTextStrokeWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -2570,6 +2890,10 @@ pub const WebkitTransformOrigin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -2596,6 +2920,18 @@ pub const WebkitTransformOrigin = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitTransformOrigin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WebkitTransformOrigin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WebkitTransformOrigin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WebkitTransformOrigin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WebkitTransformOrigin {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) WebkitTransformOrigin {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -3350,6 +3686,10 @@ pub const AnimationRangeCenter = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -3377,6 +3717,18 @@ pub const AnimationRangeCenter = union(enum) {
     pub fn rem2(v1: f32, v2: f32) AnimationRangeCenter {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) AnimationRangeCenter {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) AnimationRangeCenter {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) AnimationRangeCenter {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) AnimationRangeCenter {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) AnimationRangeCenter {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -3402,6 +3754,10 @@ pub const AnimationRangeEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -3429,6 +3785,18 @@ pub const AnimationRangeEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) AnimationRangeEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) AnimationRangeEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) AnimationRangeEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) AnimationRangeEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) AnimationRangeEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) AnimationRangeEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -3454,6 +3822,10 @@ pub const AnimationRangeStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -3480,6 +3852,18 @@ pub const AnimationRangeStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) AnimationRangeStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) AnimationRangeStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) AnimationRangeStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) AnimationRangeStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) AnimationRangeStart {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) AnimationRangeStart {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -3676,6 +4060,10 @@ pub const Background = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -3702,6 +4090,18 @@ pub const Background = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Background {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Background {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Background {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Background {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Background {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Background {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -4052,6 +4452,10 @@ pub const BackgroundPosition = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4079,6 +4483,18 @@ pub const BackgroundPosition = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BackgroundPosition {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BackgroundPosition {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BackgroundPosition {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BackgroundPosition {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BackgroundPosition {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BackgroundPosition {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -4105,6 +4521,10 @@ pub const BackgroundPositionBlock = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4132,6 +4552,18 @@ pub const BackgroundPositionBlock = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BackgroundPositionBlock {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BackgroundPositionBlock {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BackgroundPositionBlock {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BackgroundPositionBlock {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BackgroundPositionBlock {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BackgroundPositionBlock {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -4158,6 +4590,10 @@ pub const BackgroundPositionInline = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4184,6 +4620,18 @@ pub const BackgroundPositionInline = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BackgroundPositionInline {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BackgroundPositionInline {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BackgroundPositionInline {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BackgroundPositionInline {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BackgroundPositionInline {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BackgroundPositionInline {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -4213,6 +4661,10 @@ pub const BackgroundPositionX = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4239,6 +4691,18 @@ pub const BackgroundPositionX = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BackgroundPositionX {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BackgroundPositionX {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BackgroundPositionX {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BackgroundPositionX {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BackgroundPositionX {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BackgroundPositionX {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -4268,6 +4732,10 @@ pub const BackgroundPositionY = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4294,6 +4762,18 @@ pub const BackgroundPositionY = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BackgroundPositionY {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BackgroundPositionY {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BackgroundPositionY {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BackgroundPositionY {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BackgroundPositionY {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BackgroundPositionY {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -4447,6 +4927,10 @@ pub const BackgroundSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4473,6 +4957,18 @@ pub const BackgroundSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BackgroundSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BackgroundSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BackgroundSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BackgroundSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BackgroundSize {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BackgroundSize {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -4531,6 +5027,10 @@ pub const BackgroundTbd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4557,6 +5057,18 @@ pub const BackgroundTbd = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BackgroundTbd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BackgroundTbd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BackgroundTbd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BackgroundTbd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BackgroundTbd {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BackgroundTbd {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -4591,6 +5103,10 @@ pub const BaselineShift = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -4617,6 +5133,18 @@ pub const BaselineShift = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BaselineShift {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BaselineShift {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BaselineShift {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BaselineShift {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BaselineShift {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BaselineShift {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -4773,6 +5301,10 @@ pub const BlockStepSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BlockStepSize {
@@ -4798,6 +5330,18 @@ pub const BlockStepSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BlockStepSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BlockStepSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BlockStepSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BlockStepSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BlockStepSize {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BlockStepSize, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -5075,6 +5619,10 @@ pub const Border = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -5102,6 +5650,18 @@ pub const Border = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Border {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Border {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Border {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Border {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Border {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) Border {
         return .{ .hex_ = v };
     }
@@ -5122,6 +5682,10 @@ pub const BorderBlock = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBlock {
@@ -5148,6 +5712,18 @@ pub const BorderBlock = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBlock {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBlock {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlock {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlock {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlock {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderBlock, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -5165,6 +5741,10 @@ pub const BorderBlockClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBlockClip {
@@ -5191,6 +5771,18 @@ pub const BorderBlockClip = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBlockClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBlockClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockClip {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderBlockClip, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -5208,6 +5800,10 @@ pub const BorderBlockColor = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBlockColor {
@@ -5233,6 +5829,18 @@ pub const BorderBlockColor = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBlockColor {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBlockColor {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockColor {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockColor {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockColor {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderBlockColor, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -5456,6 +6064,10 @@ pub const BorderBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -5483,6 +6095,18 @@ pub const BorderBlockEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderBlockEnd {
         return .{ .hex_ = v };
     }
@@ -5503,6 +6127,10 @@ pub const BorderBlockEndClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -5529,6 +6157,18 @@ pub const BorderBlockEndClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBlockEndClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBlockEndClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockEndClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockEndClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockEndClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderBlockEndClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -5764,6 +6404,10 @@ pub const BorderBlockEndRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -5790,6 +6434,18 @@ pub const BorderBlockEndRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBlockEndRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBlockEndRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockEndRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockEndRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockEndRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderBlockEndRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -5842,6 +6498,10 @@ pub const BorderBlockEndWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBlockEndWidth {
@@ -5867,6 +6527,18 @@ pub const BorderBlockEndWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBlockEndWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBlockEndWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockEndWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockEndWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockEndWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderBlockEndWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -6090,6 +6762,10 @@ pub const BorderBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -6117,6 +6793,18 @@ pub const BorderBlockStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockStart {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderBlockStart {
         return .{ .hex_ = v };
     }
@@ -6137,6 +6825,10 @@ pub const BorderBlockStartClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -6163,6 +6855,18 @@ pub const BorderBlockStartClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBlockStartClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBlockStartClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockStartClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockStartClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockStartClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderBlockStartClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -6398,6 +7102,10 @@ pub const BorderBlockStartRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -6424,6 +7132,18 @@ pub const BorderBlockStartRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBlockStartRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBlockStartRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockStartRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockStartRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockStartRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderBlockStartRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -6476,6 +7196,10 @@ pub const BorderBlockStartWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBlockStartWidth {
@@ -6502,6 +7226,18 @@ pub const BorderBlockStartWidth = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBlockStartWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBlockStartWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockStartWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockStartWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockStartWidth {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderBlockStartWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -6519,6 +7255,10 @@ pub const BorderBlockStyle = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBlockStyle {
@@ -6545,6 +7285,18 @@ pub const BorderBlockStyle = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBlockStyle {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBlockStyle {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockStyle {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockStyle {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockStyle {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderBlockStyle, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -6562,6 +7314,10 @@ pub const BorderBlockWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBlockWidth {
@@ -6587,6 +7343,18 @@ pub const BorderBlockWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBlockWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBlockWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBlockWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBlockWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBlockWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderBlockWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -6810,6 +7578,10 @@ pub const BorderBottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -6837,6 +7609,18 @@ pub const BorderBottom = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBottom {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderBottom {
         return .{ .hex_ = v };
     }
@@ -6857,6 +7641,10 @@ pub const BorderBottomClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -6883,6 +7671,18 @@ pub const BorderBottomClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBottomClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBottomClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBottomClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBottomClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBottomClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderBottomClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -7118,6 +7918,10 @@ pub const BorderBottomLeftRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -7145,6 +7949,18 @@ pub const BorderBottomLeftRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBottomLeftRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBottomLeftRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBottomLeftRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBottomLeftRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBottomLeftRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderBottomLeftRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -7168,6 +7984,10 @@ pub const BorderBottomRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -7195,6 +8015,18 @@ pub const BorderBottomRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderBottomRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderBottomRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBottomRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBottomRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBottomRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderBottomRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -7218,6 +8050,10 @@ pub const BorderBottomRightRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -7244,6 +8080,18 @@ pub const BorderBottomRightRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBottomRightRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBottomRightRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBottomRightRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBottomRightRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBottomRightRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderBottomRightRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -7296,6 +8144,10 @@ pub const BorderBottomWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderBottomWidth {
@@ -7321,6 +8173,18 @@ pub const BorderBottomWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderBottomWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderBottomWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderBottomWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderBottomWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderBottomWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderBottomWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -7356,6 +8220,10 @@ pub const BorderClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderClip {
@@ -7381,6 +8249,18 @@ pub const BorderClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderClip {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderClip, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -7627,6 +8507,10 @@ pub const BorderEndEndRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -7654,6 +8538,18 @@ pub const BorderEndEndRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderEndEndRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderEndEndRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderEndEndRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderEndEndRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderEndEndRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderEndEndRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -7677,6 +8573,10 @@ pub const BorderEndStartRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -7704,6 +8604,18 @@ pub const BorderEndStartRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderEndStartRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderEndStartRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderEndStartRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderEndStartRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderEndStartRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderEndStartRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -7727,6 +8639,10 @@ pub const BorderImage = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderImage {
@@ -7753,6 +8669,18 @@ pub const BorderImage = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderImage {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderImage {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderImage {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderImage {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderImage {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderImage, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -7770,6 +8698,10 @@ pub const BorderImageOutset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderImageOutset {
@@ -7795,6 +8727,18 @@ pub const BorderImageOutset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderImageOutset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderImageOutset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderImageOutset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderImageOutset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderImageOutset {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderImageOutset, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -7881,6 +8825,10 @@ pub const BorderImageWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -7908,6 +8856,18 @@ pub const BorderImageWidth = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderImageWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderImageWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderImageWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderImageWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderImageWidth {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderImageWidth {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -7931,6 +8891,10 @@ pub const BorderInline = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderInline {
@@ -7957,6 +8921,18 @@ pub const BorderInline = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderInline {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderInline {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInline {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInline {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInline {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderInline, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -7974,6 +8950,10 @@ pub const BorderInlineClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderInlineClip {
@@ -8000,6 +8980,18 @@ pub const BorderInlineClip = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderInlineClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderInlineClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineClip {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderInlineClip, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -8017,6 +9009,10 @@ pub const BorderInlineColor = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderInlineColor {
@@ -8042,6 +9038,18 @@ pub const BorderInlineColor = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderInlineColor {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderInlineColor {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineColor {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineColor {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineColor {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderInlineColor, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -8265,6 +9273,10 @@ pub const BorderInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -8292,6 +9304,18 @@ pub const BorderInlineEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderInlineEnd {
         return .{ .hex_ = v };
     }
@@ -8312,6 +9336,10 @@ pub const BorderInlineEndClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -8338,6 +9366,18 @@ pub const BorderInlineEndClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderInlineEndClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderInlineEndClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineEndClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineEndClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineEndClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderInlineEndClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -8573,6 +9613,10 @@ pub const BorderInlineEndRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -8599,6 +9643,18 @@ pub const BorderInlineEndRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderInlineEndRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderInlineEndRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineEndRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineEndRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineEndRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderInlineEndRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -8651,6 +9707,10 @@ pub const BorderInlineEndWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderInlineEndWidth {
@@ -8676,6 +9736,18 @@ pub const BorderInlineEndWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderInlineEndWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderInlineEndWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineEndWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineEndWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineEndWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderInlineEndWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -8899,6 +9971,10 @@ pub const BorderInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -8926,6 +10002,18 @@ pub const BorderInlineStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineStart {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderInlineStart {
         return .{ .hex_ = v };
     }
@@ -8946,6 +10034,10 @@ pub const BorderInlineStartClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -8972,6 +10064,18 @@ pub const BorderInlineStartClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderInlineStartClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderInlineStartClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineStartClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineStartClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineStartClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderInlineStartClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -9207,6 +10311,10 @@ pub const BorderInlineStartRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -9233,6 +10341,18 @@ pub const BorderInlineStartRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderInlineStartRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderInlineStartRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineStartRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineStartRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineStartRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderInlineStartRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -9285,6 +10405,10 @@ pub const BorderInlineStartWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderInlineStartWidth {
@@ -9311,6 +10435,18 @@ pub const BorderInlineStartWidth = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderInlineStartWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderInlineStartWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineStartWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineStartWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineStartWidth {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderInlineStartWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -9328,6 +10464,10 @@ pub const BorderInlineStyle = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderInlineStyle {
@@ -9354,6 +10494,18 @@ pub const BorderInlineStyle = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderInlineStyle {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderInlineStyle {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineStyle {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineStyle {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineStyle {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderInlineStyle, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -9371,6 +10523,10 @@ pub const BorderInlineWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderInlineWidth {
@@ -9396,6 +10552,18 @@ pub const BorderInlineWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderInlineWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderInlineWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderInlineWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderInlineWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderInlineWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderInlineWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -9619,6 +10787,10 @@ pub const BorderLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -9646,6 +10818,18 @@ pub const BorderLeft = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderLeft {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderLeft {
         return .{ .hex_ = v };
     }
@@ -9666,6 +10850,10 @@ pub const BorderLeftClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -9692,6 +10880,18 @@ pub const BorderLeftClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderLeftClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderLeftClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderLeftClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderLeftClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderLeftClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderLeftClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -9927,6 +11127,10 @@ pub const BorderLeftRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -9953,6 +11157,18 @@ pub const BorderLeftRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderLeftRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderLeftRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderLeftRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderLeftRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderLeftRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderLeftRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -10005,6 +11221,10 @@ pub const BorderLeftWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderLeftWidth {
@@ -10030,6 +11250,18 @@ pub const BorderLeftWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderLeftWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderLeftWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderLeftWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderLeftWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderLeftWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderLeftWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -10062,6 +11294,10 @@ pub const BorderLimit = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -10089,6 +11325,18 @@ pub const BorderLimit = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderLimit {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderLimit {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderLimit {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderLimit {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderLimit {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderLimit {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -10112,6 +11360,10 @@ pub const BorderRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -10138,6 +11390,18 @@ pub const BorderRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -10367,6 +11631,10 @@ pub const BorderRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -10394,6 +11662,18 @@ pub const BorderRight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderRight {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderRight {
         return .{ .hex_ = v };
     }
@@ -10414,6 +11694,10 @@ pub const BorderRightClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -10440,6 +11724,18 @@ pub const BorderRightClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderRightClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderRightClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderRightClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderRightClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderRightClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderRightClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -10675,6 +11971,10 @@ pub const BorderRightRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -10701,6 +12001,18 @@ pub const BorderRightRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderRightRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderRightRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderRightRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderRightRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderRightRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderRightRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -10753,6 +12065,10 @@ pub const BorderRightWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderRightWidth {
@@ -10778,6 +12094,18 @@ pub const BorderRightWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderRightWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderRightWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderRightWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderRightWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderRightWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderRightWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -10819,6 +12147,10 @@ pub const BorderSpacing = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderSpacing {
@@ -10845,6 +12177,18 @@ pub const BorderSpacing = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderSpacing {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderSpacing {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderSpacing {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderSpacing {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderSpacing {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderSpacing, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -10862,6 +12206,10 @@ pub const BorderStartEndRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -10889,6 +12237,18 @@ pub const BorderStartEndRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderStartEndRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderStartEndRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderStartEndRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderStartEndRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderStartEndRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderStartEndRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -10912,6 +12272,10 @@ pub const BorderStartStartRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -10939,6 +12303,18 @@ pub const BorderStartStartRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderStartStartRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderStartStartRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderStartStartRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderStartStartRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderStartStartRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderStartStartRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -10962,6 +12338,10 @@ pub const BorderStyle = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderStyle {
@@ -10987,6 +12367,18 @@ pub const BorderStyle = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderStyle {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderStyle {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderStyle {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderStyle {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderStyle {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BorderStyle, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -11210,6 +12602,10 @@ pub const BorderTop = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -11237,6 +12633,18 @@ pub const BorderTop = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderTop {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderTop {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderTop {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderTop {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderTop {
+        return .{ .vmax_ = v };
+    }
     pub fn hex(v: u32) BorderTop {
         return .{ .hex_ = v };
     }
@@ -11257,6 +12665,10 @@ pub const BorderTopClip = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -11283,6 +12695,18 @@ pub const BorderTopClip = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderTopClip {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderTopClip {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderTopClip {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderTopClip {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderTopClip {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderTopClip {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -11518,6 +12942,10 @@ pub const BorderTopLeftRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -11545,6 +12973,18 @@ pub const BorderTopLeftRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderTopLeftRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderTopLeftRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderTopLeftRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderTopLeftRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderTopLeftRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderTopLeftRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -11568,6 +13008,10 @@ pub const BorderTopRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -11595,6 +13039,18 @@ pub const BorderTopRadius = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderTopRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderTopRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderTopRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderTopRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderTopRadius {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) BorderTopRadius {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -11618,6 +13074,10 @@ pub const BorderTopRightRadius = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -11644,6 +13104,18 @@ pub const BorderTopRightRadius = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BorderTopRightRadius {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BorderTopRightRadius {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderTopRightRadius {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderTopRightRadius {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderTopRightRadius {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) BorderTopRightRadius {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -11696,6 +13168,10 @@ pub const BorderTopWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderTopWidth {
@@ -11722,6 +13198,18 @@ pub const BorderTopWidth = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderTopWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderTopWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderTopWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderTopWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderTopWidth {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderTopWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -11739,6 +13227,10 @@ pub const BorderWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BorderWidth {
@@ -11765,6 +13257,18 @@ pub const BorderWidth = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BorderWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BorderWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BorderWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BorderWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BorderWidth {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BorderWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -11784,6 +13288,10 @@ pub const Bottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -11810,6 +13318,18 @@ pub const Bottom = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Bottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Bottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Bottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Bottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Bottom {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Bottom {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -11853,6 +13373,10 @@ pub const BoxShadow = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BoxShadow {
@@ -11879,6 +13403,18 @@ pub const BoxShadow = union(enum) {
     pub fn rem2(v1: f32, v2: f32) BoxShadow {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) BoxShadow {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BoxShadow {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BoxShadow {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BoxShadow {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: BoxShadow, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -11896,6 +13432,10 @@ pub const BoxShadowBlur = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BoxShadowBlur {
@@ -11921,6 +13461,18 @@ pub const BoxShadowBlur = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BoxShadowBlur {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BoxShadowBlur {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BoxShadowBlur {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BoxShadowBlur {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BoxShadowBlur {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BoxShadowBlur, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -12150,6 +13702,10 @@ pub const BoxShadowOffset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BoxShadowOffset {
@@ -12175,6 +13731,18 @@ pub const BoxShadowOffset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BoxShadowOffset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BoxShadowOffset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BoxShadowOffset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BoxShadowOffset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BoxShadowOffset {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BoxShadowOffset, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -12212,6 +13780,10 @@ pub const BoxShadowSpread = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) BoxShadowSpread {
@@ -12237,6 +13809,18 @@ pub const BoxShadowSpread = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) BoxShadowSpread {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) BoxShadowSpread {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) BoxShadowSpread {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) BoxShadowSpread {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) BoxShadowSpread {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: BoxShadowSpread, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -12917,6 +14501,10 @@ pub const ColumnGap = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -12944,6 +14532,18 @@ pub const ColumnGap = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnGap {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnGap {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnGap {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnGap {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnGap {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnGap {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -12969,6 +14569,10 @@ pub const ColumnHeight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ColumnHeight {
@@ -12994,6 +14598,18 @@ pub const ColumnHeight = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ColumnHeight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ColumnHeight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnHeight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnHeight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnHeight {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: ColumnHeight, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -13218,6 +14834,10 @@ pub const ColumnRule = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -13244,6 +14864,18 @@ pub const ColumnRule = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ColumnRule {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ColumnRule {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRule {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRule {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRule {
+        return .{ .vmax_ = v };
     }
     pub fn hex(v: u32) ColumnRule {
         return .{ .hex_ = v };
@@ -13512,6 +15144,10 @@ pub const ColumnRuleInsetCap = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13539,6 +15175,18 @@ pub const ColumnRuleInsetCap = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetCap {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnRuleInsetCap {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetCap {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetCap {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetCap {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnRuleInsetCap {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -13563,6 +15211,10 @@ pub const ColumnRuleInsetCapEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13590,6 +15242,18 @@ pub const ColumnRuleInsetCapEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetCapEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnRuleInsetCapEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -13614,6 +15278,10 @@ pub const ColumnRuleInsetCapStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13641,6 +15309,18 @@ pub const ColumnRuleInsetCapStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetCapStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnRuleInsetCapStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetCapStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetCapStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetCapStart {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnRuleInsetCapStart {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -13665,6 +15345,10 @@ pub const ColumnRuleInsetEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13692,6 +15376,18 @@ pub const ColumnRuleInsetEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnRuleInsetEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnRuleInsetEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -13716,6 +15412,10 @@ pub const ColumnRuleInsetJunction = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13743,6 +15443,18 @@ pub const ColumnRuleInsetJunction = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetJunction {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnRuleInsetJunction {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetJunction {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetJunction {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetJunction {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnRuleInsetJunction {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -13767,6 +15479,10 @@ pub const ColumnRuleInsetJunctionEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13794,6 +15510,18 @@ pub const ColumnRuleInsetJunctionEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetJunctionEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnRuleInsetJunctionEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -13818,6 +15546,10 @@ pub const ColumnRuleInsetJunctionStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13845,6 +15577,18 @@ pub const ColumnRuleInsetJunctionStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetJunctionStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ColumnRuleInsetJunctionStart {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -13869,6 +15613,10 @@ pub const ColumnRuleInsetStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -13895,6 +15643,18 @@ pub const ColumnRuleInsetStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ColumnRuleInsetStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleInsetStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleInsetStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleInsetStart {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) ColumnRuleInsetStart {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -13972,6 +15732,10 @@ pub const ColumnRuleWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ColumnRuleWidth {
@@ -13997,6 +15761,18 @@ pub const ColumnRuleWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ColumnRuleWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ColumnRuleWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnRuleWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnRuleWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnRuleWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: ColumnRuleWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14040,6 +15816,10 @@ pub const ColumnWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ColumnWidth {
@@ -14065,6 +15845,18 @@ pub const ColumnWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ColumnWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ColumnWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ColumnWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ColumnWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ColumnWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: ColumnWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14150,6 +15942,10 @@ pub const ContainIntrinsicBlockSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ContainIntrinsicBlockSize {
@@ -14176,6 +15972,18 @@ pub const ContainIntrinsicBlockSize = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ContainIntrinsicBlockSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ContainIntrinsicBlockSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ContainIntrinsicBlockSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ContainIntrinsicBlockSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ContainIntrinsicBlockSize {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ContainIntrinsicBlockSize, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -14195,6 +16003,10 @@ pub const ContainIntrinsicHeight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ContainIntrinsicHeight {
@@ -14221,6 +16033,18 @@ pub const ContainIntrinsicHeight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ContainIntrinsicHeight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ContainIntrinsicHeight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ContainIntrinsicHeight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ContainIntrinsicHeight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ContainIntrinsicHeight {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ContainIntrinsicHeight, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -14240,6 +16064,10 @@ pub const ContainIntrinsicInlineSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ContainIntrinsicInlineSize {
@@ -14266,6 +16094,18 @@ pub const ContainIntrinsicInlineSize = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ContainIntrinsicInlineSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ContainIntrinsicInlineSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ContainIntrinsicInlineSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ContainIntrinsicInlineSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ContainIntrinsicInlineSize {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ContainIntrinsicInlineSize, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -14285,6 +16125,10 @@ pub const ContainIntrinsicSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ContainIntrinsicSize {
@@ -14311,6 +16155,18 @@ pub const ContainIntrinsicSize = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ContainIntrinsicSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ContainIntrinsicSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ContainIntrinsicSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ContainIntrinsicSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ContainIntrinsicSize {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ContainIntrinsicSize, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -14330,6 +16186,10 @@ pub const ContainIntrinsicWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ContainIntrinsicWidth {
@@ -14355,6 +16215,18 @@ pub const ContainIntrinsicWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ContainIntrinsicWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ContainIntrinsicWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ContainIntrinsicWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ContainIntrinsicWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ContainIntrinsicWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: ContainIntrinsicWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14516,6 +16388,10 @@ pub const Corner = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) Corner {
@@ -14542,6 +16418,18 @@ pub const Corner = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Corner {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Corner {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Corner {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Corner {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Corner {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: Corner, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -14559,6 +16447,10 @@ pub const CornerBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerBlockEnd {
@@ -14584,6 +16476,18 @@ pub const CornerBlockEnd = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerBlockEnd {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerBlockEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14617,6 +16521,10 @@ pub const CornerBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerBlockStart {
@@ -14642,6 +16550,18 @@ pub const CornerBlockStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerBlockStart {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerBlockStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14675,6 +16595,10 @@ pub const CornerBottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerBottom {
@@ -14701,6 +16625,18 @@ pub const CornerBottom = union(enum) {
     pub fn rem2(v1: f32, v2: f32) CornerBottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) CornerBottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerBottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerBottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerBottom {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: CornerBottom, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -14718,6 +16654,10 @@ pub const CornerBottomLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerBottomLeft {
@@ -14743,6 +16683,18 @@ pub const CornerBottomLeft = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerBottomLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerBottomLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerBottomLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerBottomLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerBottomLeft {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerBottomLeft, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14782,6 +16734,10 @@ pub const CornerBottomRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerBottomRight {
@@ -14807,6 +16763,18 @@ pub const CornerBottomRight = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerBottomRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerBottomRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerBottomRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerBottomRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerBottomRight {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerBottomRight, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14861,6 +16829,10 @@ pub const CornerEndEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerEndEnd {
@@ -14886,6 +16858,18 @@ pub const CornerEndEnd = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerEndEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerEndEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerEndEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerEndEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerEndEnd {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerEndEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14925,6 +16909,10 @@ pub const CornerEndStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerEndStart {
@@ -14950,6 +16938,18 @@ pub const CornerEndStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerEndStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerEndStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerEndStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerEndStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerEndStart {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerEndStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -14989,6 +16989,10 @@ pub const CornerInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerInlineEnd {
@@ -15014,6 +17018,18 @@ pub const CornerInlineEnd = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerInlineEnd {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerInlineEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15047,6 +17063,10 @@ pub const CornerInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerInlineStart {
@@ -15072,6 +17092,18 @@ pub const CornerInlineStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerInlineStart {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerInlineStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15105,6 +17137,10 @@ pub const CornerLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerLeft {
@@ -15130,6 +17166,18 @@ pub const CornerLeft = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerLeft {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerLeft, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15163,6 +17211,10 @@ pub const CornerRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerRight {
@@ -15188,6 +17240,18 @@ pub const CornerRight = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerRight {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerRight, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15236,6 +17300,10 @@ pub const CornerStartEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerStartEnd {
@@ -15261,6 +17329,18 @@ pub const CornerStartEnd = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerStartEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerStartEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerStartEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerStartEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerStartEnd {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerStartEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15300,6 +17380,10 @@ pub const CornerStartStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerStartStart {
@@ -15325,6 +17409,18 @@ pub const CornerStartStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerStartStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerStartStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerStartStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerStartStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerStartStart {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerStartStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15364,6 +17460,10 @@ pub const CornerTop = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerTop {
@@ -15390,6 +17490,18 @@ pub const CornerTop = union(enum) {
     pub fn rem2(v1: f32, v2: f32) CornerTop {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) CornerTop {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerTop {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerTop {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerTop {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: CornerTop, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -15407,6 +17519,10 @@ pub const CornerTopLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerTopLeft {
@@ -15432,6 +17548,18 @@ pub const CornerTopLeft = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerTopLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerTopLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerTopLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerTopLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerTopLeft {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerTopLeft, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15471,6 +17599,10 @@ pub const CornerTopRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) CornerTopRight {
@@ -15496,6 +17628,18 @@ pub const CornerTopRight = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) CornerTopRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) CornerTopRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) CornerTopRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) CornerTopRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) CornerTopRight {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: CornerTopRight, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15725,6 +17869,10 @@ pub const Cx = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -15752,6 +17900,18 @@ pub const Cx = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Cx {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Cx {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Cx {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Cx {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Cx {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) Cx {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -15775,6 +17935,10 @@ pub const Cy = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -15801,6 +17965,18 @@ pub const Cy = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Cy {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Cy {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Cy {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Cy {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Cy {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Cy {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -16365,6 +18541,10 @@ pub const FillPosition = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -16391,6 +18571,18 @@ pub const FillPosition = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) FillPosition {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) FillPosition {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) FillPosition {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) FillPosition {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) FillPosition {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) FillPosition {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -16460,6 +18652,10 @@ pub const FillSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -16486,6 +18682,18 @@ pub const FillSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) FillSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) FillSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) FillSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) FillSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) FillSize {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) FillSize {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -16716,6 +18924,10 @@ pub const FloatOffset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -16742,6 +18954,18 @@ pub const FloatOffset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) FloatOffset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) FloatOffset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) FloatOffset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) FloatOffset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) FloatOffset {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) FloatOffset {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -17051,6 +19275,10 @@ pub const FlowTolerance = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -17077,6 +19305,18 @@ pub const FlowTolerance = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) FlowTolerance {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) FlowTolerance {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) FlowTolerance {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) FlowTolerance {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) FlowTolerance {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) FlowTolerance {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -17269,6 +19509,10 @@ pub const FontSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -17295,6 +19539,18 @@ pub const FontSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) FontSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) FontSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) FontSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) FontSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) FontSize {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) FontSize {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -17974,6 +20230,10 @@ pub const GridAutoColumns = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18000,6 +20260,18 @@ pub const GridAutoColumns = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) GridAutoColumns {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) GridAutoColumns {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) GridAutoColumns {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) GridAutoColumns {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) GridAutoColumns {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) GridAutoColumns {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18048,6 +20320,10 @@ pub const GridAutoRows = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18074,6 +20350,18 @@ pub const GridAutoRows = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) GridAutoRows {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) GridAutoRows {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) GridAutoRows {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) GridAutoRows {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) GridAutoRows {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) GridAutoRows {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18137,6 +20425,10 @@ pub const GridColumnGap = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18163,6 +20455,18 @@ pub const GridColumnGap = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) GridColumnGap {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) GridColumnGap {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) GridColumnGap {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) GridColumnGap {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) GridColumnGap {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) GridColumnGap {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18258,6 +20562,10 @@ pub const GridRowGap = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18284,6 +20592,18 @@ pub const GridRowGap = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) GridRowGap {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) GridRowGap {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) GridRowGap {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) GridRowGap {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) GridRowGap {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) GridRowGap {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18328,6 +20648,10 @@ pub const GridTemplate = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18354,6 +20678,18 @@ pub const GridTemplate = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) GridTemplate {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) GridTemplate {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) GridTemplate {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) GridTemplate {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) GridTemplate {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) GridTemplate {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18402,6 +20738,10 @@ pub const GridTemplateColumns = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18428,6 +20768,18 @@ pub const GridTemplateColumns = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) GridTemplateColumns {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) GridTemplateColumns {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) GridTemplateColumns {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) GridTemplateColumns {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) GridTemplateColumns {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) GridTemplateColumns {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18461,6 +20813,10 @@ pub const GridTemplateRows = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18487,6 +20843,18 @@ pub const GridTemplateRows = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) GridTemplateRows {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) GridTemplateRows {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) GridTemplateRows {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) GridTemplateRows {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) GridTemplateRows {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) GridTemplateRows {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18546,6 +20914,10 @@ pub const Height = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18572,6 +20944,18 @@ pub const Height = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Height {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Height {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Height {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Height {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Height {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Height {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18665,6 +21049,10 @@ pub const HyphenateLimitZone = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18691,6 +21079,18 @@ pub const HyphenateLimitZone = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) HyphenateLimitZone {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) HyphenateLimitZone {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) HyphenateLimitZone {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) HyphenateLimitZone {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) HyphenateLimitZone {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) HyphenateLimitZone {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -18875,6 +21275,10 @@ pub const InitialLetterWrap = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -18901,6 +21305,18 @@ pub const InitialLetterWrap = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) InitialLetterWrap {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) InitialLetterWrap {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) InitialLetterWrap {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) InitialLetterWrap {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) InitialLetterWrap {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) InitialLetterWrap {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -19008,6 +21424,10 @@ pub const InsetBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -19035,6 +21455,18 @@ pub const InsetBlockEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) InsetBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) InsetBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) InsetBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) InsetBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) InsetBlockEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) InsetBlockEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -19060,6 +21492,10 @@ pub const InsetBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -19086,6 +21522,18 @@ pub const InsetBlockStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) InsetBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) InsetBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) InsetBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) InsetBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) InsetBlockStart {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) InsetBlockStart {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -19127,6 +21575,10 @@ pub const InsetInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -19154,6 +21606,18 @@ pub const InsetInlineEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) InsetInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) InsetInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) InsetInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) InsetInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) InsetInlineEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) InsetInlineEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -19179,6 +21643,10 @@ pub const InsetInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -19205,6 +21673,18 @@ pub const InsetInlineStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) InsetInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) InsetInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) InsetInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) InsetInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) InsetInlineStart {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) InsetInlineStart {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -19449,6 +21929,10 @@ pub const Left = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -19476,6 +21960,18 @@ pub const Left = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Left {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Left {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Left {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Left {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Left {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) Left {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -19501,6 +21997,10 @@ pub const LetterSpacing = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -19527,6 +22027,18 @@ pub const LetterSpacing = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) LetterSpacing {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) LetterSpacing {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) LetterSpacing {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) LetterSpacing {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) LetterSpacing {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) LetterSpacing {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -19854,6 +22366,10 @@ pub const LineHeight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -19881,6 +22397,18 @@ pub const LineHeight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) LineHeight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) LineHeight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) LineHeight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) LineHeight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) LineHeight {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) LineHeight {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -19904,6 +22432,10 @@ pub const LineHeightStep = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) LineHeightStep {
@@ -19930,6 +22462,18 @@ pub const LineHeightStep = union(enum) {
     pub fn rem2(v1: f32, v2: f32) LineHeightStep {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) LineHeightStep {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) LineHeightStep {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) LineHeightStep {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) LineHeightStep {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: LineHeightStep, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -19947,6 +22491,10 @@ pub const LinePadding = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) LinePadding {
@@ -19972,6 +22520,18 @@ pub const LinePadding = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) LinePadding {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) LinePadding {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) LinePadding {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) LinePadding {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) LinePadding {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: LinePadding, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -20088,6 +22648,10 @@ pub const Margin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) Margin {
@@ -20114,6 +22678,18 @@ pub const Margin = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Margin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Margin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Margin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Margin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Margin {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: Margin, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20131,6 +22707,10 @@ pub const MarginBlock = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MarginBlock {
@@ -20157,6 +22737,18 @@ pub const MarginBlock = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginBlock {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginBlock {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginBlock {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginBlock {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginBlock {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MarginBlock, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20174,6 +22766,10 @@ pub const MarginBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MarginBlockEnd {
@@ -20200,6 +22796,18 @@ pub const MarginBlockEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginBlockEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MarginBlockEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20217,6 +22825,10 @@ pub const MarginBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MarginBlockStart {
@@ -20243,6 +22855,18 @@ pub const MarginBlockStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginBlockStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MarginBlockStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20261,6 +22885,10 @@ pub const MarginBottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -20287,6 +22915,18 @@ pub const MarginBottom = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MarginBottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MarginBottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginBottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginBottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginBottom {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MarginBottom {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -20332,6 +22972,10 @@ pub const MarginInline = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MarginInline {
@@ -20358,6 +23002,18 @@ pub const MarginInline = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginInline {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginInline {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginInline {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginInline {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginInline {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MarginInline, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20375,6 +23031,10 @@ pub const MarginInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MarginInlineEnd {
@@ -20401,6 +23061,18 @@ pub const MarginInlineEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginInlineEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MarginInlineEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20418,6 +23090,10 @@ pub const MarginInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MarginInlineStart {
@@ -20444,6 +23120,18 @@ pub const MarginInlineStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginInlineStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MarginInlineStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20462,6 +23150,10 @@ pub const MarginLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -20489,6 +23181,18 @@ pub const MarginLeft = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginLeft {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) MarginLeft {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -20513,6 +23217,10 @@ pub const MarginRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -20540,6 +23248,18 @@ pub const MarginRight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MarginRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MarginRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginRight {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) MarginRight {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -20564,6 +23284,10 @@ pub const MarginTop = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -20590,6 +23314,18 @@ pub const MarginTop = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MarginTop {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MarginTop {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MarginTop {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MarginTop {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MarginTop {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MarginTop {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -20762,6 +23498,10 @@ pub const Mask = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -20789,6 +23529,18 @@ pub const Mask = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Mask {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Mask {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Mask {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Mask {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Mask {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) Mask {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -20812,6 +23564,10 @@ pub const MaskBorder = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorder {
@@ -20837,6 +23593,18 @@ pub const MaskBorder = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MaskBorder {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MaskBorder {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskBorder {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskBorder {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskBorder {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: MaskBorder, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -20874,6 +23642,10 @@ pub const MaskBorderOutset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorderOutset {
@@ -20900,6 +23672,18 @@ pub const MaskBorderOutset = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MaskBorderOutset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MaskBorderOutset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskBorderOutset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskBorderOutset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskBorderOutset {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MaskBorderOutset, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20917,6 +23701,10 @@ pub const MaskBorderRepeat = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorderRepeat {
@@ -20943,6 +23731,18 @@ pub const MaskBorderRepeat = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MaskBorderRepeat {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MaskBorderRepeat {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskBorderRepeat {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskBorderRepeat {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskBorderRepeat {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MaskBorderRepeat, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20960,6 +23760,10 @@ pub const MaskBorderSlice = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorderSlice {
@@ -20986,6 +23790,18 @@ pub const MaskBorderSlice = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MaskBorderSlice {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MaskBorderSlice {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskBorderSlice {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskBorderSlice {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskBorderSlice {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MaskBorderSlice, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -21003,6 +23819,10 @@ pub const MaskBorderSource = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorderSource {
@@ -21029,6 +23849,18 @@ pub const MaskBorderSource = union(enum) {
     pub fn rem2(v1: f32, v2: f32) MaskBorderSource {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) MaskBorderSource {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskBorderSource {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskBorderSource {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskBorderSource {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: MaskBorderSource, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -21046,6 +23878,10 @@ pub const MaskBorderWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorderWidth {
@@ -21071,6 +23907,18 @@ pub const MaskBorderWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MaskBorderWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MaskBorderWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskBorderWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskBorderWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskBorderWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: MaskBorderWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -21219,6 +24067,10 @@ pub const MaskPosition = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -21245,6 +24097,18 @@ pub const MaskPosition = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MaskPosition {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MaskPosition {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskPosition {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskPosition {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskPosition {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MaskPosition {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -21295,6 +24159,10 @@ pub const MaskSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -21321,6 +24189,18 @@ pub const MaskSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MaskSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MaskSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaskSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaskSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaskSize {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MaskSize {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -21439,6 +24319,10 @@ pub const MaxHeight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -21465,6 +24349,18 @@ pub const MaxHeight = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MaxHeight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MaxHeight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaxHeight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaxHeight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaxHeight {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MaxHeight {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -21529,6 +24425,10 @@ pub const MaxWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -21555,6 +24455,18 @@ pub const MaxWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MaxWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MaxWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MaxWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MaxWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MaxWidth {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MaxWidth {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -21606,6 +24518,10 @@ pub const MinHeight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -21632,6 +24548,18 @@ pub const MinHeight = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MinHeight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MinHeight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MinHeight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MinHeight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MinHeight {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MinHeight {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -21704,6 +24632,10 @@ pub const MinWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -21730,6 +24662,18 @@ pub const MinWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MinWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) MinWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) MinWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) MinWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) MinWidth {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) MinWidth {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -21896,6 +24840,10 @@ pub const ObjectPosition = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -21922,6 +24870,18 @@ pub const ObjectPosition = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ObjectPosition {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ObjectPosition {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ObjectPosition {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ObjectPosition {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ObjectPosition {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) ObjectPosition {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -21993,6 +24953,10 @@ pub const OffsetAnchor = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -22020,6 +24984,18 @@ pub const OffsetAnchor = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OffsetAnchor {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OffsetAnchor {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OffsetAnchor {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OffsetAnchor {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OffsetAnchor {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) OffsetAnchor {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -22043,6 +25019,10 @@ pub const OffsetDistance = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -22069,6 +25049,18 @@ pub const OffsetDistance = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) OffsetDistance {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) OffsetDistance {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OffsetDistance {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OffsetDistance {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OffsetDistance {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) OffsetDistance {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -22133,6 +25125,10 @@ pub const OffsetPosition = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -22159,6 +25155,18 @@ pub const OffsetPosition = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) OffsetPosition {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) OffsetPosition {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OffsetPosition {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OffsetPosition {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OffsetPosition {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) OffsetPosition {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -22279,6 +25287,10 @@ pub const OutlineColor = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OutlineColor {
@@ -22305,6 +25317,18 @@ pub const OutlineColor = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OutlineColor {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OutlineColor {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OutlineColor {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OutlineColor {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OutlineColor {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OutlineColor, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22322,6 +25346,10 @@ pub const OutlineOffset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OutlineOffset {
@@ -22347,6 +25375,18 @@ pub const OutlineOffset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) OutlineOffset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) OutlineOffset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OutlineOffset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OutlineOffset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OutlineOffset {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: OutlineOffset, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -22393,6 +25433,10 @@ pub const OutlineWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OutlineWidth {
@@ -22418,6 +25462,18 @@ pub const OutlineWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) OutlineWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) OutlineWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OutlineWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OutlineWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OutlineWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: OutlineWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -22491,6 +25547,10 @@ pub const OverflowClipMargin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMargin {
@@ -22517,6 +25577,18 @@ pub const OverflowClipMargin = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMargin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMargin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMargin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMargin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMargin {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMargin, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22537,6 +25609,10 @@ pub const OverflowClipMarginBlock = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginBlock {
@@ -22563,6 +25639,18 @@ pub const OverflowClipMarginBlock = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginBlock {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginBlock {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginBlock {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginBlock {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginBlock {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginBlock, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22583,6 +25671,10 @@ pub const OverflowClipMarginBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginBlockEnd {
@@ -22609,6 +25701,18 @@ pub const OverflowClipMarginBlockEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginBlockEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginBlockEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22629,6 +25733,10 @@ pub const OverflowClipMarginBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginBlockStart {
@@ -22655,6 +25763,18 @@ pub const OverflowClipMarginBlockStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginBlockStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginBlockStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22675,6 +25795,10 @@ pub const OverflowClipMarginBottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginBottom {
@@ -22701,6 +25825,18 @@ pub const OverflowClipMarginBottom = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginBottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginBottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginBottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginBottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginBottom {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginBottom, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22721,6 +25857,10 @@ pub const OverflowClipMarginInline = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginInline {
@@ -22747,6 +25887,18 @@ pub const OverflowClipMarginInline = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginInline {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginInline {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginInline {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginInline {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginInline {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginInline, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22767,6 +25919,10 @@ pub const OverflowClipMarginInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginInlineEnd {
@@ -22793,6 +25949,18 @@ pub const OverflowClipMarginInlineEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginInlineEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginInlineEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22813,6 +25981,10 @@ pub const OverflowClipMarginInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginInlineStart {
@@ -22839,6 +26011,18 @@ pub const OverflowClipMarginInlineStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginInlineStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginInlineStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22859,6 +26043,10 @@ pub const OverflowClipMarginLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginLeft {
@@ -22885,6 +26073,18 @@ pub const OverflowClipMarginLeft = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginLeft {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginLeft, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22905,6 +26105,10 @@ pub const OverflowClipMarginRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginRight {
@@ -22931,6 +26135,18 @@ pub const OverflowClipMarginRight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) OverflowClipMarginRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginRight {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: OverflowClipMarginRight, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -22951,6 +26167,10 @@ pub const OverflowClipMarginTop = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) OverflowClipMarginTop {
@@ -22976,6 +26196,18 @@ pub const OverflowClipMarginTop = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) OverflowClipMarginTop {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) OverflowClipMarginTop {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) OverflowClipMarginTop {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) OverflowClipMarginTop {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) OverflowClipMarginTop {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: OverflowClipMarginTop, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -23207,6 +26439,10 @@ pub const Padding = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) Padding {
@@ -23233,6 +26469,18 @@ pub const Padding = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Padding {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Padding {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Padding {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Padding {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Padding {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: Padding, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -23250,6 +26498,10 @@ pub const PaddingBlock = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) PaddingBlock {
@@ -23276,6 +26528,18 @@ pub const PaddingBlock = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingBlock {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingBlock {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingBlock {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingBlock {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingBlock {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: PaddingBlock, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -23293,6 +26557,10 @@ pub const PaddingBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) PaddingBlockEnd {
@@ -23319,6 +26587,18 @@ pub const PaddingBlockEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingBlockEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: PaddingBlockEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -23336,6 +26616,10 @@ pub const PaddingBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) PaddingBlockStart {
@@ -23362,6 +26646,18 @@ pub const PaddingBlockStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingBlockStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: PaddingBlockStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -23379,6 +26675,10 @@ pub const PaddingBottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -23406,6 +26706,18 @@ pub const PaddingBottom = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingBottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingBottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingBottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingBottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingBottom {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) PaddingBottom {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -23429,6 +26741,10 @@ pub const PaddingInline = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) PaddingInline {
@@ -23455,6 +26771,18 @@ pub const PaddingInline = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingInline {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingInline {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingInline {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingInline {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingInline {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: PaddingInline, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -23472,6 +26800,10 @@ pub const PaddingInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) PaddingInlineEnd {
@@ -23498,6 +26830,18 @@ pub const PaddingInlineEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingInlineEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: PaddingInlineEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -23515,6 +26859,10 @@ pub const PaddingInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) PaddingInlineStart {
@@ -23541,6 +26889,18 @@ pub const PaddingInlineStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingInlineStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: PaddingInlineStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -23558,6 +26918,10 @@ pub const PaddingLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -23585,6 +26949,18 @@ pub const PaddingLeft = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingLeft {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) PaddingLeft {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -23608,6 +26984,10 @@ pub const PaddingRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -23635,6 +27015,18 @@ pub const PaddingRight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) PaddingRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) PaddingRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingRight {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) PaddingRight {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -23658,6 +27050,10 @@ pub const PaddingTop = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -23684,6 +27080,18 @@ pub const PaddingTop = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) PaddingTop {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) PaddingTop {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PaddingTop {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PaddingTop {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PaddingTop {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) PaddingTop {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -23902,6 +27310,10 @@ pub const Perspective = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) Perspective {
@@ -23927,6 +27339,18 @@ pub const Perspective = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Perspective {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Perspective {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Perspective {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Perspective {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Perspective {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: Perspective, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -23965,6 +27389,10 @@ pub const PerspectiveOrigin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -23991,6 +27419,18 @@ pub const PerspectiveOrigin = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) PerspectiveOrigin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) PerspectiveOrigin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) PerspectiveOrigin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) PerspectiveOrigin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) PerspectiveOrigin {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) PerspectiveOrigin {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -24425,6 +27865,10 @@ pub const R = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -24451,6 +27895,18 @@ pub const R = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) R {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) R {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) R {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) R {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) R {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) R {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -24631,6 +28087,10 @@ pub const Right = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -24657,6 +28117,18 @@ pub const Right = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Right {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Right {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Right {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Right {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Right {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Right {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -24712,6 +28184,10 @@ pub const RowGap = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -24738,6 +28214,18 @@ pub const RowGap = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) RowGap {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) RowGap {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowGap {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowGap {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowGap {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) RowGap {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -24968,6 +28456,10 @@ pub const RowRule = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -24994,6 +28486,18 @@ pub const RowRule = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) RowRule {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) RowRule {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRule {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRule {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRule {
+        return .{ .vmax_ = v };
     }
     pub fn hex(v: u32) RowRule {
         return .{ .hex_ = v };
@@ -25262,6 +28766,10 @@ pub const RowRuleInsetCap = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25289,6 +28797,18 @@ pub const RowRuleInsetCap = union(enum) {
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetCap {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) RowRuleInsetCap {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetCap {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetCap {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetCap {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) RowRuleInsetCap {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -25313,6 +28833,10 @@ pub const RowRuleInsetCapEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25340,6 +28864,18 @@ pub const RowRuleInsetCapEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetCapEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) RowRuleInsetCapEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetCapEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetCapEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetCapEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) RowRuleInsetCapEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -25364,6 +28900,10 @@ pub const RowRuleInsetCapStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25391,6 +28931,18 @@ pub const RowRuleInsetCapStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetCapStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) RowRuleInsetCapStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetCapStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetCapStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetCapStart {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) RowRuleInsetCapStart {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -25415,6 +28967,10 @@ pub const RowRuleInsetEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25442,6 +28998,18 @@ pub const RowRuleInsetEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) RowRuleInsetEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) RowRuleInsetEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -25466,6 +29034,10 @@ pub const RowRuleInsetJunction = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25493,6 +29065,18 @@ pub const RowRuleInsetJunction = union(enum) {
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetJunction {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) RowRuleInsetJunction {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetJunction {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetJunction {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetJunction {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) RowRuleInsetJunction {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -25517,6 +29101,10 @@ pub const RowRuleInsetJunctionEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25544,6 +29132,18 @@ pub const RowRuleInsetJunctionEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetJunctionEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) RowRuleInsetJunctionEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -25568,6 +29168,10 @@ pub const RowRuleInsetJunctionStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25595,6 +29199,18 @@ pub const RowRuleInsetJunctionStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetJunctionStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) RowRuleInsetJunctionStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetJunctionStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetJunctionStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetJunctionStart {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) RowRuleInsetJunctionStart {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -25619,6 +29235,10 @@ pub const RowRuleInsetStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -25645,6 +29265,18 @@ pub const RowRuleInsetStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) RowRuleInsetStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) RowRuleInsetStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleInsetStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleInsetStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleInsetStart {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) RowRuleInsetStart {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -25722,6 +29354,10 @@ pub const RowRuleWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) RowRuleWidth {
@@ -25747,6 +29383,18 @@ pub const RowRuleWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) RowRuleWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) RowRuleWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) RowRuleWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) RowRuleWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) RowRuleWidth {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: RowRuleWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -26036,6 +29684,10 @@ pub const Rx = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26063,6 +29715,18 @@ pub const Rx = union(enum) {
     pub fn rem2(v1: f32, v2: f32) Rx {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) Rx {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Rx {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Rx {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Rx {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) Rx {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -26087,6 +29751,10 @@ pub const Ry = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26113,6 +29781,18 @@ pub const Ry = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Ry {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Ry {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Ry {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Ry {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Ry {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Ry {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -26199,6 +29879,10 @@ pub const ScrollMargin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMargin {
@@ -26225,6 +29909,18 @@ pub const ScrollMargin = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMargin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMargin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMargin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMargin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMargin {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMargin, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26242,6 +29938,10 @@ pub const ScrollMarginBlock = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginBlock {
@@ -26268,6 +29968,18 @@ pub const ScrollMarginBlock = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginBlock {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginBlock {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginBlock {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginBlock {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginBlock {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginBlock, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26285,6 +29997,10 @@ pub const ScrollMarginBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginBlockEnd {
@@ -26311,6 +30027,18 @@ pub const ScrollMarginBlockEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginBlockEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginBlockEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26328,6 +30056,10 @@ pub const ScrollMarginBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginBlockStart {
@@ -26354,6 +30086,18 @@ pub const ScrollMarginBlockStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginBlockStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginBlockStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26371,6 +30115,10 @@ pub const ScrollMarginBottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginBottom {
@@ -26397,6 +30145,18 @@ pub const ScrollMarginBottom = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginBottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginBottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginBottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginBottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginBottom {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginBottom, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26414,6 +30174,10 @@ pub const ScrollMarginInline = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginInline {
@@ -26440,6 +30204,18 @@ pub const ScrollMarginInline = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginInline {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginInline {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginInline {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginInline {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginInline {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginInline, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26457,6 +30233,10 @@ pub const ScrollMarginInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginInlineEnd {
@@ -26483,6 +30263,18 @@ pub const ScrollMarginInlineEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginInlineEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginInlineEnd, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26500,6 +30292,10 @@ pub const ScrollMarginInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginInlineStart {
@@ -26526,6 +30322,18 @@ pub const ScrollMarginInlineStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginInlineStart {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginInlineStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26543,6 +30351,10 @@ pub const ScrollMarginLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginLeft {
@@ -26569,6 +30381,18 @@ pub const ScrollMarginLeft = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginLeft {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginLeft, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26586,6 +30410,10 @@ pub const ScrollMarginRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginRight {
@@ -26612,6 +30440,18 @@ pub const ScrollMarginRight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollMarginRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollMarginRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginRight {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: ScrollMarginRight, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -26629,6 +30469,10 @@ pub const ScrollMarginTop = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) ScrollMarginTop {
@@ -26654,6 +30498,18 @@ pub const ScrollMarginTop = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ScrollMarginTop {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ScrollMarginTop {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollMarginTop {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollMarginTop {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollMarginTop {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: ScrollMarginTop, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -26697,6 +30553,10 @@ pub const ScrollPadding = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26724,6 +30584,18 @@ pub const ScrollPadding = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPadding {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPadding {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPadding {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPadding {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPadding {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPadding {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -26749,6 +30621,10 @@ pub const ScrollPaddingBlock = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26776,6 +30652,18 @@ pub const ScrollPaddingBlock = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingBlock {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingBlock {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingBlock {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingBlock {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingBlock {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingBlock {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -26801,6 +30689,10 @@ pub const ScrollPaddingBlockEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26828,6 +30720,18 @@ pub const ScrollPaddingBlockEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingBlockEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingBlockEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingBlockEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingBlockEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingBlockEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingBlockEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -26853,6 +30757,10 @@ pub const ScrollPaddingBlockStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26880,6 +30788,18 @@ pub const ScrollPaddingBlockStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingBlockStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingBlockStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingBlockStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingBlockStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingBlockStart {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingBlockStart {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -26904,6 +30824,10 @@ pub const ScrollPaddingBottom = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26931,6 +30855,18 @@ pub const ScrollPaddingBottom = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingBottom {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingBottom {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingBottom {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingBottom {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingBottom {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingBottom {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -26956,6 +30892,10 @@ pub const ScrollPaddingInline = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -26983,6 +30923,18 @@ pub const ScrollPaddingInline = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingInline {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingInline {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingInline {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingInline {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingInline {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingInline {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -27008,6 +30960,10 @@ pub const ScrollPaddingInlineEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -27035,6 +30991,18 @@ pub const ScrollPaddingInlineEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingInlineEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingInlineEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingInlineEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingInlineEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingInlineEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingInlineEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -27060,6 +31028,10 @@ pub const ScrollPaddingInlineStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -27087,6 +31059,18 @@ pub const ScrollPaddingInlineStart = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingInlineStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingInlineStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingInlineStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingInlineStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingInlineStart {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingInlineStart {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -27111,6 +31095,10 @@ pub const ScrollPaddingLeft = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -27138,6 +31126,18 @@ pub const ScrollPaddingLeft = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingLeft {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingLeft {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingLeft {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingLeft {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingLeft {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingLeft {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -27162,6 +31162,10 @@ pub const ScrollPaddingRight = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -27189,6 +31193,18 @@ pub const ScrollPaddingRight = union(enum) {
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingRight {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) ScrollPaddingRight {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingRight {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingRight {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingRight {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) ScrollPaddingRight {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -27213,6 +31229,10 @@ pub const ScrollPaddingTop = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -27239,6 +31259,18 @@ pub const ScrollPaddingTop = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ScrollPaddingTop {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ScrollPaddingTop {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ScrollPaddingTop {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ScrollPaddingTop {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ScrollPaddingTop {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) ScrollPaddingTop {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -27703,6 +31735,10 @@ pub const ShapeMargin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -27729,6 +31765,18 @@ pub const ShapeMargin = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ShapeMargin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ShapeMargin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ShapeMargin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ShapeMargin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ShapeMargin {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) ShapeMargin {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -27773,6 +31821,10 @@ pub const ShapePadding = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -27799,6 +31851,18 @@ pub const ShapePadding = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ShapePadding {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ShapePadding {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ShapePadding {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ShapePadding {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ShapePadding {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) ShapePadding {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -28301,6 +32365,10 @@ pub const StrokeDashCorner = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) StrokeDashCorner {
@@ -28326,6 +32394,18 @@ pub const StrokeDashCorner = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) StrokeDashCorner {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) StrokeDashCorner {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) StrokeDashCorner {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) StrokeDashCorner {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) StrokeDashCorner {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: StrokeDashCorner, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -28386,6 +32466,10 @@ pub const StrokeDasharray = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -28413,6 +32497,18 @@ pub const StrokeDasharray = union(enum) {
     pub fn rem2(v1: f32, v2: f32) StrokeDasharray {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) StrokeDasharray {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) StrokeDasharray {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) StrokeDasharray {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) StrokeDasharray {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) StrokeDasharray {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -28436,6 +32532,10 @@ pub const StrokeDashcorner = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) StrokeDashcorner {
@@ -28462,6 +32562,18 @@ pub const StrokeDashcorner = union(enum) {
     pub fn rem2(v1: f32, v2: f32) StrokeDashcorner {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) StrokeDashcorner {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) StrokeDashcorner {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) StrokeDashcorner {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) StrokeDashcorner {
+        return .{ .vmax_ = v };
+    }
     pub fn format(self: StrokeDashcorner, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -28479,6 +32591,10 @@ pub const StrokeDashoffset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -28505,6 +32621,18 @@ pub const StrokeDashoffset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) StrokeDashoffset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) StrokeDashoffset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) StrokeDashoffset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) StrokeDashoffset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) StrokeDashoffset {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) StrokeDashoffset {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -28665,6 +32793,10 @@ pub const StrokePosition = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -28691,6 +32823,18 @@ pub const StrokePosition = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) StrokePosition {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) StrokePosition {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) StrokePosition {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) StrokePosition {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) StrokePosition {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) StrokePosition {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -28741,6 +32885,10 @@ pub const StrokeSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -28767,6 +32915,18 @@ pub const StrokeSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) StrokeSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) StrokeSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) StrokeSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) StrokeSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) StrokeSize {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) StrokeSize {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -28795,6 +32955,10 @@ pub const StrokeWidth = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -28822,6 +32986,18 @@ pub const StrokeWidth = union(enum) {
     pub fn rem2(v1: f32, v2: f32) StrokeWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) StrokeWidth {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) StrokeWidth {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) StrokeWidth {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) StrokeWidth {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) StrokeWidth {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -28845,6 +33021,10 @@ pub const TabSize = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) TabSize {
@@ -28870,6 +33050,18 @@ pub const TabSize = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TabSize {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TabSize {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TabSize {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TabSize {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TabSize {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: TabSize, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -29338,6 +33530,10 @@ pub const TextDecorationInset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) TextDecorationInset {
@@ -29363,6 +33559,18 @@ pub const TextDecorationInset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TextDecorationInset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TextDecorationInset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TextDecorationInset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TextDecorationInset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TextDecorationInset {
+        return .{ .vmax_ = v };
     }
     pub fn format(self: TextDecorationInset, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -29538,6 +33746,10 @@ pub const TextDecorationThickness = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -29564,6 +33776,18 @@ pub const TextDecorationThickness = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TextDecorationThickness {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TextDecorationThickness {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TextDecorationThickness {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TextDecorationThickness {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TextDecorationThickness {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) TextDecorationThickness {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -29917,6 +34141,10 @@ pub const TextIndent = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -29943,6 +34171,18 @@ pub const TextIndent = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TextIndent {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TextIndent {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TextIndent {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TextIndent {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TextIndent {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) TextIndent {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -30246,6 +34486,10 @@ pub const TextShadow = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     hex_: u32,
     calc_: CalcExpr,
 
@@ -30272,6 +34516,18 @@ pub const TextShadow = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TextShadow {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TextShadow {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TextShadow {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TextShadow {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TextShadow {
+        return .{ .vmax_ = v };
     }
     pub fn hex(v: u32) TextShadow {
         return .{ .hex_ = v };
@@ -30408,6 +34664,10 @@ pub const TextUnderlineOffset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -30434,6 +34694,18 @@ pub const TextUnderlineOffset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TextUnderlineOffset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TextUnderlineOffset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TextUnderlineOffset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TextUnderlineOffset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TextUnderlineOffset {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) TextUnderlineOffset {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -30590,6 +34862,10 @@ pub const TimelineTriggerActivationRangeEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -30617,6 +34893,18 @@ pub const TimelineTriggerActivationRangeEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) TimelineTriggerActivationRangeEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) TimelineTriggerActivationRangeEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TimelineTriggerActivationRangeEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TimelineTriggerActivationRangeEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TimelineTriggerActivationRangeEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) TimelineTriggerActivationRangeEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -30641,6 +34929,10 @@ pub const TimelineTriggerActivationRangeStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -30667,6 +34959,18 @@ pub const TimelineTriggerActivationRangeStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TimelineTriggerActivationRangeStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TimelineTriggerActivationRangeStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TimelineTriggerActivationRangeStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TimelineTriggerActivationRangeStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TimelineTriggerActivationRangeStart {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) TimelineTriggerActivationRangeStart {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -30709,6 +35013,10 @@ pub const TimelineTriggerActiveRangeEnd = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -30736,6 +35044,18 @@ pub const TimelineTriggerActiveRangeEnd = union(enum) {
     pub fn rem2(v1: f32, v2: f32) TimelineTriggerActiveRangeEnd {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) TimelineTriggerActiveRangeEnd {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TimelineTriggerActiveRangeEnd {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TimelineTriggerActiveRangeEnd {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TimelineTriggerActiveRangeEnd {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) TimelineTriggerActiveRangeEnd {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -30762,6 +35082,10 @@ pub const TimelineTriggerActiveRangeStart = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -30788,6 +35112,18 @@ pub const TimelineTriggerActiveRangeStart = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TimelineTriggerActiveRangeStart {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TimelineTriggerActiveRangeStart {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TimelineTriggerActiveRangeStart {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TimelineTriggerActiveRangeStart {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TimelineTriggerActiveRangeStart {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) TimelineTriggerActiveRangeStart {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -30849,6 +35185,10 @@ pub const Top = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -30875,6 +35215,18 @@ pub const Top = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Top {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Top {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Top {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Top {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Top {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Top {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -30973,6 +35325,10 @@ pub const TransformOrigin = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -30999,6 +35355,18 @@ pub const TransformOrigin = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) TransformOrigin {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) TransformOrigin {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) TransformOrigin {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) TransformOrigin {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) TransformOrigin {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) TransformOrigin {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -31163,6 +35531,10 @@ pub const Translate = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -31189,6 +35561,18 @@ pub const Translate = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Translate {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Translate {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Translate {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Translate {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Translate {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Translate {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -31358,6 +35742,10 @@ pub const ViewTimelineInset = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -31384,6 +35772,18 @@ pub const ViewTimelineInset = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) ViewTimelineInset {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) ViewTimelineInset {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) ViewTimelineInset {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) ViewTimelineInset {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) ViewTimelineInset {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) ViewTimelineInset {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -31838,6 +36238,10 @@ pub const Width = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -31864,6 +36268,18 @@ pub const Width = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Width {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Width {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Width {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Width {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Width {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Width {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -31976,6 +36392,10 @@ pub const WordSpacing = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -32002,6 +36422,18 @@ pub const WordSpacing = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WordSpacing {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) WordSpacing {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) WordSpacing {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) WordSpacing {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) WordSpacing {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) WordSpacing {
         return .{ .percent_ = .{ v, v, v, v } };
@@ -32170,6 +36602,10 @@ pub const X = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -32197,6 +36633,18 @@ pub const X = union(enum) {
     pub fn rem2(v1: f32, v2: f32) X {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
+    pub fn vh(v: f32) X {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) X {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) X {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) X {
+        return .{ .vmax_ = v };
+    }
     pub fn percent(v: f32) X {
         return .{ .percent_ = .{ v, v, v, v } };
     }
@@ -32220,6 +36668,10 @@ pub const Y = union(enum) {
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
+    vh_: f32,
+    vw_: f32,
+    vmin_: f32,
+    vmax_: f32,
     percent_: [4]f32,
     calc_: CalcExpr,
 
@@ -32246,6 +36698,18 @@ pub const Y = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) Y {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn vh(v: f32) Y {
+        return .{ .vh_ = v };
+    }
+    pub fn vw(v: f32) Y {
+        return .{ .vw_ = v };
+    }
+    pub fn vmin(v: f32) Y {
+        return .{ .vmin_ = v };
+    }
+    pub fn vmax(v: f32) Y {
+        return .{ .vmax_ = v };
     }
     pub fn percent(v: f32) Y {
         return .{ .percent_ = .{ v, v, v, v } };

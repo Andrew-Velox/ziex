@@ -1,5 +1,6 @@
 const zx = @import("zx");
 const S = zx.Style;
+const s = zx.style;
 
 pub const container: S = .{
     .padding = .px2(24, 0),
@@ -7,7 +8,8 @@ pub const container: S = .{
 
 pub const shell: S = .{
     .width = .percent(100),
-    .max_width = .px(960),
+    .max_width = .calc(s.Calc.px(960).sub(s.Calc.px(48))),
+    .min_height = .vh(60),
     .display = .flex,
     .flex_direction = .column,
 };
