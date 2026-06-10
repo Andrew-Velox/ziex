@@ -8,35 +8,26 @@ tar xf zig.tar.xz && \
 mv zig-$(uname -m)-linux-${ZIG_VER}/ /opt/zig
 ENV PATH="/opt/zig:$PATH"
 
-# Node/Bun Pre-requisites
-# RUN apk add --no-cache unzip bash libstdc++ libgcc nodejs npm
-
-# Install Bun
-# RUN curl -fsSL https://bun.sh/install | bash
-# ENV PATH="/root/.bun/bin:${PATH}"
-
-# Build the app
+# Build App
 WORKDIR /build
 
-# Node.js dependencies (node)
+# Node.js dependencies
+# RUN apk add --no-cache nodejs npm
 # COPY package.json package-lock.json ./
 # RUN npm install
 
-# Node.js dependencies (bun)
-# COPY package.json bun.lock ./
-# RUN bun install
-
-# Zig Dep
+# Ziex CLI
 COPY build.zig build.zig.zon ./
 RUN zig build --fetch
 RUN zig build zx -- version
 
-COPY . .
-
+# App
+COPY app/ ./app/
 RUN zig build -Doptimize=ReleaseSafe
 RUN zig build zx -- bundle
 
-# Run the app
+# Run App
 FROM alpine:3.22.2
+WORKDIR /app
 COPY --from=build /build/bundle/ /app/
-ENTRYPOINT ["/app/$BIN_NAME", "--rootdir", "./app/static"]
+ENTRYPOINT ["/app/$BIN_NAME"]

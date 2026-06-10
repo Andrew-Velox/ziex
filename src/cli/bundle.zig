@@ -24,6 +24,7 @@ fn bundle(ctx: zli.CommandContext) !void {
     const outdir = ctx.flag("outdir", []const u8);
     const binpath = ctx.flag("binpath", []const u8);
 
+    // TODO: upon upgrading to Zig 0.17 use the zig build --listen to get build configuration to find binary path
     var app_meta = util.findprogram(io, ctx.allocator, binpath) catch |err| {
         if (err == error.FileNotFound or err == error.ProgramNotFound or err == error.EmptyBinDir) {
             try ctx.writer.print("Run \x1b[34mzig build\x1b[0m to build the ZX executable first!\n", .{});
@@ -81,7 +82,7 @@ fn bundle(ctx: zli.CommandContext) !void {
         else => {},
     };
 
-    printer.footer("Now run {s}\n\n{s}(cd {s} && ./{s} --rootdir ./static){s}", .{ tui.Printer.emoji("→"), tui.Colors.cyan, outdir, bin_name, tui.Colors.reset });
+    printer.footer("Now run {s}\n\n{s}(cd {s} && ./{s}{s}", .{ tui.Printer.emoji("→"), tui.Colors.cyan, outdir, bin_name, tui.Colors.reset });
 }
 
 const std = @import("std");

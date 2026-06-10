@@ -59,6 +59,7 @@ fn @"export"(ctx: zli.CommandContext) !void {
         },
     }
 
+    // TODO: upon upgrading to Zig 0.17 use the zig build --listen to get build configuration to find binary path
     var app_meta = util.findprogram(io, ctx.allocator, binpath) catch |err| {
         if (err == error.FileNotFound or err == error.ProgramNotFound or err == error.EmptyBinDir) {
             try ctx.writer.print("Run \x1b[34mzig build\x1b[0m to build the ZX executable first!\n", .{});

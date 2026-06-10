@@ -1,19 +1,3 @@
-/// Generic Server that accepts an application context type.
-/// The app context is injected into all page and layout handlers via ctx.app.
-///
-/// Usage:
-/// ```zig
-/// // With app context (pointer)
-/// const AppCtx = struct { db: *Database, config: Config };
-/// var app_ctx = AppCtx{ .db = &db, .config = config };
-/// const server = try zx.Server(*AppCtx).init(allocator, config, &app_ctx);
-///
-/// // With app context (value)
-/// const server = try zx.Server(AppCtx).init(allocator, config, app_ctx);
-///
-/// // Without app context
-/// const server = try zx.Server(void).init(allocator, config, {});
-/// ```
 pub fn Server(comptime H: type) type {
     const AppCtxType = switch (@typeInfo(H)) {
         .@"struct" => H,

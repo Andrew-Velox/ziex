@@ -437,9 +437,9 @@ pub fn initInner(
     b.installArtifact(exe);
 
     // --- Build-time App Metadata ---
-    //
+    const is_dev_build = std.mem.eql(u8, cli_command_opt orelse "--", "dev");
     const can_introspect_exe = if (target) |resolved| resolved.query.isNative() else true;
-    if (can_introspect_exe) {
+    if (can_introspect_exe and !is_dev_build) {
         const introspect_src = try genIntrospectRoot(b, zx_module.owner, exe.root_module, target);
 
         const introspect_root = b.createModule(.{
@@ -564,7 +564,6 @@ pub fn initInner(
             "--binpath",
         });
         dev_cmd.addArg(b.pathJoin(&.{ b.exe_dir, exe.out_filename }));
-        dev_cmd.step.dependOn(b.getInstallStep());
         const dev_step = b.step(dev_step_name, "Run the Ziex app in development mode");
         dev_step.dependOn(&dev_cmd.step);
         if (b.args) |args| dev_cmd.addArgs(args);
