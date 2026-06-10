@@ -10,43 +10,43 @@ const categories = [_]SidebarProps.Category{
     .{
         .title = "Examples",
         .sections = &[_]SidebarProps.Section{
-            .{ .title = "Overview", .href = ssg ++ "/examples" },
+            .{ .title = "Overview", .href = "/examples" },
             .{
                 .title = "Control Flow",
                 .items = &[_]SidebarProps.Link{
-                    .{ .href = ssg ++ "/examples#if-else", .text = "If/Else" },
-                    .{ .href = ssg ++ "/examples#switch", .text = "Switch" },
-                    .{ .href = ssg ++ "/examples#for-loop", .text = "For Loop" },
+                    .{ .href = "/examples#if-else", .text = "If/Else" },
+                    .{ .href = "/examples#switch", .text = "Switch" },
+                    .{ .href = "/examples#for-loop", .text = "For Loop" },
                 },
             },
             .{
                 .title = "Components",
                 .items = &[_]SidebarProps.Link{
-                    .{ .href = ssg ++ "/examples#components", .text = "Props" },
-                    .{ .href = ssg ++ "/examples#dynamic-attributes", .text = "Dynamic Attributes" },
-                    .{ .href = ssg ++ "/examples#form-handling", .text = "Form Handling" },
+                    .{ .href = "/examples#components", .text = "Props" },
+                    .{ .href = "/examples#dynamic-attributes", .text = "Dynamic Attributes" },
+                    .{ .href = "/examples#form-handling", .text = "Form Handling" },
                 },
             },
             .{
                 .title = "Caching",
-                .href = ssg ++ "/examples#caching",
+                .href = "/examples#caching",
             },
         },
     },
     .{
         .title = "Example Applications",
         .sections = &[_]SidebarProps.Section{
-            .{ .title = "Counter", .href = ssg ++ "/examples/wasm/simple" },
-            .{ .title = "Streaming", .href = ssg ++ "/examples/streaming" },
-            .{ .title = "Todo App", .href = ssg ++ "/examples/wasm" },
-            .{ .title = "Async Timer", .href =  ssg ++ "/examples/wasm/async" },
-            // .{ .title = "React Integration", .href = ssg ++ "/examples/wasm/react" },
-            .{ .title = "Hydration", .href = ssg ++ "/examples/wasm/hydration" },
-            // .{ .title = "Progress Bar", .href = ssg ++ "/examples/wasm/progress" },
-            // .{ .title = "Realtime Chat", .href = ssg ++ "/examples/realtime" },
-            .{ .title = "Auth", .href = ssg ++ "/examples/auth" },
-            .{ .title = "Form", .href = ssg ++ "/examples/form" },
-            .{ .title = "File Form", .href = ssg ++ "/examples/form/file" },
+            .{ .title = "Counter", .href = "/examples/wasm/simple" },
+            .{ .title = "Streaming", .href = "/examples/streaming" },
+            .{ .title = "Todo App", .href = "/examples/wasm" },
+            .{ .title = "Async Timer", .href =  "/examples/wasm/async" },
+            // .{ .title = "React Integration", .href = "/examples/wasm/react" },
+            .{ .title = "Hydration", .href = "/examples/wasm/hydration" },
+            // .{ .title = "Progress Bar", .href = "/examples/wasm/progress" },
+            // .{ .title = "Realtime Chat", .href = "/examples/realtime" },
+            .{ .title = "Auth", .href = "/examples/auth" },
+            .{ .title = "Form", .href = "/examples/form" },
+            .{ .title = "File Form", .href = "/examples/form/file" },
         },
     },
 };
@@ -64,7 +64,5 @@ const toc_links = [_]SidebarProps.Link{
 const Sidebar = @import("../components/sidebar.zx").Sidebar;
 const SidebarProps = @import("../components/sidebar.zx").SidebarProps;
 
-const ssr = root.configs.ssr_url;
-const ssg = root.configs.ssg_url;
 const zx = @import("zx");
 const root = @import("root");

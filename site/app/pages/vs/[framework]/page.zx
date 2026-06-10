@@ -1,6 +1,5 @@
 const zx = @import("zx");
 const std = @import("std");
-const root = @import("root");
 
 const ComparisonRow = struct {
     aspect: []const u8,
@@ -201,7 +200,7 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
                     <article class="vs-note-card">
                         <h3>Ziex</h3>
                         <ul>
-                            <li><a href={root.configs.main_site_url}>Homepage</a></li>
+                            <li><a href="/">Homepage</a></li>
                             <li><a href="/learn">Documentation</a></li>
                             <li><a href={zx.info.repository} target="_blank" rel="noopener noreferrer">Source Code</a></li>
                         </ul>
