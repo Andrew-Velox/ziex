@@ -37,7 +37,7 @@ pub const Editor = struct {
 
     pub fn linef(self: *Editor, comptime fmt: []const u8, args: anytype) !void {
         try self.writeIndent();
-        try self.buffer.writer(self.allocator).print(fmt, args);
+        try self.buffer.print(self.allocator, fmt, args);
         try self.newline();
     }
 
@@ -144,9 +144,9 @@ pub const File = struct {
     }
 
     pub fn finish(self: *File) ![]const u8 {
-        var out: std.ArrayList(u8) = .empty;
-        defer out.deinit(self.allocator());
-        var w = out.writer(self.allocator());
+        var out: std.Io.Writer.Allocating = .init(self.allocator());
+        defer out.deinit();
+        const w = &out.writer;
 
         for (self.decls.items) |decl| {
             try decl.render(w);
@@ -154,7 +154,7 @@ pub const File = struct {
             try w.writeByte('\n');
         }
 
-        const raw = try out.toOwnedSlice(self.allocator());
+        const raw = out.written();
         const final_allocator = self.arena.child_allocator;
 
         const sentinel = try final_allocator.alloc(u8, raw.len + 1);
@@ -168,9 +168,7 @@ pub const File = struct {
         };
         defer tree.deinit(final_allocator);
         if (tree.errors.len != 0) {
-            const f = try std.Io.Dir.cwd().createFile("ast_error.zig", .{});
-            defer f.close();
-            try f.writeAll(raw);
+            std.debug.print("Invalid generated source:\n{s}\n", .{raw});
             return error.InvalidGeneratedSource;
         }
 

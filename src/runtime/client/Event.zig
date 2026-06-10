@@ -1,15 +1,17 @@
+const Event = @This();
+
 const std = @import("std");
+const builtin = @import("builtin");
+
 const zx = @import("../../root.zig");
 const client = @import("window.zig");
 const generated_events = @import("events/generated.zig");
+
 const js = zx.client.js;
 const reactivity = client.reactivity;
-
 const Allocator = zx.Allocator;
 pub const Kind = generated_events.Kind;
 const platform_role = zx.platform.role;
-
-const Event = @This();
 
 _internal: Internal = .{},
 
@@ -58,7 +60,35 @@ pub fn key(self: Event) ?[]const u8 {
 /// Get the event data by providing zx.client.events.<Type>.
 pub fn as(self: Event, comptime T: type, allocator: Allocator) T {
     if (platform_role != .client) return std.mem.zeroInit(T, .{});
-    return readStruct(T, allocator, self.getEvent().ref);
+    const event = self.getEvent();
+    if (comptime builtin.mode == .Debug) assertType(T, event);
+    return readStruct(T, allocator, event.ref);
+}
+
+/// Debug-only guard: validates that requested struct `T` matches the live event.
+inline fn assertType(comptime T: type, event: client.Event) void {
+    // The bare `Event` interface is the catch-all — valid for every event.
+    if (comptime T == generated_events.Event) return;
+
+    const type_str = event.getType(zx.allocator) orelse return;
+    defer zx.allocator.free(type_str);
+
+    const kind = generated_events.kindForType(type_str) orelse return; // custom event
+    switch (kind) {
+        inline else => |k| {
+            if (generated_events.Data(k) != T) {
+                std.log.err(
+                    \\Event.as, incorrect type requested for '{s}' event
+                    \\
+                    \\  Requested: {s}
+                    \\  Expected: {s}
+                    \\
+                ,
+                    .{ type_str, @typeName(T), @typeName(generated_events.Data(k)) },
+                );
+            }
+        },
+    }
 }
 
 pub fn data(self: Event, comptime kind: Kind, allocator: Allocator) Data(kind) {

@@ -2,7 +2,7 @@ const std = @import("std");
 const astgen = @import("astgen.zig");
 const helper = @import("helper.zig");
 
-const TypeMap = std.StringArrayHashMap([]const u8);
+const TypeMap = std.array_hash_map.String([]const u8);
 
 const UnitSupport = struct {
     length: bool = false,
@@ -14,22 +14,19 @@ const UnitSupport = struct {
 };
 
 const PropMeta = struct {
-    keywords: std.StringArrayHashMap([]const u8),
+    keywords: std.array_hash_map.String([]const u8),
     units: UnitSupport,
     href: []const u8,
     prose: []const u8 = "",
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-    try writeFile(allocator, "src/style/generated.zig");
+pub fn main(init: std.process.Init) !void {
+    try writeFile(init.io, init.gpa, "src/style/generated.zig");
     std.debug.print("Successfully generated src/style/generated.zig using AST-Driven engine.\n", .{});
 }
 
-pub fn writeFile(allocator: std.mem.Allocator, path: []const u8) !void {
-    const source = generate(allocator) catch |err| {
+pub fn writeFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8) !void {
+    const source = generate(io, allocator) catch |err| {
         if (err == error.InvalidGeneratedSource) {
             // We can't easily get the raw buffer from File here without changes,
             // but we can try to catch it in generate() or just look at what's happening.
@@ -38,19 +35,17 @@ pub fn writeFile(allocator: std.mem.Allocator, path: []const u8) !void {
     };
     defer allocator.free(source);
 
-    const file = try std.Io.Dir.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(source);
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, source);
 }
 
-pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
+pub fn generate(io: std.Io, allocator: std.mem.Allocator) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     const a = arena.allocator();
 
-    const main_file = try std.Io.Dir.cwd().openFile("vendor/webref/ed/css.json", .{});
-    defer main_file.close();
-    const main_content = try main_file.readToEndAlloc(a, 15 * 1024 * 1024);
+    const main_content = try std.Io.Dir.cwd().readFileAlloc(io, "vendor/webref/ed/css.json", a, .unlimited);
     const main_parsed = try std.json.parseFromSlice(std.json.Value, a, main_content, .{});
     defer main_parsed.deinit();
 
@@ -59,26 +54,24 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
     const types_json = root.get("types").?.array;
     const selectors = root.get("selectors").?.array;
 
-    var type_map = TypeMap.init(a);
-    defer type_map.deinit();
+    var type_map: TypeMap = .empty;
+    defer type_map.deinit(a);
     for (types_json.items) |t| {
         const name = t.object.get("name").?.string;
         const syntax = if (t.object.get("syntax")) |s| s.string else "";
-        try type_map.put(name, syntax);
+        try type_map.put(a, name, syntax);
     }
 
     var prose_map = std.StringHashMap([]const u8).init(a);
     defer prose_map.deinit();
     var kw_prose_map = std.StringHashMap(std.StringHashMap([]const u8)).init(a);
     defer kw_prose_map.deinit();
-    var dir = try std.Io.Dir.cwd().openDir("vendor/webref/ed/css/", .{ .iterate = true });
-    defer dir.close();
+    var dir = try std.Io.Dir.cwd().openDir(io, "vendor/webref/ed/css/", .{ .iterate = true });
+    defer dir.close(io);
     var dir_it = dir.iterate();
-    while (try dir_it.next()) |entry| {
+    while (try dir_it.next(io)) |entry| {
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
-        const f = try dir.openFile(entry.name, .{});
-        defer f.close();
-        const fc = try f.readToEndAlloc(a, 5 * 1024 * 1024);
+        const fc = try dir.readFileAlloc(io, entry.name, a, .unlimited);
         const p = std.json.parseFromSlice(std.json.Value, a, fc, .{}) catch continue;
         defer p.deinit();
         if (p.value.object.get("properties")) |props| {
@@ -101,21 +94,21 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
         }
     }
 
-    var prop_data = std.StringArrayHashMap(PropMeta).init(a);
-    defer prop_data.deinit();
+    var prop_data: std.array_hash_map.String(PropMeta) = .empty;
+    defer prop_data.deinit(a);
     for (properties.items) |prop| {
         const name = prop.object.get("name").?.string;
         const syntax = if (prop.object.get("syntax")) |s| s.string else "";
         const href = if (prop.object.get("href")) |h| h.string else "";
-        var keywords = std.StringArrayHashMap([]const u8).init(a);
-        try keywords.put("none", "");
+        var keywords: std.array_hash_map.String([]const u8) = .empty;
+        try keywords.put(a, "none", "");
         const globals = [_][]const u8{ "inherit", "initial", "revert", "revert-layer", "unset" };
         for (globals) |g| {
-            if (!keywords.contains(g)) try keywords.put(g, "");
+            if (!keywords.contains(g)) try keywords.put(a, g, "");
         }
         var units = UnitSupport{};
         try resolveMetaEnriched(a, syntax, &type_map, &keywords, &units, 0, kw_prose_map.get(name));
-        try prop_data.put(name, .{ .keywords = keywords, .units = units, .href = href, .prose = prose_map.get(name) orelse "" });
+        try prop_data.put(a, name, .{ .keywords = keywords, .units = units, .href = href, .prose = prose_map.get(name) orelse "" });
     }
 
     var file = astgen.File.init(allocator);
@@ -141,14 +134,14 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
         const prop_union = try file.addUnion(final_type_name, "enum");
         try prop_union.setDoc(fa, prop_doc);
 
-        var tags = std.StringArrayHashMap(void).init(a);
+        var tags: std.array_hash_map.String(void) = .empty;
         var k_it = data.keywords.iterator();
         while (k_it.next()) |k_entry| {
             const clean_kw = try cleanName(a, k_entry.key_ptr.*, .snake);
             if (clean_kw.len > 0 and !tags.contains(clean_kw)) {
                 const kw_doc = if (k_entry.value_ptr.*.len > 0) try docText(fa, null, k_entry.value_ptr.*, null) else "";
                 try prop_union.addField(fa, kw_doc, clean_kw, "", null);
-                try tags.put(clean_kw, {});
+                try tags.put(a, clean_kw, {});
             }
         }
 
@@ -214,8 +207,8 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
         try style_struct.addField(fa, "", clean_p, final_type_name, ".none");
     }
 
-    var selector_tags = std.StringArrayHashMap(void).init(a);
-    defer selector_tags.deinit();
+    var selector_tags: std.array_hash_map.String(void) = .empty;
+    defer selector_tags.deinit(a);
     for (selectors.items) |sel| {
         const name = sel.object.get("name").?.string;
         if (std.mem.indexOf(u8, name, "(") != null) continue;
@@ -234,7 +227,7 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
         }
         if (is_duplicate) continue;
 
-        try selector_tags.put(clean_s, {});
+        try selector_tags.put(a, clean_s, {});
         try style_struct.addField(fa, "", clean_s, "?*const Style", "null");
     }
 
@@ -298,7 +291,7 @@ fn cleanName(allocator: std.mem.Allocator, name: []const u8, case: enum { pascal
     return result;
 }
 
-fn resolveMetaEnriched(allocator: std.mem.Allocator, syntax: []const u8, type_map: *TypeMap, keywords: *std.StringArrayHashMap([]const u8), units: *UnitSupport, depth: usize, kprose: ?std.StringHashMap([]const u8)) !void {
+fn resolveMetaEnriched(allocator: std.mem.Allocator, syntax: []const u8, type_map: *TypeMap, keywords: *std.array_hash_map.String([]const u8), units: *UnitSupport, depth: usize, kprose: ?std.StringHashMap([]const u8)) !void {
     if (depth > 10) return;
 
     const is_shorthand = std.mem.indexOf(u8, syntax, "{1,4}") != null or std.mem.indexOf(u8, syntax, "{1,2}") != null;
@@ -360,15 +353,15 @@ fn resolveMetaEnriched(allocator: std.mem.Allocator, syntax: []const u8, type_ma
                 if (std.mem.eql(u8, cleaned, "unset")) break :blk "The unset CSS keyword resets a property to its inherited value if the property naturally inherits from its parent, and to its initial value otherwise.";
                 break :blk "";
             };
-            try keywords.put(try allocator.dupe(u8, cleaned), try allocator.dupe(u8, pr));
+            try keywords.put(allocator, try allocator.dupe(u8, cleaned), try allocator.dupe(u8, pr));
         }
     }
 }
 
 fn docText(allocator: std.mem.Allocator, title: ?[]const u8, prose: []const u8, href: ?[]const u8) ![]const u8 {
-    var list: std.ArrayList(u8) = .empty;
-    defer list.deinit(allocator);
-    const w = list.writer(allocator);
+    var list: std.Io.Writer.Allocating = .init(allocator);
+    defer list.deinit();
+    const w = &list.writer;
     var first = true;
     if (title) |t| {
         try w.print("{s}", .{t});
@@ -383,7 +376,7 @@ fn docText(allocator: std.mem.Allocator, title: ?[]const u8, prose: []const u8, 
         if (!first) try w.writeAll("\n\n");
         try w.print("- **W3C**: {s}", .{h});
     }
-    return try list.toOwnedSlice(allocator);
+    return try allocator.dupe(u8, list.written());
 }
 
 fn isZigKeyword(name: []const u8) bool {

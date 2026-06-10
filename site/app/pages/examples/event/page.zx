@@ -1,0 +1,133 @@
+// Demonstrates and exercises `zx.client.Event.as(T)` across every case the
+// debug-build type assertion guards:
+//
+//   1. Correct match    — as(PointerEvent) in a click handler          → reads data
+//   2. Correct match    — as(KeyboardEvent) in a keydown handler       → reads data
+//   3. Correct match    — as(InputEvent) in an input handler           → reads data
+//   4. Correct match    — as(SubmitEvent) in a submit handler          → reads data
+//   5. Catch-all        — as(Event) in any handler                     → never asserts
+//   6. Deliberate mismatch — as(KeyboardEvent) in a click handler      → debug panic
+//
+// Open the browser console and interact with each control to watch the typed
+// fields print. In a debug build, clicking "Trigger type mismatch" panics with
+// a descriptive message — that's the guard working.
+
+pub fn Page(ctx: zx.PageContext) zx.Component {
+    return (
+        <main @allocator={ctx.arena}>
+            <h1>Event.as() type-safety demo</h1>
+            <p>Open the console, then interact with each control below.</p>
+            <EventDemo @rendering={.client} />
+        </main>
+    );
+}
+
+pub fn EventDemo(ctx: *zx.ComponentContext) zx.Component {
+    return (
+        <div @allocator={ctx.allocator}>
+            <section>
+                <p>1. PointerEvent (click)</p>
+                <button onclick={ctx.bind(onClick)}>Click me</button>
+            </section>
+
+            <section>
+                <p>2. KeyboardEvent (keydown) + 3. InputEvent (input)</p>
+                <input
+                    type="text"
+                    placeholder="Type here"
+                    onkeydown={ctx.bind(onKeyDown)}
+                    oninput={ctx.bind(onInput)}
+                />
+            </section>
+
+            <section>
+                <p>4. SubmitEvent (submit)</p>
+                <form onsubmit={ctx.bind(onSubmit)}>
+                    <button type="submit">Submit form</button>
+                </form>
+            </section>
+
+            <section>
+                <p>5. Catch-all Event (any type is valid)</p>
+                <button onclick={ctx.bind(onAnyEvent)}>Read as generic Event</button>
+            </section>
+
+            <section>
+                <p>6. Deliberate mismatch (debug build panics)</p>
+                <button onclick={ctx.bind(onMismatch)}>Trigger type mismatch</button>
+            </section>
+        </div>
+    );
+}
+
+// 1. Correct: click events are backed by PointerEvent (a superset of MouseEvent).
+fn onClick(ctx: *zx.client.Event.Stateful) void {
+    const e = ctx.as(zx.client.events.PointerEvent, zx.allocator);
+    zx.log.info("PointerEvent: type={s} at ({d},{d}) button={d} pointerType={s} on <{s}>", .{
+        e.type,
+        e.client_x,
+        e.client_y,
+        e.button,
+        e.pointer_type,
+        if (e.target) |t| t.tag_name else "unknown",
+    });
+}
+
+// 2. Correct: keydown events are backed by KeyboardEvent.
+fn onKeyDown(ctx: *zx.client.Event.Stateful) void {
+    const e = ctx.as(zx.client.events.KeyboardEvent, zx.allocator);
+    zx.log.info("KeyboardEvent: key={s} code={s} ctrl={any} shift={any} repeat={any}", .{
+        e.key,
+        e.code,
+        e.ctrl_key,
+        e.shift_key,
+        e.repeat,
+    });
+}
+
+// 3. Correct: input events are backed by InputEvent.
+fn onInput(ctx: *zx.client.Event.Stateful) void {
+    const e = ctx.as(zx.client.events.InputEvent, zx.allocator);
+    zx.log.info("InputEvent: type={s} inputType={s} data={s} value={s}", .{
+        e.type,
+        e.input_type,
+        e.data orelse "",
+        ctx.value() orelse "",
+    });
+}
+
+// 4. Correct: submit events are backed by SubmitEvent.
+fn onSubmit(ctx: *zx.client.Event.Stateful) void {
+    ctx.preventDefault();
+    const e = ctx.as(zx.client.events.SubmitEvent, zx.allocator);
+    zx.log.info("SubmitEvent: type={s} bubbles={any} cancelable={any}", .{
+        e.type,
+        e.bubbles,
+        e.cancelable,
+    });
+}
+
+// 5. Catch-all: `Event` is valid for every event type, so the guard is skipped.
+fn onAnyEvent(ctx: *zx.client.Event.Stateful) void {
+    const e = ctx.as(zx.client.events.Event, zx.allocator);
+    zx.log.info("Event (catch-all): type={s} bubbles={any} isTrusted={any}", .{
+        e.type,
+        e.bubbles,
+        e.is_trusted,
+    });
+}
+
+// 6. Mismatch: a click is NOT a KeyboardEvent. In a debug build the assertion
+// in `as()` panics with a message naming the requested vs. actual type. This is
+// the bug the guard exists to catch.
+fn onMismatch(ctx: *zx.client.Event.Stateful) void {
+    zx.log.info("About to request KeyboardEvent for a click — expect a debug panic.", .{});
+    const e = ctx.as(zx.client.events.KeyboardEvent, zx.allocator);
+    zx.log.info("Unreachable in debug builds: {s}", .{e.key});
+}
+
+pub const options: zx.PageOptions = .{
+    .methods = &.{ .GET, .POST },
+};
+
+const zx = @import("zx");

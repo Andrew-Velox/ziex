@@ -1,11 +1,7 @@
 const std = @import("std");
 
 pub fn calcExprSource(allocator: std.mem.Allocator) ![]const u8 {
-    var out: std.ArrayList(u8) = .empty;
-    defer out.deinit(allocator);
-    const w = out.writer(allocator);
-
-    try w.writeAll(
+    return try allocator.dupe(u8,
         \\pub const CalcExpr = struct {
         \\    const Self = @This();
         \\    pub const Unit = enum {
@@ -138,11 +134,9 @@ pub fn calcExprSource(allocator: std.mem.Allocator) ![]const u8 {
         \\        return self.combine(Self.numberLeaf(factor), .div);
         \\    }
         \\
-        \\    pub fn format(self: Self, w: *std.io.Writer) std.io.Writer.Error!void {
+        \\    pub fn format(self: Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
         \\        try w.writeAll(self.text());
         \\    }
         \\};
     );
-
-    return try out.toOwnedSlice(allocator);
 }

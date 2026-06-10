@@ -1057,6 +1057,7 @@ pub const WebkitFlexWrap = union(enum) {
     nowrap,
     wrap,
     wrap_reverse,
+    balance,
 
     pub fn format(self: WebkitFlexWrap, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -1294,11 +1295,35 @@ pub const WebkitMaskBoxImageRepeat = union(enum) {
     revert,
     revert_layer,
     unset,
-    stretch,
-    repeat,
-    round,
-    space,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    calc_: CalcExpr,
 
+    pub fn calc(expr: CalcExpr) WebkitMaskBoxImageRepeat {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) WebkitMaskBoxImageRepeat {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) WebkitMaskBoxImageRepeat {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) WebkitMaskBoxImageRepeat {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) WebkitMaskBoxImageRepeat {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) WebkitMaskBoxImageRepeat {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) WebkitMaskBoxImageRepeat {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageRepeat {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
     pub fn format(self: WebkitMaskBoxImageRepeat, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -1313,18 +1338,34 @@ pub const WebkitMaskBoxImageSlice = union(enum) {
     revert,
     revert_layer,
     unset,
-    fill,
-    percent_: [4]f32,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImageSlice {
         return .{ .calc_ = expr };
     }
-    pub fn percent(v: f32) WebkitMaskBoxImageSlice {
-        return .{ .percent_ = .{ v, v, v, v } };
+    pub fn px(v: f32) WebkitMaskBoxImageSlice {
+        return .{ .px_ = .{ v, v, v, v } };
     }
-    pub fn percent2(v1: f32, v2: f32) WebkitMaskBoxImageSlice {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    pub fn px2(v1: f32, v2: f32) WebkitMaskBoxImageSlice {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) WebkitMaskBoxImageSlice {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) WebkitMaskBoxImageSlice {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) WebkitMaskBoxImageSlice {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) WebkitMaskBoxImageSlice {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageSlice {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
     pub fn format(self: WebkitMaskBoxImageSlice, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -1340,7 +1381,35 @@ pub const WebkitMaskBoxImageSource = union(enum) {
     revert,
     revert_layer,
     unset,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    calc_: CalcExpr,
 
+    pub fn calc(expr: CalcExpr) WebkitMaskBoxImageSource {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) WebkitMaskBoxImageSource {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) WebkitMaskBoxImageSource {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) WebkitMaskBoxImageSource {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) WebkitMaskBoxImageSource {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) WebkitMaskBoxImageSource {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) WebkitMaskBoxImageSource {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageSource {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
     pub fn format(self: WebkitMaskBoxImageSource, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -1355,11 +1424,9 @@ pub const WebkitMaskBoxImageWidth = union(enum) {
     revert,
     revert_layer,
     unset,
-    auto,
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
-    percent_: [4]f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) WebkitMaskBoxImageWidth {
@@ -1385,12 +1452,6 @@ pub const WebkitMaskBoxImageWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) WebkitMaskBoxImageWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) WebkitMaskBoxImageWidth {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) WebkitMaskBoxImageWidth {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
     }
     pub fn format(self: WebkitMaskBoxImageWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -12739,7 +12800,7 @@ pub const ColorAdjust = union(enum) {
 };
 
 /// color-interpolation
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#ColorInterpolationProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#ColorInterpolationProperty
 pub const ColorInterpolation = union(enum) {
     none,
     inherit,
@@ -12786,13 +12847,13 @@ pub const ColorScheme = union(enum) {
     revert,
     revert_layer,
     unset,
-    /// Indicates that the element supports the page’s supported color schemes, if they are set, or that it supports no color schemes at all otherwise.
+    /// The element color scheme is the same as the page color scheme. (This includes noting whether the color scheme was defaulted.)
     normal,
-    /// Indicates that the element supports a light color scheme.
+    /// Indicates that the element supports a light and/or dark color scheme, as appropriate. The element’s color scheme support will include the keywords, in the order they’re specified.
     light,
-    /// Indicates that the element supports a dark color scheme.
+    /// Indicates that the element supports a light and/or dark color scheme, as appropriate. The element’s color scheme support will include the keywords, in the order they’re specified.
     dark,
-    /// Forbids the user agent from overriding the color scheme for the element.
+    /// Forbids the user agent from overriding the color scheme for the element. The element’s color scheme support will have a flag indicating sole support.
     only,
 
     pub fn format(self: ColorScheme, w: anytype) std.Io.Writer.Error!void {
@@ -12839,7 +12900,7 @@ pub const ColumnFill = union(enum) {
 };
 
 /// column-gap
-/// - **W3C**: https://drafts.csswg.org/css-align-3/#propdef-column-gap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-gap
 pub const ColumnGap = union(enum) {
     none,
     inherit,
@@ -13423,156 +13484,6 @@ pub const ColumnRuleColor = union(enum) {
     }
 };
 
-/// column-rule-edge-inset
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-edge-inset
-pub const ColumnRuleEdgeInset = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) ColumnRuleEdgeInset {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) ColumnRuleEdgeInset {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) ColumnRuleEdgeInset {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleEdgeInset {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) ColumnRuleEdgeInset {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) ColumnRuleEdgeInset {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) ColumnRuleEdgeInset {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) ColumnRuleEdgeInset {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) ColumnRuleEdgeInset {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) ColumnRuleEdgeInset {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: ColumnRuleEdgeInset, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// column-rule-edge-inset-end
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-edge-inset-end
-pub const ColumnRuleEdgeInsetEnd = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) ColumnRuleEdgeInsetEnd {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) ColumnRuleEdgeInsetEnd {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: ColumnRuleEdgeInsetEnd, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// column-rule-edge-inset-start
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-edge-inset-start
-pub const ColumnRuleEdgeInsetStart = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) ColumnRuleEdgeInsetStart {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) ColumnRuleEdgeInsetStart {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) ColumnRuleEdgeInsetStart {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleEdgeInsetStart {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) ColumnRuleEdgeInsetStart {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) ColumnRuleEdgeInsetStart {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) ColumnRuleEdgeInsetStart {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) ColumnRuleEdgeInsetStart {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) ColumnRuleEdgeInsetStart {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) ColumnRuleEdgeInsetStart {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: ColumnRuleEdgeInsetStart, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
 /// column-rule-inset
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset
 pub const ColumnRuleInset = union(enum) {
@@ -13588,6 +13499,159 @@ pub const ColumnRuleInset = union(enum) {
     }
 };
 
+/// column-rule-inset-cap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-cap
+pub const ColumnRuleInsetCap = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) ColumnRuleInsetCap {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) ColumnRuleInsetCap {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) ColumnRuleInsetCap {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInsetCap {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) ColumnRuleInsetCap {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) ColumnRuleInsetCap {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) ColumnRuleInsetCap {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetCap {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) ColumnRuleInsetCap {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) ColumnRuleInsetCap {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: ColumnRuleInsetCap, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// column-rule-inset-cap-end
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-cap-end
+pub const ColumnRuleInsetCapEnd = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) ColumnRuleInsetCapEnd {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) ColumnRuleInsetCapEnd {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInsetCapEnd {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) ColumnRuleInsetCapEnd {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetCapEnd {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) ColumnRuleInsetCapEnd {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) ColumnRuleInsetCapEnd {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: ColumnRuleInsetCapEnd, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// column-rule-inset-cap-start
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-cap-start
+pub const ColumnRuleInsetCapStart = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) ColumnRuleInsetCapStart {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) ColumnRuleInsetCapStart {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) ColumnRuleInsetCapStart {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInsetCapStart {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) ColumnRuleInsetCapStart {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) ColumnRuleInsetCapStart {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) ColumnRuleInsetCapStart {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetCapStart {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) ColumnRuleInsetCapStart {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) ColumnRuleInsetCapStart {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: ColumnRuleInsetCapStart, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
 /// column-rule-inset-end
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-end
 pub const ColumnRuleInsetEnd = union(enum) {
@@ -13597,6 +13661,7 @@ pub const ColumnRuleInsetEnd = union(enum) {
     revert,
     revert_layer,
     unset,
+    overlap_join,
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
@@ -13638,6 +13703,159 @@ pub const ColumnRuleInsetEnd = union(enum) {
     }
 };
 
+/// column-rule-inset-junction
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-junction
+pub const ColumnRuleInsetJunction = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) ColumnRuleInsetJunction {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) ColumnRuleInsetJunction {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) ColumnRuleInsetJunction {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInsetJunction {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) ColumnRuleInsetJunction {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) ColumnRuleInsetJunction {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) ColumnRuleInsetJunction {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetJunction {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) ColumnRuleInsetJunction {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) ColumnRuleInsetJunction {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: ColumnRuleInsetJunction, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// column-rule-inset-junction-end
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-junction-end
+pub const ColumnRuleInsetJunctionEnd = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) ColumnRuleInsetJunctionEnd {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) ColumnRuleInsetJunctionEnd {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: ColumnRuleInsetJunctionEnd, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// column-rule-inset-junction-start
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-junction-start
+pub const ColumnRuleInsetJunctionStart = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) ColumnRuleInsetJunctionStart {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) ColumnRuleInsetJunctionStart {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInsetJunctionStart {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) ColumnRuleInsetJunctionStart {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) ColumnRuleInsetJunctionStart {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) ColumnRuleInsetJunctionStart {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) ColumnRuleInsetJunctionStart {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: ColumnRuleInsetJunctionStart, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
 /// column-rule-inset-start
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-inset-start
 pub const ColumnRuleInsetStart = union(enum) {
@@ -13647,6 +13865,7 @@ pub const ColumnRuleInsetStart = union(enum) {
     revert,
     revert_layer,
     unset,
+    overlap_join,
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
@@ -13684,156 +13903,6 @@ pub const ColumnRuleInsetStart = union(enum) {
         return .{ .percent_ = .{ v1, v2, v1, v2 } };
     }
     pub fn format(self: ColumnRuleInsetStart, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// column-rule-interior-inset
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-interior-inset
-pub const ColumnRuleInteriorInset = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) ColumnRuleInteriorInset {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) ColumnRuleInteriorInset {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) ColumnRuleInteriorInset {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInteriorInset {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) ColumnRuleInteriorInset {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) ColumnRuleInteriorInset {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) ColumnRuleInteriorInset {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) ColumnRuleInteriorInset {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) ColumnRuleInteriorInset {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) ColumnRuleInteriorInset {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: ColumnRuleInteriorInset, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// column-rule-interior-inset-end
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-interior-inset-end
-pub const ColumnRuleInteriorInsetEnd = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) ColumnRuleInteriorInsetEnd {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) ColumnRuleInteriorInsetEnd {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: ColumnRuleInteriorInsetEnd, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// column-rule-interior-inset-start
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-column-rule-interior-inset-start
-pub const ColumnRuleInteriorInsetStart = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) ColumnRuleInteriorInsetStart {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) ColumnRuleInteriorInsetStart {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) ColumnRuleInteriorInsetStart {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) ColumnRuleInteriorInsetStart {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) ColumnRuleInteriorInsetStart {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) ColumnRuleInteriorInsetStart {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) ColumnRuleInteriorInsetStart {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) ColumnRuleInteriorInsetStart {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) ColumnRuleInteriorInsetStart {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) ColumnRuleInteriorInsetStart {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: ColumnRuleInteriorInsetStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
 };
@@ -13878,6 +13947,8 @@ pub const ColumnRuleVisibilityItems = union(enum) {
     around,
     /// Paint decorations in a gap segment if both adjacent areas are occupied by items.
     between,
+    /// Behavior depends on the type of container.
+    normal,
 
     pub fn format(self: ColumnRuleVisibilityItems, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -15643,7 +15714,7 @@ pub const Cursor = union(enum) {
 };
 
 /// cx
-/// - **W3C**: https://svgwg.org/svg2-draft/geometry.html#CxProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/geometry.html#CxProperty
 pub const Cx = union(enum) {
     none,
     inherit,
@@ -15693,7 +15764,7 @@ pub const Cx = union(enum) {
 };
 
 /// cy
-/// - **W3C**: https://svgwg.org/svg2-draft/geometry.html#CyProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/geometry.html#CyProperty
 pub const Cy = union(enum) {
     none,
     inherit,
@@ -15743,7 +15814,7 @@ pub const Cy = union(enum) {
 };
 
 /// d
-/// - **W3C**: https://svgwg.org/svg2-draft/paths.html#DProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/paths.html#DProperty
 pub const D = union(enum) {
     none,
     inherit,
@@ -15793,7 +15864,6 @@ pub const Display = union(enum) {
     table,
     flex,
     grid,
-    /// Specifies that an element generates a ruby container box. (Corresponds to HTML/XHTML <ruby> elements.)
     ruby,
     /// The list-item keyword causes the element to generate a ::marker pseudo-element [CSS-PSEUDO-4] with the content specified by its list-style properties (CSS 2.1§12.5 Lists) [CSS2] together with a principal box of the specified type for its own contents.
     list_item,
@@ -15805,13 +15875,9 @@ pub const Display = union(enum) {
     table_column_group,
     table_column,
     table_caption,
-    /// Specifies that an element generates a ruby base box. (Corresponds to HTML/XHTML <rb> elements.)
     ruby_base,
-    /// Specifies that an element generates a ruby annotation box. (Corresponds to HTML/XHTML <rt> elements.)
     ruby_text,
-    /// Specifies that an element generates a ruby base container box. (Corresponds to XHTML <rbc> elements; generated as an anonymous box in HTML.)
     ruby_base_container,
-    /// Specifies that an element generates a ruby annotation container box. (Corresponds to HTML/XHTML <rtc> elements.)
     ruby_text_container,
     contents,
     inline_block,
@@ -15970,7 +16036,7 @@ pub const FieldSizing = union(enum) {
 };
 
 /// fill
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#FillProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#FillProperty
 pub const Fill = union(enum) {
     none,
     inherit,
@@ -16448,7 +16514,7 @@ pub const Filter = union(enum) {
 };
 
 /// flex
-/// - **W3C**: https://drafts.csswg.org/css-flexbox-1/#propdef-flex
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex
 pub const Flex = union(enum) {
     none,
     inherit,
@@ -16463,7 +16529,7 @@ pub const Flex = union(enum) {
 };
 
 /// flex-basis
-/// - **W3C**: https://drafts.csswg.org/css-flexbox-1/#propdef-flex-basis
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex-basis
 pub const FlexBasis = union(enum) {
     none,
     inherit,
@@ -16480,7 +16546,7 @@ pub const FlexBasis = union(enum) {
 };
 
 /// flex-direction
-/// - **W3C**: https://drafts.csswg.org/css-flexbox-1/#propdef-flex-direction
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex-direction
 pub const FlexDirection = union(enum) {
     none,
     inherit,
@@ -16503,7 +16569,7 @@ pub const FlexDirection = union(enum) {
 };
 
 /// flex-flow
-/// - **W3C**: https://drafts.csswg.org/css-flexbox-1/#propdef-flex-flow
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex-flow
 pub const FlexFlow = union(enum) {
     none,
     inherit,
@@ -16518,7 +16584,7 @@ pub const FlexFlow = union(enum) {
 };
 
 /// flex-grow
-/// - **W3C**: https://drafts.csswg.org/css-flexbox-1/#propdef-flex-grow
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex-grow
 pub const FlexGrow = union(enum) {
     none,
     inherit,
@@ -16532,8 +16598,23 @@ pub const FlexGrow = union(enum) {
     }
 };
 
+/// flex-line-count
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex-line-count
+pub const FlexLineCount = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+
+    pub fn format(self: FlexLineCount, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
 /// flex-shrink
-/// - **W3C**: https://drafts.csswg.org/css-flexbox-1/#propdef-flex-shrink
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex-shrink
 pub const FlexShrink = union(enum) {
     none,
     inherit,
@@ -16548,7 +16629,7 @@ pub const FlexShrink = union(enum) {
 };
 
 /// flex-wrap
-/// - **W3C**: https://drafts.csswg.org/css-flexbox-1/#propdef-flex-wrap
+/// - **W3C**: https://drafts.csswg.org/css-flexbox-2/#propdef-flex-wrap
 pub const FlexWrap = union(enum) {
     none,
     inherit,
@@ -16560,8 +16641,10 @@ pub const FlexWrap = union(enum) {
     nowrap,
     /// The flex container is multi-line.
     wrap,
-    /// Same as wrap.
+    /// The flex container is multi-line, but the lines are stacked "in reverse" (see below).
     wrap_reverse,
+    /// The flex container is multi-line, and attempts to balance the lengths of the flex lines to be as similar as possible. balance can be combined with wrap or wrap-reverse to dictate which direction the flex lines are stacked in. If neither are specified, it behaves as if wrap was specified.
+    balance,
 
     pub fn format(self: FlexWrap, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -17057,6 +17140,7 @@ pub const FontFamily = union(enum) {
     system_ui,
     cursive,
     fantasy,
+    /// This font family is intended for use with mathematical expressions. Such fonts may include additional data (for example, the OpenType MATH table) to help with the hierarchical process of equation layout. In particular, they may contain stylistic and stretching glyph variants useful in setting mathematical equations.
     math,
     monospace,
     ui_serif,
@@ -17793,10 +17877,15 @@ pub const FrameSizing = union(enum) {
     revert,
     revert_layer,
     unset,
+    /// The element’s internal layout intrinsic size, if any, is ignored.
     auto,
+    /// If the element has an internal layout intrinsic size, its intrinsic size takes the corresponding dimension (either width or height) from the internal layout intrinsic size. (The other dimension is determined normally.) Logical directions resolve based on the writing mode of the element. (Not the embedded document.)
     content_width,
+    /// If the element has an internal layout intrinsic size, its intrinsic size takes the corresponding dimension (either width or height) from the internal layout intrinsic size. (The other dimension is determined normally.) Logical directions resolve based on the writing mode of the element. (Not the embedded document.)
     content_height,
+    /// If the element has an internal layout intrinsic size, its intrinsic size takes the corresponding dimension (either width or height) from the internal layout intrinsic size. (The other dimension is determined normally.) Logical directions resolve based on the writing mode of the element. (Not the embedded document.)
     content_block_size,
+    /// If the element has an internal layout intrinsic size, its intrinsic size takes the corresponding dimension (either width or height) from the internal layout intrinsic size. (The other dimension is determined normally.) Logical directions resolve based on the writing mode of the element. (Not the embedded document.)
     content_inline_size,
 
     pub fn format(self: FrameSizing, w: anytype) std.Io.Writer.Error!void {
@@ -17805,7 +17894,7 @@ pub const FrameSizing = union(enum) {
 };
 
 /// gap
-/// - **W3C**: https://drafts.csswg.org/css-align-3/#propdef-gap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-gap
 pub const Gap = union(enum) {
     none,
     inherit,
@@ -18032,7 +18121,7 @@ pub const GridColumnEnd = union(enum) {
 };
 
 /// grid-column-gap
-/// - **W3C**: https://drafts.csswg.org/css-align-3/#propdef-grid-column-gap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-grid-column-gap
 pub const GridColumnGap = union(enum) {
     none,
     inherit,
@@ -18104,7 +18193,7 @@ pub const GridColumnStart = union(enum) {
 };
 
 /// grid-gap
-/// - **W3C**: https://drafts.csswg.org/css-align-3/#propdef-grid-gap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-grid-gap
 pub const GridGap = union(enum) {
     none,
     inherit,
@@ -18153,7 +18242,7 @@ pub const GridRowEnd = union(enum) {
 };
 
 /// grid-row-gap
-/// - **W3C**: https://drafts.csswg.org/css-align-3/#propdef-grid-row-gap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-grid-row-gap
 pub const GridRowGap = union(enum) {
     none,
     inherit,
@@ -19760,7 +19849,7 @@ pub const LineHeight = union(enum) {
     revert,
     revert_layer,
     unset,
-    /// Determine the preferred line height automatically based on font metrics.
+    /// Determine the preferred line height automatically based on the metrics of the used font.
     normal,
     px_: [4]f32,
     em_: [4]f32,
@@ -20541,7 +20630,7 @@ pub const MarginTrim = union(enum) {
 };
 
 /// marker
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#MarkerProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#MarkerProperty
 pub const Marker = union(enum) {
     none,
     inherit,
@@ -20556,7 +20645,7 @@ pub const Marker = union(enum) {
 };
 
 /// marker-end
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#MarkerEndProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#MarkerEndProperty
 pub const MarkerEnd = union(enum) {
     none,
     inherit,
@@ -20571,7 +20660,7 @@ pub const MarkerEnd = union(enum) {
 };
 
 /// marker-mid
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#MarkerMidProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#MarkerMidProperty
 pub const MarkerMid = union(enum) {
     none,
     inherit,
@@ -20605,7 +20694,7 @@ pub const MarkerSide = union(enum) {
 };
 
 /// marker-start
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#MarkerStartProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#MarkerStartProperty
 pub const MarkerStart = union(enum) {
     none,
     inherit,
@@ -20825,11 +20914,35 @@ pub const MaskBorderRepeat = union(enum) {
     revert,
     revert_layer,
     unset,
-    stretch,
-    repeat,
-    round,
-    space,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    calc_: CalcExpr,
 
+    pub fn calc(expr: CalcExpr) MaskBorderRepeat {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) MaskBorderRepeat {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) MaskBorderRepeat {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) MaskBorderRepeat {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) MaskBorderRepeat {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) MaskBorderRepeat {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) MaskBorderRepeat {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) MaskBorderRepeat {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
     pub fn format(self: MaskBorderRepeat, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20844,19 +20957,34 @@ pub const MaskBorderSlice = union(enum) {
     revert,
     revert_layer,
     unset,
-    /// This property specifies inward offsets from the top, right, bottom, and left edges of the mask border image, dividing it into nine regions: four corners, four edges and a middle. The middle image part is discarded and treated as fully opaque white (the content covered by the middle part is not masked and shines through) unless the fill keyword is present.
-    fill,
-    percent_: [4]f32,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorderSlice {
         return .{ .calc_ = expr };
     }
-    pub fn percent(v: f32) MaskBorderSlice {
-        return .{ .percent_ = .{ v, v, v, v } };
+    pub fn px(v: f32) MaskBorderSlice {
+        return .{ .px_ = .{ v, v, v, v } };
     }
-    pub fn percent2(v1: f32, v2: f32) MaskBorderSlice {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    pub fn px2(v1: f32, v2: f32) MaskBorderSlice {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) MaskBorderSlice {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) MaskBorderSlice {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) MaskBorderSlice {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) MaskBorderSlice {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) MaskBorderSlice {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
     }
     pub fn format(self: MaskBorderSlice, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -20872,7 +21000,35 @@ pub const MaskBorderSource = union(enum) {
     revert,
     revert_layer,
     unset,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    calc_: CalcExpr,
 
+    pub fn calc(expr: CalcExpr) MaskBorderSource {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) MaskBorderSource {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) MaskBorderSource {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) MaskBorderSource {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) MaskBorderSource {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) MaskBorderSource {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) MaskBorderSource {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) MaskBorderSource {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
     pub fn format(self: MaskBorderSource, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
@@ -20887,11 +21043,9 @@ pub const MaskBorderWidth = union(enum) {
     revert,
     revert_layer,
     unset,
-    auto,
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
-    percent_: [4]f32,
     calc_: CalcExpr,
 
     pub fn calc(expr: CalcExpr) MaskBorderWidth {
@@ -20917,12 +21071,6 @@ pub const MaskBorderWidth = union(enum) {
     }
     pub fn rem2(v1: f32, v2: f32) MaskBorderWidth {
         return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) MaskBorderWidth {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) MaskBorderWidth {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
     }
     pub fn format(self: MaskBorderWidth, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -21709,11 +21857,11 @@ pub const ObjectFit = union(enum) {
     unset,
     /// The replaced content is sized to fill the element’s content box: the object’s concrete object size is the element’s used width and height.
     fill,
-    /// The replaced content is sized to maintain its aspect ratio while fitting within the element’s content box: its concrete object size is resolved as a contain constraint against the element’s used width and height. If the scale-down flag is used, size the content as if none or contain were specified, whichever would result in a smaller concrete object size.
+    /// The replaced content is sized to maintain its natural aspect ratio while fitting within the element’s content box: its concrete object size is resolved as a contain constraint against the element’s used width and height.
     contain,
-    /// The replaced content is sized to maintain its aspect ratio while filling the element’s entire content box: its concrete object size is resolved as a cover constraint against the element’s used width and height. If the scale-down flag is used, size the content as if none or cover were specified, whichever would result in a smaller concrete object size.
+    /// The replaced content is sized to maintain its natural aspect ratio while filling the element’s entire content box: its concrete object size is resolved as a cover constraint against the element’s used width and height.
     cover,
-    /// Equivalent to contain scale-down.
+    /// Size the content as if none or contain were specified, whichever would result in a smaller concrete object size.
     scale_down,
 
     pub fn format(self: ObjectFit, w: anytype) std.Io.Writer.Error!void {
@@ -22884,13 +23032,13 @@ pub const OverflowX = union(enum) {
     revert,
     revert_layer,
     unset,
-    /// There is no special handling of overflow, that is, the box’s content is rendered outside the box if positioned there. The box is not a scroll container.
+    /// There is no special handling of overflow, that is, the box’s content is rendered outside the box if positioned there.
     visible,
-    /// This value indicates that the box’s content is clipped to its padding box and that the UA must not provide any scrolling user interface to view the content outside the clipping region, nor allow scrolling by direct intervention of the user, such as dragging on a touch screen or using the scrolling wheel on a mouse. However, the content must still be scrollable programmatically, for example using the mechanisms defined in [CSSOM-VIEW], and the box is therefore still a scroll container.
+    /// This value indicates that the box’s content is clipped to its overflow clip edge and that the UA must not provide any scrolling user interface to view the content outside the clipping region, nor allow scrolling by direct intervention of the user, such as dragging on a touch screen or using the scrolling wheel on a mouse. However, the content must still be scrollable programmatically, for example using the mechanisms defined in [CSSOM-VIEW].
     hidden,
-    /// This value indicates that the box’s content is clipped to its overflow clip edge and that no scrolling user interface should be provided by the UA to view the content outside the clipping region. In addition, unlike overflow: hidden which still allows programmatic scrolling, overflow: clip forbids scrolling entirely, through any mechanism, and therefore the box is not a scroll container. Unlike hidden, this value does not cause the element to establish a new formatting context.
+    /// This value indicates that the box’s content is clipped to its overflow clip edge and that no scrolling user interface should be provided by the UA to view the content outside the clipping region. In addition, unlike overflow: hidden which still allows programmatic scrolling, overflow: clip forbids scrolling entirely, through any mechanism. Unlike hidden, this value does not cause the element to establish a new formatting context.
     clip,
-    /// This value indicates that the content is clipped to the padding box, but can be scrolled into view (and therefore the box is a scroll container). Furthermore, if the user agent uses a scrolling mechanism that is visible on the screen (such as a scroll bar or a panner), that mechanism should be displayed whether or not any of its content is clipped. This avoids any problem with scrollbars appearing and disappearing in a dynamic environment. When the target medium is print, overflowing content may be printed; it is not defined where it may be printed.
+    /// This value indicates that the content is clipped to the overflow clip edge, but can be scrolled into view. Furthermore, if the user agent uses a scrolling mechanism that is visible on the screen (such as a scroll bar or a panner), that mechanism should be displayed whether or not any of its content is clipped. This avoids any problem with scrollbars appearing and disappearing in a dynamic environment. When the target medium is print, overflowing content may be printed; it is not defined where it may be printed.
     scroll,
     /// Like scroll when the box has scrollable overflow; like hidden otherwise. Thus, if the user agent uses a scrolling mechanism that is visible on the screen (such as a scroll bar or a panner), that mechanism will only be displayed if there is overflow.
     auto,
@@ -22909,13 +23057,13 @@ pub const OverflowY = union(enum) {
     revert,
     revert_layer,
     unset,
-    /// There is no special handling of overflow, that is, the box’s content is rendered outside the box if positioned there. The box is not a scroll container.
+    /// There is no special handling of overflow, that is, the box’s content is rendered outside the box if positioned there.
     visible,
-    /// This value indicates that the box’s content is clipped to its padding box and that the UA must not provide any scrolling user interface to view the content outside the clipping region, nor allow scrolling by direct intervention of the user, such as dragging on a touch screen or using the scrolling wheel on a mouse. However, the content must still be scrollable programmatically, for example using the mechanisms defined in [CSSOM-VIEW], and the box is therefore still a scroll container.
+    /// This value indicates that the box’s content is clipped to its overflow clip edge and that the UA must not provide any scrolling user interface to view the content outside the clipping region, nor allow scrolling by direct intervention of the user, such as dragging on a touch screen or using the scrolling wheel on a mouse. However, the content must still be scrollable programmatically, for example using the mechanisms defined in [CSSOM-VIEW].
     hidden,
-    /// This value indicates that the box’s content is clipped to its overflow clip edge and that no scrolling user interface should be provided by the UA to view the content outside the clipping region. In addition, unlike overflow: hidden which still allows programmatic scrolling, overflow: clip forbids scrolling entirely, through any mechanism, and therefore the box is not a scroll container. Unlike hidden, this value does not cause the element to establish a new formatting context.
+    /// This value indicates that the box’s content is clipped to its overflow clip edge and that no scrolling user interface should be provided by the UA to view the content outside the clipping region. In addition, unlike overflow: hidden which still allows programmatic scrolling, overflow: clip forbids scrolling entirely, through any mechanism. Unlike hidden, this value does not cause the element to establish a new formatting context.
     clip,
-    /// This value indicates that the content is clipped to the padding box, but can be scrolled into view (and therefore the box is a scroll container). Furthermore, if the user agent uses a scrolling mechanism that is visible on the screen (such as a scroll bar or a panner), that mechanism should be displayed whether or not any of its content is clipped. This avoids any problem with scrollbars appearing and disappearing in a dynamic environment. When the target medium is print, overflowing content may be printed; it is not defined where it may be printed.
+    /// This value indicates that the content is clipped to the overflow clip edge, but can be scrolled into view. Furthermore, if the user agent uses a scrolling mechanism that is visible on the screen (such as a scroll bar or a panner), that mechanism should be displayed whether or not any of its content is clipped. This avoids any problem with scrollbars appearing and disappearing in a dynamic environment. When the target medium is print, overflowing content may be printed; it is not defined where it may be printed.
     scroll,
     /// Like scroll when the box has scrollable overflow; like hidden otherwise. Thus, if the user agent uses a scrolling mechanism that is visible on the screen (such as a scroll bar or a panner), that mechanism will only be displayed if there is overflow.
     auto,
@@ -22955,6 +23103,8 @@ pub const OverscrollBehavior = union(enum) {
     contain,
     /// This value indicates that the user agent should perform the usual boundary default action with respect to scroll chaining, overscroll and navigation gestures.
     auto,
+    /// This value indicates that the element may perform non-local boundary default actions such as scroll chaining or navigation. However, the element must not perform local boundary default actions, such as showing any overscroll affordances.
+    chain,
 
     pub fn format(self: OverscrollBehavior, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -22974,6 +23124,8 @@ pub const OverscrollBehaviorBlock = union(enum) {
     contain,
     /// This value indicates that the user agent should perform the usual boundary default action with respect to scroll chaining, overscroll and navigation gestures.
     auto,
+    /// This value indicates that the element may perform non-local boundary default actions such as scroll chaining or navigation. However, the element must not perform local boundary default actions, such as showing any overscroll affordances.
+    chain,
 
     pub fn format(self: OverscrollBehaviorBlock, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -22993,6 +23145,8 @@ pub const OverscrollBehaviorInline = union(enum) {
     contain,
     /// This value indicates that the user agent should perform the usual boundary default action with respect to scroll chaining, overscroll and navigation gestures.
     auto,
+    /// This value indicates that the element may perform non-local boundary default actions such as scroll chaining or navigation. However, the element must not perform local boundary default actions, such as showing any overscroll affordances.
+    chain,
 
     pub fn format(self: OverscrollBehaviorInline, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -23012,6 +23166,8 @@ pub const OverscrollBehaviorX = union(enum) {
     contain,
     /// This value indicates that the user agent should perform the usual boundary default action with respect to scroll chaining, overscroll and navigation gestures.
     auto,
+    /// This value indicates that the element may perform non-local boundary default actions such as scroll chaining or navigation. However, the element must not perform local boundary default actions, such as showing any overscroll affordances.
+    chain,
 
     pub fn format(self: OverscrollBehaviorX, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -23031,6 +23187,8 @@ pub const OverscrollBehaviorY = union(enum) {
     contain,
     /// This value indicates that the user agent should perform the usual boundary default action with respect to scroll chaining, overscroll and navigation gestures.
     auto,
+    /// This value indicates that the element may perform non-local boundary default actions such as scroll chaining or navigation. However, the element must not perform local boundary default actions, such as showing any overscroll affordances.
+    chain,
 
     pub fn format(self: OverscrollBehaviorY, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -23624,7 +23782,7 @@ pub const PageBreakInside = union(enum) {
 };
 
 /// paint-order
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#PaintOrderProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#PaintOrderProperty
 pub const PaintOrder = union(enum) {
     none,
     inherit,
@@ -23638,6 +23796,23 @@ pub const PaintOrder = union(enum) {
     markers,
 
     pub fn format(self: PaintOrder, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// path-length
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/paths.html#PathLengthCSSProperty
+pub const PathLength = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    unknown,
+    symbol,
+
+    pub fn format(self: PathLength, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
 };
@@ -23874,7 +24049,7 @@ pub const PlaceSelf = union(enum) {
 };
 
 /// pointer-events
-/// - **W3C**: https://svgwg.org/svg2-draft/interact.html#PointerEventsProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/interact.html#PointerEventsProperty
 pub const PointerEvents = union(enum) {
     none,
     inherit,
@@ -24188,10 +24363,10 @@ pub const PositionVisibility = union(enum) {
     unset,
     /// This property has no effect. (The box is displayed without regard for its anchors or its overflowing status.)
     always,
-    /// If any of the box’s required anchor references do not resolve to a target anchor element, the box’s visibility property computes to force-hidden. What is a required anchor reference? anchor() functions that don’t have a fallback value; the default anchor *sometimes*? Need more detail here. Any anchors are missing, or all anchors are missing? I can see use-cases for either, potentially. Do we want to make a decision here, or make it controllable somehow?
-    anchors_valid,
+    /// If the box references the default anchor box (e.g. using position-area, 'anchor()' or 'anchor-size()' functions, or anchor-center), but the default anchor box cannot be resolved, the box’s visibility property computes to force-hidden.
+    anchor_valid,
     /// If the box has a default anchor box but that anchor box is invisible or clipped by intervening boxes, the box’s visibility property computes to force-hidden.
-    anchors_visible,
+    anchor_visible,
     /// If the box overflows its inset-modified containing block even after applying position-try, the box’s visibility property computes to force-hidden.
     no_overflow,
 
@@ -24239,7 +24414,7 @@ pub const Quotes = union(enum) {
 };
 
 /// r
-/// - **W3C**: https://svgwg.org/svg2-draft/geometry.html#RProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/geometry.html#RProperty
 pub const R = union(enum) {
     none,
     inherit,
@@ -24520,7 +24695,7 @@ pub const Rotate = union(enum) {
 };
 
 /// row-gap
-/// - **W3C**: https://drafts.csswg.org/css-align-3/#propdef-row-gap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-gap
 pub const RowGap = union(enum) {
     none,
     inherit,
@@ -25059,156 +25234,6 @@ pub const RowRuleColor = union(enum) {
     }
 };
 
-/// row-rule-edge-inset
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-edge-inset
-pub const RowRuleEdgeInset = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) RowRuleEdgeInset {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) RowRuleEdgeInset {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) RowRuleEdgeInset {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleEdgeInset {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) RowRuleEdgeInset {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) RowRuleEdgeInset {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) RowRuleEdgeInset {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) RowRuleEdgeInset {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) RowRuleEdgeInset {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) RowRuleEdgeInset {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: RowRuleEdgeInset, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// row-rule-edge-inset-end
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-edge-inset-end
-pub const RowRuleEdgeInsetEnd = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) RowRuleEdgeInsetEnd {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) RowRuleEdgeInsetEnd {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) RowRuleEdgeInsetEnd {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleEdgeInsetEnd {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) RowRuleEdgeInsetEnd {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) RowRuleEdgeInsetEnd {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) RowRuleEdgeInsetEnd {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) RowRuleEdgeInsetEnd {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) RowRuleEdgeInsetEnd {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) RowRuleEdgeInsetEnd {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: RowRuleEdgeInsetEnd, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// row-rule-edge-inset-start
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-edge-inset-start
-pub const RowRuleEdgeInsetStart = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) RowRuleEdgeInsetStart {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) RowRuleEdgeInsetStart {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) RowRuleEdgeInsetStart {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleEdgeInsetStart {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) RowRuleEdgeInsetStart {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) RowRuleEdgeInsetStart {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) RowRuleEdgeInsetStart {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) RowRuleEdgeInsetStart {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) RowRuleEdgeInsetStart {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) RowRuleEdgeInsetStart {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: RowRuleEdgeInsetStart, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
 /// row-rule-inset
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset
 pub const RowRuleInset = union(enum) {
@@ -25224,6 +25249,159 @@ pub const RowRuleInset = union(enum) {
     }
 };
 
+/// row-rule-inset-cap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-cap
+pub const RowRuleInsetCap = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) RowRuleInsetCap {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) RowRuleInsetCap {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) RowRuleInsetCap {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInsetCap {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) RowRuleInsetCap {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) RowRuleInsetCap {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) RowRuleInsetCap {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) RowRuleInsetCap {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) RowRuleInsetCap {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) RowRuleInsetCap {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: RowRuleInsetCap, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// row-rule-inset-cap-end
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-cap-end
+pub const RowRuleInsetCapEnd = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) RowRuleInsetCapEnd {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) RowRuleInsetCapEnd {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) RowRuleInsetCapEnd {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInsetCapEnd {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) RowRuleInsetCapEnd {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) RowRuleInsetCapEnd {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) RowRuleInsetCapEnd {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) RowRuleInsetCapEnd {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) RowRuleInsetCapEnd {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) RowRuleInsetCapEnd {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: RowRuleInsetCapEnd, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// row-rule-inset-cap-start
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-cap-start
+pub const RowRuleInsetCapStart = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) RowRuleInsetCapStart {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) RowRuleInsetCapStart {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) RowRuleInsetCapStart {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInsetCapStart {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) RowRuleInsetCapStart {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) RowRuleInsetCapStart {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) RowRuleInsetCapStart {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) RowRuleInsetCapStart {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) RowRuleInsetCapStart {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) RowRuleInsetCapStart {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: RowRuleInsetCapStart, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
 /// row-rule-inset-end
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-end
 pub const RowRuleInsetEnd = union(enum) {
@@ -25233,6 +25411,7 @@ pub const RowRuleInsetEnd = union(enum) {
     revert,
     revert_layer,
     unset,
+    overlap_join,
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
@@ -25274,6 +25453,159 @@ pub const RowRuleInsetEnd = union(enum) {
     }
 };
 
+/// row-rule-inset-junction
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-junction
+pub const RowRuleInsetJunction = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) RowRuleInsetJunction {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) RowRuleInsetJunction {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) RowRuleInsetJunction {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInsetJunction {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) RowRuleInsetJunction {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) RowRuleInsetJunction {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) RowRuleInsetJunction {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) RowRuleInsetJunction {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) RowRuleInsetJunction {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) RowRuleInsetJunction {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: RowRuleInsetJunction, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// row-rule-inset-junction-end
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-junction-end
+pub const RowRuleInsetJunctionEnd = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) RowRuleInsetJunctionEnd {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) RowRuleInsetJunctionEnd {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInsetJunctionEnd {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) RowRuleInsetJunctionEnd {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) RowRuleInsetJunctionEnd {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) RowRuleInsetJunctionEnd {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) RowRuleInsetJunctionEnd {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: RowRuleInsetJunctionEnd, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// row-rule-inset-junction-start
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-junction-start
+pub const RowRuleInsetJunctionStart = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    overlap_join,
+    px_: [4]f32,
+    em_: [4]f32,
+    rem_: [4]f32,
+    percent_: [4]f32,
+    calc_: CalcExpr,
+
+    pub fn calc(expr: CalcExpr) RowRuleInsetJunctionStart {
+        return .{ .calc_ = expr };
+    }
+    pub fn px(v: f32) RowRuleInsetJunctionStart {
+        return .{ .px_ = .{ v, v, v, v } };
+    }
+    pub fn px2(v1: f32, v2: f32) RowRuleInsetJunctionStart {
+        return .{ .px_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInsetJunctionStart {
+        return .{ .px_ = .{ v1, v2, v3, v4 } };
+    }
+    pub fn em(v: f32) RowRuleInsetJunctionStart {
+        return .{ .em_ = .{ v, v, v, v } };
+    }
+    pub fn em2(v1: f32, v2: f32) RowRuleInsetJunctionStart {
+        return .{ .em_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn rem(v: f32) RowRuleInsetJunctionStart {
+        return .{ .rem_ = .{ v, v, v, v } };
+    }
+    pub fn rem2(v1: f32, v2: f32) RowRuleInsetJunctionStart {
+        return .{ .rem_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn percent(v: f32) RowRuleInsetJunctionStart {
+        return .{ .percent_ = .{ v, v, v, v } };
+    }
+    pub fn percent2(v1: f32, v2: f32) RowRuleInsetJunctionStart {
+        return .{ .percent_ = .{ v1, v2, v1, v2 } };
+    }
+    pub fn format(self: RowRuleInsetJunctionStart, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
 /// row-rule-inset-start
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-inset-start
 pub const RowRuleInsetStart = union(enum) {
@@ -25283,6 +25615,7 @@ pub const RowRuleInsetStart = union(enum) {
     revert,
     revert_layer,
     unset,
+    overlap_join,
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
@@ -25320,156 +25653,6 @@ pub const RowRuleInsetStart = union(enum) {
         return .{ .percent_ = .{ v1, v2, v1, v2 } };
     }
     pub fn format(self: RowRuleInsetStart, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// row-rule-interior-inset
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-interior-inset
-pub const RowRuleInteriorInset = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) RowRuleInteriorInset {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) RowRuleInteriorInset {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) RowRuleInteriorInset {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInteriorInset {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) RowRuleInteriorInset {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) RowRuleInteriorInset {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) RowRuleInteriorInset {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) RowRuleInteriorInset {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) RowRuleInteriorInset {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) RowRuleInteriorInset {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: RowRuleInteriorInset, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// row-rule-interior-inset-end
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-interior-inset-end
-pub const RowRuleInteriorInsetEnd = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) RowRuleInteriorInsetEnd {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) RowRuleInteriorInsetEnd {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) RowRuleInteriorInsetEnd {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInteriorInsetEnd {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) RowRuleInteriorInsetEnd {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) RowRuleInteriorInsetEnd {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) RowRuleInteriorInsetEnd {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) RowRuleInteriorInsetEnd {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) RowRuleInteriorInsetEnd {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) RowRuleInteriorInsetEnd {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: RowRuleInteriorInsetEnd, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// row-rule-interior-inset-start
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-row-rule-interior-inset-start
-pub const RowRuleInteriorInsetStart = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    px_: [4]f32,
-    em_: [4]f32,
-    rem_: [4]f32,
-    percent_: [4]f32,
-    calc_: CalcExpr,
-
-    pub fn calc(expr: CalcExpr) RowRuleInteriorInsetStart {
-        return .{ .calc_ = expr };
-    }
-    pub fn px(v: f32) RowRuleInteriorInsetStart {
-        return .{ .px_ = .{ v, v, v, v } };
-    }
-    pub fn px2(v1: f32, v2: f32) RowRuleInteriorInsetStart {
-        return .{ .px_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn px4(v1: f32, v2: f32, v3: f32, v4: f32) RowRuleInteriorInsetStart {
-        return .{ .px_ = .{ v1, v2, v3, v4 } };
-    }
-    pub fn em(v: f32) RowRuleInteriorInsetStart {
-        return .{ .em_ = .{ v, v, v, v } };
-    }
-    pub fn em2(v1: f32, v2: f32) RowRuleInteriorInsetStart {
-        return .{ .em_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn rem(v: f32) RowRuleInteriorInsetStart {
-        return .{ .rem_ = .{ v, v, v, v } };
-    }
-    pub fn rem2(v1: f32, v2: f32) RowRuleInteriorInsetStart {
-        return .{ .rem_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn percent(v: f32) RowRuleInteriorInsetStart {
-        return .{ .percent_ = .{ v, v, v, v } };
-    }
-    pub fn percent2(v1: f32, v2: f32) RowRuleInteriorInsetStart {
-        return .{ .percent_ = .{ v1, v2, v1, v2 } };
-    }
-    pub fn format(self: RowRuleInteriorInsetStart, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
 };
@@ -25514,6 +25697,8 @@ pub const RowRuleVisibilityItems = union(enum) {
     around,
     /// Paint decorations in a gap segment if both adjacent areas are occupied by items.
     between,
+    /// Behavior depends on the type of container.
+    normal,
 
     pub fn format(self: RowRuleVisibilityItems, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -25623,6 +25808,8 @@ pub const RubyOverhang = union(enum) {
     unset,
     /// When a ruby annotation container is longer than its corresponding ruby base container, the ruby annotation container may partially overlap adjacent boxes. Whether, how much, and under which conditions to overhang are determined by the UA.
     auto,
+    /// When a ruby annotation container is longer than its corresponding ruby base container, the ruby annotation container must not overlap adjacent boxes, except over adjacent spaces. For this purpose, spaces are any of the following: preserved white space no-break space (U+00A0) other space separators half of the advance measure of fullwidth opening punctuation, on the inline-start side of the character, unless it has been trimmed by text-spacing-trim half of the advance measure of fullwidth closing punctuation, on the inline-end side of the character, unless it has been trimmed by text-spacing-trim one quarter of the advance measure of fullwidth middle dot punctuation, on both the inline-start and inline-end sides of the character, unless it has been trimmed by text-spacing-trim
+    spaces,
 
     pub fn format(self: RubyOverhang, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
@@ -25697,21 +25884,6 @@ pub const RuleColor = union(enum) {
     }
 };
 
-/// rule-edge-inset
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-rule-edge-inset
-pub const RuleEdgeInset = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-
-    pub fn format(self: RuleEdgeInset, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
 /// rule-inset
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-rule-inset
 pub const RuleInset = union(enum) {
@@ -25723,6 +25895,21 @@ pub const RuleInset = union(enum) {
     unset,
 
     pub fn format(self: RuleInset, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
+/// rule-inset-cap
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-rule-inset-cap
+pub const RuleInsetCap = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+
+    pub fn format(self: RuleInsetCap, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
 };
@@ -25742,6 +25929,21 @@ pub const RuleInsetEnd = union(enum) {
     }
 };
 
+/// rule-inset-junction
+/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-rule-inset-junction
+pub const RuleInsetJunction = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+
+    pub fn format(self: RuleInsetJunction, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
 /// rule-inset-start
 /// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-rule-inset-start
 pub const RuleInsetStart = union(enum) {
@@ -25753,21 +25955,6 @@ pub const RuleInsetStart = union(enum) {
     unset,
 
     pub fn format(self: RuleInsetStart, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// rule-interior-inset
-/// - **W3C**: https://drafts.csswg.org/css-gaps-1/#propdef-rule-interior-inset
-pub const RuleInteriorInset = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-
-    pub fn format(self: RuleInteriorInset, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
 };
@@ -25837,7 +26024,7 @@ pub const RuleWidth = union(enum) {
 };
 
 /// rx
-/// - **W3C**: https://svgwg.org/svg2-draft/geometry.html#RxProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/geometry.html#RxProperty
 pub const Rx = union(enum) {
     none,
     inherit,
@@ -25888,7 +26075,7 @@ pub const Rx = union(enum) {
 };
 
 /// ry
-/// - **W3C**: https://svgwg.org/svg2-draft/geometry.html#RyProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/geometry.html#RyProperty
 pub const Ry = union(enum) {
     none,
     inherit,
@@ -27625,7 +27812,7 @@ pub const ShapePadding = union(enum) {
 };
 
 /// shape-rendering
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#ShapeRenderingProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#ShapeRenderingProperty
 pub const ShapeRendering = union(enum) {
     none,
     inherit,
@@ -27639,21 +27826,6 @@ pub const ShapeRendering = union(enum) {
     geometricPrecision,
 
     pub fn format(self: ShapeRendering, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// shape-subtract
-/// - **W3C**: https://svgwg.org/svg2-draft/text.html#ShapesubtractProperty
-pub const ShapeSubtract = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-
-    pub fn format(self: ShapeSubtract, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
 };
@@ -27789,7 +27961,7 @@ pub const SpeakAs = union(enum) {
 };
 
 /// stop-color
-/// - **W3C**: https://svgwg.org/svg2-draft/pservers.html#StopColorProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/pservers.html#StopColorProperty
 pub const StopColor = union(enum) {
     none,
     inherit,
@@ -27804,7 +27976,7 @@ pub const StopColor = union(enum) {
 };
 
 /// stop-opacity
-/// - **W3C**: https://svgwg.org/svg2-draft/pservers.html#StopOpacityProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/pservers.html#StopOpacityProperty
 pub const StopOpacity = union(enum) {
     none,
     inherit,
@@ -27834,7 +28006,7 @@ pub const StringSet = union(enum) {
 };
 
 /// stroke
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#StrokeProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#StrokeProperty
 pub const Stroke = union(enum) {
     none,
     inherit,
@@ -28616,6 +28788,10 @@ pub const StrokeWidth = union(enum) {
     revert,
     revert_layer,
     unset,
+    hairline,
+    thin,
+    medium,
+    thick,
     px_: [4]f32,
     em_: [4]f32,
     rem_: [4]f32,
@@ -28736,7 +28912,7 @@ pub const TextAlign = union(enum) {
     right,
     /// Inline-level content is centered within the line box.
     center,
-    /// Text is justified according to the method specified by the text-justify property, in order to exactly fill the line box. Unless otherwise specified by text-align-last, the last line before a forced break or the end of the block is start-aligned.
+    /// Text is justified according to the method specified by the text-justify property, in order to exactly fill the line box. Unless otherwise specified by text-align-last, the last line before a forced line break is start-aligned.
     justify,
     /// This value behaves the same as inherit (computes to its parent’s computed value) except that an inherited value of start or end is interpreted against the parent’s direction value and results in a computed value of either left or right. Computes to start when specified on the root element. When specified on the text-align shorthand, sets both text-align-all and text-align-last to match-parent.
     match_parent,
@@ -28795,7 +28971,7 @@ pub const TextAlignLast = union(enum) {
 };
 
 /// text-anchor
-/// - **W3C**: https://svgwg.org/svg2-draft/text.html#TextAnchorProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/text.html#TextAnchorProperty
 pub const TextAnchor = union(enum) {
     none,
     inherit,
@@ -29847,7 +30023,7 @@ pub const TextOverflow = union(enum) {
 };
 
 /// text-rendering
-/// - **W3C**: https://svgwg.org/svg2-draft/painting.html#TextRenderingProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/painting.html#TextRenderingProperty
 pub const TextRendering = union(enum) {
     none,
     inherit,
@@ -30319,9 +30495,9 @@ pub const TextWrapMode = union(enum) {
     revert,
     revert_layer,
     unset,
-    /// Content may break across lines at allowed soft wrap opportunities, as determined by the line-breaking rules in effect, in order to minimize inline-axis overflow.
+    /// Lines may wrap at allowed soft wrap opportunities, as determined by the line-breaking rules in effect, in order to minimize inline-axis overflow.
     wrap,
-    /// Inline-level content does not break across lines; content that does not fit within the block container overflows it.
+    /// Lines only break at forced line breaks; content that does not fit within the block container overflows it.
     nowrap,
 
     pub fn format(self: TextWrapMode, w: anytype) std.Io.Writer.Error!void {
@@ -30340,7 +30516,7 @@ pub const TextWrapStyle = union(enum) {
     unset,
     /// The exact algorithm for selecting which soft wrap opportunity to break at is UA-defined. The algorithm may consider multiple lines when making break decisions. The UA may bias for speed over best layout. The UA must not attempt to even out all lines (including the last) as for balance. This value selects the UA’s preferred (or most Web-compatible) wrapping algorithm.
     auto,
-    /// Line breaks are chosen to balance the remaining (empty) space in each line box, if better balance than auto is possible. This should avoid changing—​and in the case of 5 or fewer lines must not change—​the number of line boxes the block would contain if text-wrap were set to auto. The remaining space to consider is that which remains after placing floats and inline content, but before any adjustments due to text justification. Line boxes are balanced when the standard deviation from the average inline-size of the remaining space in each line box is reduced over the block (including lines that end in a forced break). Groups of lines separated by a forced line break are processed separately. If the element is affected by line-clamp, the clamping effect is applied first, then the remaining lines are balanced. The exact algorithm is UA-defined. UAs may treat this value as auto if there are more than ten lines to balance.
+    /// Line breaks are chosen to balance the remaining (empty) space in each line box, if better balance than auto is possible. This should avoid changing—​and in the case of 5 or fewer lines must not change—​the number of line boxes the block would contain if text-wrap were set to auto. The remaining space to consider is that which remains after placing floats and inline content, but before any adjustments due to text justification. Line boxes are balanced when the standard deviation from the average inline-size of the remaining space in each line box is reduced over the block (including lines that end in a forced line break). Groups of lines separated by a forced line break are processed separately. If the element is affected by line-clamp, the clamping effect is applied first, then the remaining lines are balanced. The exact algorithm is UA-defined. UAs may treat this value as auto if there are more than ten lines to balance.
     balance,
     /// Specifies that content on subsequent lines should not be considered when making break decisions so that when editing text any content before the cursor remains stable; otherwise equivalent to auto,
     stable,
@@ -31093,7 +31269,7 @@ pub const UserSelect = union(enum) {
 };
 
 /// vector-effect
-/// - **W3C**: https://svgwg.org/svg2-draft/coords.html#VectorEffectProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/coords.html#VectorEffectProperty
 pub const VectorEffect = union(enum) {
     none,
     inherit,
@@ -31721,6 +31897,23 @@ pub const WillChange = union(enum) {
     }
 };
 
+/// window-drag
+/// - **W3C**: https://drafts.csswg.org/css-ui-4/#propdef-window-drag
+pub const WindowDrag = union(enum) {
+    none,
+    inherit,
+    initial,
+    revert,
+    revert_layer,
+    unset,
+    /// Specifies that the element’s principal box can be used as a window drag area.
+    move,
+
+    pub fn format(self: WindowDrag, w: anytype) std.Io.Writer.Error!void {
+        return core.formatValue(self, w);
+    }
+};
+
 /// word-break
 /// - **W3C**: https://drafts.csswg.org/css-text-4/#propdef-word-break
 pub const WordBreak = union(enum) {
@@ -31817,24 +32010,6 @@ pub const WordSpacing = union(enum) {
         return .{ .percent_ = .{ v1, v2, v1, v2 } };
     }
     pub fn format(self: WordSpacing, w: anytype) std.Io.Writer.Error!void {
-        return core.formatValue(self, w);
-    }
-};
-
-/// word-wrap
-/// - **W3C**: https://drafts.csswg.org/css-text-4/#propdef-word-wrap
-pub const WordWrap = union(enum) {
-    none,
-    inherit,
-    initial,
-    revert,
-    revert_layer,
-    unset,
-    normal,
-    break_word,
-    anywhere,
-
-    pub fn format(self: WordWrap, w: anytype) std.Io.Writer.Error!void {
         return core.formatValue(self, w);
     }
 };
@@ -31984,7 +32159,7 @@ pub const WritingMode = union(enum) {
 };
 
 /// x
-/// - **W3C**: https://svgwg.org/svg2-draft/geometry.html#XProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/geometry.html#XProperty
 pub const X = union(enum) {
     none,
     inherit,
@@ -32034,7 +32209,7 @@ pub const X = union(enum) {
 };
 
 /// y
-/// - **W3C**: https://svgwg.org/svg2-draft/geometry.html#YProperty
+/// - **W3C**: https://w3c.github.io/svgwg/svg2-draft/geometry.html#YProperty
 pub const Y = union(enum) {
     none,
     inherit,
@@ -32373,15 +32548,15 @@ pub const Style = struct {
     column_rule: ColumnRule = .none,
     column_rule_break: ColumnRuleBreak = .none,
     column_rule_color: ColumnRuleColor = .none,
-    column_rule_edge_inset: ColumnRuleEdgeInset = .none,
-    column_rule_edge_inset_end: ColumnRuleEdgeInsetEnd = .none,
-    column_rule_edge_inset_start: ColumnRuleEdgeInsetStart = .none,
     column_rule_inset: ColumnRuleInset = .none,
+    column_rule_inset_cap: ColumnRuleInsetCap = .none,
+    column_rule_inset_cap_end: ColumnRuleInsetCapEnd = .none,
+    column_rule_inset_cap_start: ColumnRuleInsetCapStart = .none,
     column_rule_inset_end: ColumnRuleInsetEnd = .none,
+    column_rule_inset_junction: ColumnRuleInsetJunction = .none,
+    column_rule_inset_junction_end: ColumnRuleInsetJunctionEnd = .none,
+    column_rule_inset_junction_start: ColumnRuleInsetJunctionStart = .none,
     column_rule_inset_start: ColumnRuleInsetStart = .none,
-    column_rule_interior_inset: ColumnRuleInteriorInset = .none,
-    column_rule_interior_inset_end: ColumnRuleInteriorInsetEnd = .none,
-    column_rule_interior_inset_start: ColumnRuleInteriorInsetStart = .none,
     column_rule_style: ColumnRuleStyle = .none,
     column_rule_visibility_items: ColumnRuleVisibilityItems = .none,
     column_rule_width: ColumnRuleWidth = .none,
@@ -32471,6 +32646,7 @@ pub const Style = struct {
     flex_direction: FlexDirection = .none,
     flex_flow: FlexFlow = .none,
     flex_grow: FlexGrow = .none,
+    flex_line_count: FlexLineCount = .none,
     flex_shrink: FlexShrink = .none,
     flex_wrap: FlexWrap = .none,
     float: Float = .none,
@@ -32693,6 +32869,7 @@ pub const Style = struct {
     page_break_before: PageBreakBefore = .none,
     page_break_inside: PageBreakInside = .none,
     paint_order: PaintOrder = .none,
+    path_length: PathLength = .none,
     pause: Pause = .none,
     pause_after: PauseAfter = .none,
     pause_before: PauseBefore = .none,
@@ -32728,15 +32905,15 @@ pub const Style = struct {
     row_rule: RowRule = .none,
     row_rule_break: RowRuleBreak = .none,
     row_rule_color: RowRuleColor = .none,
-    row_rule_edge_inset: RowRuleEdgeInset = .none,
-    row_rule_edge_inset_end: RowRuleEdgeInsetEnd = .none,
-    row_rule_edge_inset_start: RowRuleEdgeInsetStart = .none,
     row_rule_inset: RowRuleInset = .none,
+    row_rule_inset_cap: RowRuleInsetCap = .none,
+    row_rule_inset_cap_end: RowRuleInsetCapEnd = .none,
+    row_rule_inset_cap_start: RowRuleInsetCapStart = .none,
     row_rule_inset_end: RowRuleInsetEnd = .none,
+    row_rule_inset_junction: RowRuleInsetJunction = .none,
+    row_rule_inset_junction_end: RowRuleInsetJunctionEnd = .none,
+    row_rule_inset_junction_start: RowRuleInsetJunctionStart = .none,
     row_rule_inset_start: RowRuleInsetStart = .none,
-    row_rule_interior_inset: RowRuleInteriorInset = .none,
-    row_rule_interior_inset_end: RowRuleInteriorInsetEnd = .none,
-    row_rule_interior_inset_start: RowRuleInteriorInsetStart = .none,
     row_rule_style: RowRuleStyle = .none,
     row_rule_visibility_items: RowRuleVisibilityItems = .none,
     row_rule_width: RowRuleWidth = .none,
@@ -32747,11 +32924,11 @@ pub const Style = struct {
     rule: Rule = .none,
     rule_break: RuleBreak = .none,
     rule_color: RuleColor = .none,
-    rule_edge_inset: RuleEdgeInset = .none,
     rule_inset: RuleInset = .none,
+    rule_inset_cap: RuleInsetCap = .none,
     rule_inset_end: RuleInsetEnd = .none,
+    rule_inset_junction: RuleInsetJunction = .none,
     rule_inset_start: RuleInsetStart = .none,
-    rule_interior_inset: RuleInteriorInset = .none,
     rule_overlap: RuleOverlap = .none,
     rule_style: RuleStyle = .none,
     rule_visibility_items: RuleVisibilityItems = .none,
@@ -32800,7 +32977,6 @@ pub const Style = struct {
     shape_outside: ShapeOutside = .none,
     shape_padding: ShapePadding = .none,
     shape_rendering: ShapeRendering = .none,
-    shape_subtract: ShapeSubtract = .none,
     slider_orientation: SliderOrientation = .none,
     spatial_navigation_action: SpatialNavigationAction = .none,
     spatial_navigation_contain: SpatialNavigationContain = .none,
@@ -32925,10 +33101,10 @@ pub const Style = struct {
     widows: Widows = .none,
     width: Width = .none,
     will_change: WillChange = .none,
+    window_drag: WindowDrag = .none,
     word_break: WordBreak = .none,
     word_space_transform: WordSpaceTransform = .none,
     word_spacing: WordSpacing = .none,
-    word_wrap: WordWrap = .none,
     wrap_after: WrapAfter = .none,
     wrap_before: WrapBefore = .none,
     wrap_flow: WrapFlow = .none,
@@ -33040,6 +33216,7 @@ pub const Style = struct {
     target_after: ?*const Style = null,
     target_before: ?*const Style = null,
     target_current: ?*const Style = null,
+    trigger_link: ?*const Style = null,
     unchecked: ?*const Style = null,
     user_invalid: ?*const Style = null,
     user_valid: ?*const Style = null,

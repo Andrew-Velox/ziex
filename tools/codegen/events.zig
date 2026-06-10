@@ -105,19 +105,20 @@ const Interface = struct {
     };
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-    const source = try generate(allocator);
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
+
+    const source = try generate(io, allocator);
     defer allocator.free(source);
-    const file = try std.Io.Dir.cwd().createFile("src/runtime/client/events/generated.zig", .{});
-    defer file.close();
-    try file.writeAll(source);
+    try std.Io.Dir.cwd().writeFile(io, .{
+        .sub_path = "src/runtime/client/events/generated.zig",
+        .data = source,
+    });
     std.debug.print("Generated src/runtime/client/events/generated.zig\n", .{});
 }
 
-pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
+pub fn generate(io: std.Io, allocator: std.mem.Allocator) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     const a = arena.allocator();
@@ -131,14 +132,12 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
     ).init(a);
     var raw_inheritance = std.StringHashMap([]const u8).init(a);
 
-    var spec_dir = try std.Io.Dir.cwd().openDir("vendor/webref/ed/idlparsed", .{ .iterate = true });
-    defer spec_dir.close();
+    var spec_dir = try std.Io.Dir.cwd().openDir(io, "vendor/webref/ed/idlparsed", .{ .iterate = true });
+    defer spec_dir.close(io);
     var it = spec_dir.iterate();
-    while (try it.next()) |entry| {
+    while (try it.next(io)) |entry| {
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
-        const f = try spec_dir.openFile(entry.name, .{});
-        defer f.close();
-        const content = try f.readToEndAlloc(a, 8 * 1024 * 1024);
+        const content = try spec_dir.readFileAlloc(io, entry.name, a, .unlimited);
         const parsed = std.json.parseFromSlice(std.json.Value, a, content, .{}) catch continue;
         const idlp = parsed.value.object.get("idlparsed") orelse continue;
         const idl_names = (idlp.object.get("idlNames") orelse continue).object;
@@ -204,9 +203,7 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
     // -------------------------------------------------------------------------
     // Step 3: load events.json → event-name to interface map
     // -------------------------------------------------------------------------
-    const events_file = try std.Io.Dir.cwd().openFile("vendor/webref/ed/events.json", .{});
-    defer events_file.close();
-    const events_content = try events_file.readToEndAlloc(a, 4 * 1024 * 1024);
+    const events_content = try std.Io.Dir.cwd().readFileAlloc(io, "vendor/webref/ed/events.json", a, .unlimited);
     const events_parsed = try std.json.parseFromSlice(std.json.Value, a, events_content, .{});
     const events_array = events_parsed.value.array;
 
@@ -217,6 +214,22 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
         const iface = (ev.object.get("interface") orelse continue).string;
         if (!event_map.contains(ev_type)) {
             try event_map.put(ev_type, iface);
+        }
+    }
+
+    const interface_overrides = [_]struct { ev: []const u8, iface: []const u8 }{
+        .{ .ev = "click", .iface = "PointerEvent" },
+        .{ .ev = "auxclick", .iface = "PointerEvent" },
+        .{ .ev = "contextmenu", .iface = "PointerEvent" },
+        .{ .ev = "dblclick", .iface = "MouseEvent" },
+        .{ .ev = "focus", .iface = "FocusEvent" },
+        .{ .ev = "blur", .iface = "FocusEvent" },
+    };
+    for (interface_overrides) |o| {
+        if (interfaces.get(o.iface)) |iface| {
+            if (iface.fields.items.len > 0) {
+                try event_map.put(o.ev, o.iface);
+            }
         }
     }
 
@@ -293,8 +306,8 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
     }
 
     // Emit event name -> struct alias namespace
-    var aliases: std.ArrayListUnmanaged(u8) = .empty;
-    const w = aliases.writer(a);
+    var aliases: std.Io.Writer.Allocating = .init(a);
+    const w = &aliases.writer;
     try w.writeAll("/// Maps browser event names to their typed structs.\n");
     try w.writeAll("/// Example: `event.as(events.click, allocator)` or `event.as(events.MouseEvent, allocator)`.\n");
     try w.writeAll("pub const events = struct {\n");
@@ -341,6 +354,21 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
     try w.writeAll("    };\n");
     try w.writeAll("}\n\n");
 
+    try w.writeAll("/// Resolves an event `type` string to its `Kind`, or null if unknown.\n");
+    try w.writeAll("pub fn kindForType(type_str: []const u8) ?Kind {\n");
+    try w.writeAll("    return kind_for_type.get(type_str);\n");
+    try w.writeAll("}\n");
+    try w.writeAll("const kind_for_type = std.StaticStringMap(Kind).initComptime(.{\n");
+    for (pairs.items) |p| {
+        const safe = isValidIdent(p.ev) and !isZigKeyword(p.ev);
+        if (safe) {
+            try w.print("    .{{ \"{s}\", .{s} }},\n", .{ p.ev, p.ev });
+        } else {
+            try w.print("    .{{ \"{s}\", .@\"{s}\" }},\n", .{ p.ev, p.ev });
+        }
+    }
+    try w.writeAll("});\n\n");
+
     // Emit the snake_case → camelCase map used by `Event.as` at runtime to
     // translate Zig field names back to the original DOM property names.
     try w.writeAll("/// Maps snake_case Zig field names to their camelCase DOM property names.\n");
@@ -367,7 +395,7 @@ pub fn generate(allocator: std.mem.Allocator) ![]const u8 {
     try w.writeAll("    return js_field_names.get(name) orelse name;\n");
     try w.writeAll("}");
 
-    try file.addRaw(try aliases.toOwnedSlice(a));
+    try file.addRaw(aliases.written());
 
     return try file.finish();
 }

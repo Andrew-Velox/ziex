@@ -237,6 +237,11 @@ export class ZigJS {
       return;
     }
 
+    if (typeof val === "bigint") {
+      view.setFloat64(out, Number(val), true);
+      return;
+    }
+
     // Determine our ID
     let id = this.idPool.pop();
     if (id === undefined) {
