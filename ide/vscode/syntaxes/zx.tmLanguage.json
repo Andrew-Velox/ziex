@@ -5,6 +5,9 @@
   "fileTypes": ["zx", "zx"],
   "patterns": [
     {
+      "include": "#zig-guards"
+    },
+    {
       "include": "#zx"
     },
     {
@@ -12,6 +15,40 @@
     }
   ],
   "repository": {
+    "zig-guards": {
+      "comment": "Match Zig comments and string literals before #zx so a '<' inside them is never treated as the start of a zx tag (which would otherwise swallow the rest of the file).",
+      "patterns": [
+        {
+          "name": "comment.line.documentation.zig",
+          "match": "//[!/].*$"
+        },
+        {
+          "name": "comment.line.double-slash.zig",
+          "match": "//.*$"
+        },
+        {
+          "name": "string.quoted.double.zig",
+          "begin": "\"",
+          "end": "\"|(?<!\\\\)(?=$)",
+          "patterns": [
+            {
+              "include": "source.zig#stringcontent"
+            },
+            {
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.zig",
+          "match": "'(\\\\.|[^'\\\\])'"
+        },
+        {
+          "name": "string.quoted.other.multiline.zig",
+          "match": "^\\s*\\\\\\\\.*$"
+        }
+      ]
+    },
     "zx": {
       "patterns": [
         {
@@ -292,6 +329,9 @@
               "include": "#zig-multiline-string"
             },
             {
+              "include": "#zig-guards"
+            },
+            {
               "include": "#zx"
             },
             {
@@ -342,6 +382,9 @@
       "patterns": [
         {
           "include": "#zig-multiline-string"
+        },
+        {
+          "include": "#zig-guards"
         },
         {
           "include": "#zx"
