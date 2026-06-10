@@ -85,48 +85,55 @@ pub fn render(self: zx.Component, writer: *std.Io.Writer, options: RenderOptions
         .component_fn => |func| {
             // Check for component-level caching
             if (func.caching) |caching| {
+                const cmp_cache = zx.cache.scoped(.cmp);
+
                 if (caching.seconds > 0) {
                     // Generate cache key from function pointer + props pointer + optional custom key
                     var key_buf: [128]u8 = undefined;
-                    const generated_key = if (caching.key) |custom_key|
-                        std.fmt.bufPrint(&key_buf, "cmp:{s}:{x}:{x}", .{
-                            custom_key,
-                            @intFromPtr(func.callFn),
-                            @intFromPtr(func.propsPtr),
-                        }) catch null
-                    else
-                        std.fmt.bufPrint(&key_buf, "cmp:{x}:{x}", .{
-                            @intFromPtr(func.callFn),
-                            @intFromPtr(func.propsPtr),
-                        }) catch null;
+                    const generated_key = key_blk: {
+                        if (caching.key) |custom_key| {
+                            // This generates unique keys per run
+                            // break :key_blk try std.fmt.bufPrint(&key_buf, "cmp:{s}:{x}:{x}", .{
+                            //     custom_key,
+                            //     @intFromPtr(func.callFn),
+                            //     @intFromPtr(func.propsPtr),
+                            // });
 
-                    if (generated_key) |key| {
-                        // Try to get from cache
-                        const cached = zx.cache.get(func.allocator, key) catch |err| switch (err) {
-                            error.CacheUnavailable => null,
-                            else => return err,
-                        };
-                        if (cached) |cached_html| {
-                            defer func.allocator.free(cached_html);
-                            try writer.writeAll(cached_html);
-                            return;
+                            // TODO: figure out a better way generate unique stable component id
+                            // for now we will just use the custom key directly as the cache key
+                            break :key_blk try std.fmt.bufPrint(&key_buf, "cmp:{s}", .{custom_key});
+                        } else {
+                            break :key_blk try std.fmt.bufPrint(&key_buf, "cmp:{x}:{x}", .{
+                                @intFromPtr(func.callFn),
+                                @intFromPtr(func.propsPtr),
+                            });
                         }
+                    };
 
-                        // Render to buffer for caching
-                        var buf_writer = std.Io.Writer.Allocating.init(func.allocator);
-                        const component = try func.call();
-                        try render(component, &buf_writer.writer, options);
-
-                        const rendered = buf_writer.written();
-                        zx.cache.put(key, rendered, .{ .expiration_ttl = caching.seconds }) catch |err| switch (err) {
-                            error.CacheUnavailable => {},
-                            else => return err,
-                        };
-
-                        // Write to actual output
-                        try writer.writeAll(rendered);
+                    // Try to get from cache
+                    const cached = cmp_cache.get(func.allocator, generated_key) catch |err| switch (err) {
+                        error.CacheUnavailable => null,
+                        else => return err,
+                    };
+                    if (cached) |cached_html| {
+                        defer func.allocator.free(cached_html);
+                        try writer.writeAll(cached_html);
                         return;
                     }
+
+                    // Render to buffer for caching
+                    var buf_writer = std.Io.Writer.Allocating.init(func.allocator);
+                    const component = try func.call();
+                    try render(component, &buf_writer.writer, options);
+
+                    const rendered = buf_writer.written();
+                    cmp_cache.put(generated_key, rendered, .{ .expiration_ttl = caching.seconds }) catch |err| switch (err) {
+                        error.CacheUnavailable => {},
+                        else => return err,
+                    };
+
+                    try writer.writeAll(rendered);
+                    return;
                 }
             }
 

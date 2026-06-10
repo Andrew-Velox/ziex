@@ -1,5 +1,5 @@
 pub fn Version(allocator: zx.Allocator) !zx.Component {
-    return (<VersionBadge @{allocator} @caching="1h" />);
+    return (<VersionBadge @{allocator} @caching="1h:ziex_version" />);
 }
 
 fn VersionBadge(allocator: zx.Allocator) zx.Component {
