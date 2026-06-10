@@ -39,8 +39,9 @@ var cache_fs: zx.Kv.Fs = undefined;
 fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Config {
     var resolved = config;
 
-    const datadir = envVar(alloc, init, "ZIEX_DATA_DIR") orelse Constant.default_datadir;
-    const staticdir = envVar(alloc, init, "ZIEX_STATIC_DIR") orelse Constant.default_staticdir;
+    const rootdir = envVar(alloc, init, "ZIEX_ROOT_DIR") orelse Constant.default_rootdir;
+    const datadir = try std.fs.path.join(alloc, &.{ rootdir, envVar(alloc, init, "ZIEX_DATA_DIR") orelse Constant.default_datadir });
+    const staticdir = try std.fs.path.join(alloc, &.{ rootdir, envVar(alloc, init, "ZIEX_STATIC_DIR") orelse Constant.default_staticdir });
 
     resolved.datadir = datadir;
     resolved.staticdir = staticdir;

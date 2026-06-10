@@ -23,4 +23,12 @@ pub const verbose_flag = zli.Flag{
     .default_value = .{ .Bool = false },
 };
 
+pub const install_prefix_flag = zli.Flag{
+    .name = "install-prefix",
+    .shortcut = "i",
+    .description = "Install prefix for the app (default: zig-out)",
+    .type = .String,
+    .default_value = .{ .String = "zig-out" },
+};
+
 const zli = @import("zli");

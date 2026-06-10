@@ -22,6 +22,7 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 
     try cmd.addFlag(flag.binpath_flag);
     try cmd.addFlag(flag.build_args);
+    try cmd.addFlag(flag.install_prefix_flag);
     try cmd.addFlag(.{
         .name = "port",
         .description = "Port to run the server on (0 means default or configured port)",
@@ -62,6 +63,7 @@ const BIN_DIR = "zig-out/bin";
 fn dev(ctx: zli.CommandContext) !void {
     const allocator = ctx.allocator;
     const binpath = ctx.flag("binpath", []const u8);
+    const install_prefix = ctx.flag("install-prefix", []const u8);
     const port = ctx.flag("port", u32);
     const port_str = try std.fmt.allocPrint(ctx.allocator, "{d}", .{port});
     defer ctx.allocator.free(port_str);
@@ -121,8 +123,7 @@ fn dev(ctx: zli.CommandContext) !void {
     try env_map.put("ZIEX_INNER_PORT", inner_port_str);
     try env_map.put("ZIEX_OUTER_PORT", outer_port_str);
 
-    if (env_map.get("ZIEX_STATIC_DIR") == null) try env_map.put("ZIEX_STATIC_DIR", "zig-out/static");
-    if (env_map.get("ZIEX_DATA_DIR") == null) try env_map.put("ZIEX_DATA_DIR", "zig-out/data");
+    if (env_map.get("ZIEX_ROOT_DIR") == null) try env_map.put("ZIEX_ROOT_DIR", install_prefix);
 
     log.debug("starting devserver, inner: {d}: outer: {d}", .{ inner_port, outer_port });
     var dev_server = DevServer.init(.{
