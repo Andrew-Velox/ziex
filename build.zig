@@ -15,12 +15,13 @@ pub fn build(b: *std.Build) !void {
 
     const exclude_lsp = b.option(bool, "exclude-lsp", "Exclude the LSP server to speed up builds") orelse false;
     const exclude_core_lang = b.option(bool, "exclude-core-lang", "Exclude core language tools (Ast/Parse/sourcemap) - only needed by CLI") orelse false;
+    const version = b.option([]const u8, "version", "Version to embed in the binary") orelse build_zon.version;
 
     const is_client = b.option(bool, "is-client", "Building for the browser (client)") orelse false;
 
     // Options
     const options = b.addOptions();
-    options.addOption([]const u8, "version", build_zon.version);
+    options.addOption([]const u8, "version", version);
     options.addOption([]const u8, "description", build_zon.description);
     options.addOption([]const u8, "repository", build_zon.repository);
     options.addOption([]const u8, "homepage", build_zon.homepage);
@@ -82,6 +83,11 @@ pub fn build(b: *std.Build) !void {
         mod.addAnonymousImport("zx_injections", .{ .root_source_file = b.path("src/build/stubs/injections.zig") });
     }
 
+    // --- ZX CLI Subset Module (only the parts of zx the CLI needs) --- //
+    const zx_cli_mod = b.createModule(.{ .root_source_file = b.path("src/root_cli.zig"), .target = target, .optimize = optimize });
+    zx_cli_mod.addImport("core_lang", zx_core_lang_mod);
+    zx_cli_mod.addOptions("zx_info", options);
+
     // --- ZX CLI (Transpiler, Exporter, Dev Server) --- //
     const zli_dep = b.dependency("zli", .{ .target = target, .optimize = optimize });
     const exe_rootmod_opts: std.Build.Module.CreateOptions = .{
@@ -90,7 +96,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "cli_options", .module = cli_options_dev.createModule() },
-            .{ .name = "zx", .module = mod },
+            .{ .name = "zx", .module = zx_cli_mod },
             .{ .name = "zli", .module = zli_dep.module("zli") },
             .{ .name = "tree_sitter", .module = tree_sitter_dep.module("tree_sitter") },
             .{ .name = "tree_sitter_zx", .module = tree_sitter_zx_dep.module("tree_sitter_zx") },
@@ -267,19 +273,10 @@ pub fn build(b: *std.Build) !void {
             release_core_lang_mod.addImport("tree_sitter_zx", release_tree_sitter_zx_dep.module("tree_sitter_zx"));
             release_core_lang_mod.addImport("tree_sitter_mdzx", release_tree_sitter_mdzx_dep.module("tree_sitter_mdzx"));
 
-            const release_mod = b.createModule(.{ .root_source_file = b.path("src/root.zig"), .target = resolved_target, .optimize = .ReleaseSafe });
-
-            // Release module options (CLI needs core_lang)
-            const release_module_options = b.addOptions();
-            release_module_options.addOption(bool, "exclude_core_lang", false);
-
-            const release_adapters_dep = b.dependency("adapters", .{ .target = resolved_target, .optimize = .ReleaseSafe });
-            release_mod.addImport("zqlite", release_adapters_dep.module("zqlite"));
-            release_mod.addImport("httpz", httpz_dep.module("httpz"));
-            release_mod.addImport("zx_core_lang", release_core_lang_mod);
-            release_mod.addOptions("zx_info", options);
-            release_mod.addOptions("zx_options", zx_runtime_options);
-            release_mod.addOptions("zx_module_options", release_module_options);
+            // CLI subset of zx (see src/root_cli.zig)
+            const release_zx_cli_mod = b.createModule(.{ .root_source_file = b.path("src/root_cli.zig"), .target = resolved_target, .optimize = .ReleaseSafe });
+            release_zx_cli_mod.addImport("core_lang", release_core_lang_mod);
+            release_zx_cli_mod.addOptions("zx_info", options);
 
             const release_exe = b.addExecutable(.{
                 .name = "zx",
@@ -289,7 +286,7 @@ pub fn build(b: *std.Build) !void {
                     .optimize = .ReleaseSafe,
                     .imports = &.{
                         .{ .name = "cli_options", .module = cli_options_rel.createModule() },
-                        .{ .name = "zx", .module = release_mod },
+                        .{ .name = "zx", .module = release_zx_cli_mod },
                         .{ .name = "zli", .module = zli_dep.module("zli") },
                         .{ .name = "tree_sitter", .module = release_tree_sitter_dep.module("tree_sitter") },
                         .{ .name = "tree_sitter_zx", .module = release_tree_sitter_zx_dep.module("tree_sitter_zx") },
