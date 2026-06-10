@@ -61,13 +61,12 @@ pub fn key(self: Event) ?[]const u8 {
 pub fn as(self: Event, comptime T: type, allocator: Allocator) T {
     if (platform_role != .client) return std.mem.zeroInit(T, .{});
     const event = self.getEvent();
-    if (comptime builtin.mode == .Debug) assertType(T, event);
+    if (comptime (builtin.mode == .Debug)) assertType(T, event);
     return readStruct(T, allocator, event.ref);
 }
 
 /// Debug-only guard: validates that requested struct `T` matches the live event.
 inline fn assertType(comptime T: type, event: client.Event) void {
-    // The bare `Event` interface is the catch-all — valid for every event.
     if (comptime T == generated_events.Event) return;
 
     const type_str = event.getType(zx.allocator) orelse return;
@@ -91,11 +90,10 @@ inline fn assertType(comptime T: type, event: client.Event) void {
     }
 }
 
-pub fn data(self: Event, comptime kind: Kind, allocator: Allocator) Data(kind) {
-    return self.as(Data(kind), allocator);
-}
-
-pub const Data = generated_events.Data;
+// const Data = generated_events.Data;
+// pub fn data(self: Event, comptime kind: Kind, allocator: Allocator) Data(kind) {
+//     return self.as(Data(kind), allocator);
+// }
 
 fn readStruct(comptime T: type, allocator: Allocator, obj: js.Object) T {
     const info = @typeInfo(T).@"struct";
@@ -189,7 +187,7 @@ pub const Stateful = struct {
         return self.inner.as(T, allocator);
     }
 
-    pub fn data(self: Stateful, comptime kind: Kind, allocator: Allocator) Data(kind) {
-        return self.inner.data(kind, allocator);
-    }
+    // pub fn data(self: Stateful, comptime kind: Kind, allocator: Allocator) Data(kind) {
+    //     return self.inner.data(kind, allocator);
+    // }
 };
