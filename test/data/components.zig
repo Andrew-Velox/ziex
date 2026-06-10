@@ -1,11 +1,10 @@
-pub const components = [_]zx.Client.ComponentMeta{
-
+pub const components = [_]zx.client.ComponentMeta{
     .{
         .type = .client,
         .id = "c8fee6a",
         .name = "CounterComponent",
         .path = "component/csr_zig.zig",
-        .import = zx.Client.ComponentMeta.init(@import("component/csr_zig.zig").CounterComponent),
+        .import = zx.client.ComponentMeta.init(@import("component/csr_zig.zig").CounterComponent),
         .route = "",
     },
     .{
@@ -13,7 +12,7 @@ pub const components = [_]zx.Client.ComponentMeta{
         .id = "cd02624",
         .name = "Button",
         .path = "component/csr_zig.zig",
-        .import = zx.Client.ComponentMeta.init(@import("component/csr_zig.zig").Button),
+        .import = zx.client.ComponentMeta.init(@import("component/csr_zig.zig").Button),
         .route = "",
     },
     .{
@@ -21,7 +20,7 @@ pub const components = [_]zx.Client.ComponentMeta{
         .id = "c24eadf",
         .name = "Counter",
         .path = "component/csr_zig_props.zig",
-        .import = zx.Client.ComponentMeta.init(@import("component/csr_zig_props.zig").Counter),
+        .import = zx.client.ComponentMeta.init(@import("component/csr_zig_props.zig").Counter),
         .route = "",
     },
     .{
@@ -29,7 +28,7 @@ pub const components = [_]zx.Client.ComponentMeta{
         .id = "cd768fc",
         .name = "Counter",
         .path = "component/csr_zig_props.zig",
-        .import = zx.Client.ComponentMeta.init(@import("component/csr_zig_props.zig").Counter),
+        .import = zx.client.ComponentMeta.init(@import("component/csr_zig_props.zig").Counter),
         .route = "",
     },
     .{
@@ -37,7 +36,7 @@ pub const components = [_]zx.Client.ComponentMeta{
         .id = "c9e599a",
         .name = "Counter",
         .path = "component/csr_zig_props.zig",
-        .import = zx.Client.ComponentMeta.init(@import("component/csr_zig_props.zig").Counter),
+        .import = zx.client.ComponentMeta.init(@import("component/csr_zig_props.zig").Counter),
         .route = "",
     },
 };

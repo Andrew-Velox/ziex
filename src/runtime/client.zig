@@ -14,3 +14,5 @@ pub const setTimeout = window.setTimeout;
 pub const Console = window.Console;
 pub const rerender = reactivity.rerender;
 pub const eval = window.eval;
+// TODO: this should have it's own place, it's not related to client only
+pub const ComponentMeta = @import("client/Client.zig").ComponentMeta;

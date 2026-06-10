@@ -222,11 +222,11 @@ fn applyTheme(dark: bool) void {
     root.setAttribute("data-theme", theme);
     root.setAttribute("style", if (dark) "color-scheme: dark;" else "color-scheme: light;");
 
-    const local_storage = zx.client.js.global.get(zx.Client.js.Object, "localStorage") catch return;
+    const local_storage = zx.client.js.global.get(zx.client.js.Object, "localStorage") catch return;
     defer local_storage.deinit();
     local_storage.call(void, "setItem", .{
-        zx.Client.js.string(theme_storage_key),
-        zx.Client.js.string(if (dark) "1" else "0"),
+        zx.client.js.string(theme_storage_key),
+        zx.client.js.string(if (dark) "1" else "0"),
     }) catch {};
 }
 

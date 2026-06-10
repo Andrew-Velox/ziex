@@ -29,7 +29,7 @@ pub fn Server(comptime H: type) type {
             errdefer allocator.destroy(self);
 
             self.allocator = allocator;
-            self.meta = zx.meta;
+            self.meta = zx.app.meta;
             self.app_ctx = app_ctx;
             self.io = io;
 
@@ -55,7 +55,7 @@ pub fn Server(comptime H: type) type {
             router.get("/*", HandlerType.public, .{});
 
             // Routes
-            inline for (&zx.routes) |*route| {
+            inline for (&zx.app.routes) |*route| {
                 // Check if this is an API-only route (no page)
                 const is_api_only = route.page == null;
 
@@ -870,6 +870,7 @@ fn setServerAddress(config: *httpz.Config, address: []const u8, port: u16) void 
         .{ .ip = std.Io.net.IpAddress.parse(address, port) catch .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = port } } };
 }
 
+// TODO: read from passed through env from root init
 fn envVar(name_z: [*:0]const u8) ?[]const u8 {
     const value = std.c.getenv(name_z) orelse return null;
     return std.mem.span(value);

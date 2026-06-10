@@ -10,7 +10,6 @@ const plfm = @import("platform.zig");
 const prp = @import("props.zig");
 
 const routing = @import("runtime/core/routing.zig");
-const app_module = @import("runtime/server/Server.zig");
 const opts = @import("options.zig");
 const ctxs = @import("contexts.zig");
 const reactivity = @import("runtime/client/reactivity.zig");
@@ -29,11 +28,6 @@ pub const Element = @import("Component.zig").Element;
 
 // Internal - Used by the .zx to .zig transpiler
 pub const x = @import("x.zig");
-
-// TODO: move all generated zig files under zx.manifests
-pub const routes = @import("zx_meta").routes;
-pub const components = @import("zx_meta").components.components;
-pub const meta = @import("zx_meta").meta;
 pub const info = @import("zx_info");
 
 // --- Aliases --- //
@@ -44,14 +38,14 @@ pub const Init = switch (builtin.os.tag) {
     else => std.process.Init,
 };
 
-// TODO: Legacy, should be removed
-pub const Server = app_module.Server;
-pub const Client = @import("runtime/client/Client.zig");
-
 pub const App = app_mod.App;
 pub const AppConfig = app_mod.Config;
 pub const app = struct {
     pub const Route = @import("zx_meta").RoutePaths;
+
+    pub const routes = @import("zx_meta").routes;
+    pub const components = @import("zx_meta").components.components;
+    pub const meta = @import("zx_meta").meta;
 };
 
 // --- Namespaces --- //

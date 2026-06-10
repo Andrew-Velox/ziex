@@ -47,7 +47,7 @@ fn resolveComponent(allocator: zx.Allocator, comptime field_name: []const u8) zx
                 (param_count == 1 and FirstParam == zx.Allocator) or
                 (param_count == 2 and FirstParam == zx.Allocator))
             {
-                const cmp_fn = zx.Client.ComponentMeta.init(Cmp);
+                const cmp_fn = zx.client.ComponentMeta.init(Cmp);
                 return cmp_fn(allocator, "Playground", null);
             }
 

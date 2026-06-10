@@ -1359,7 +1359,7 @@ fn transpileFile(
                 //   "@ and @" - markers to strip outer quotes from ZON serialization
                 //   @@@ - literal @ (for @import)
                 //   @@ - literal " (for quotes inside @import())
-                const import_str = try std.fmt.allocPrint(allocator, "@zx.Client.ComponentMeta.init(@@@import(@@{s}@@).{s})@", .{ clean_path, component.name });
+                const import_str = try std.fmt.allocPrint(allocator, "@zx.client.ComponentMeta.init(@@@import(@@{s}@@).{s})@", .{ clean_path, component.name });
                 cloned_import = import_str;
             },
             .react => {

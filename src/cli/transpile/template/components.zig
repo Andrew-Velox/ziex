@@ -1,4 +1,4 @@
-pub const components = [_]zx.Client.ComponentMeta{
+pub const components = [_]zx.client.ComponentMeta{
     // PLACEHOLDER_ZX_COMPONENTS
 };
 

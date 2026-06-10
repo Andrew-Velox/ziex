@@ -34,8 +34,8 @@ pub var show_native_elements: bool = true;
 pub var host: []const u8 = "localhost:3000";
 pub var current_path: []const u8 = "/";
 
-fn settingsKV() zx.kv.KVScope {
-    return zx.kv.scoped(settings_namespace);
+fn settingsKV() zx.Kv {
+    return zx.kv.scoped(.settings_namespace);
 }
 
 pub fn loadSettings() bool {

@@ -136,7 +136,7 @@ fn leaveChat(_: zx.client.Event) void {
     // Clear input via DOM
     const document = zx.client.Document.init(zx.allocator);
     if (document.getElementById("message-input")) |input| {
-        input.ref.set("value", zx.Client.js.string("")) catch {};
+        input.ref.set("value", zx.client.js.string("")) catch {};
     } else |_| {}
 }
 
@@ -146,7 +146,7 @@ fn sendMessage(e: zx.client.Event) void {
 
     const document = zx.client.Document.init(zx.allocator);
     const input = document.getElementById("message-input") catch return;
-    const text = input.ref.getAlloc(zx.Client.js.String, zx.allocator, "value") catch return;
+    const text = input.ref.getAlloc(zx.client.js.String, zx.allocator, "value") catch return;
 
     std.log.info("sendMessage: {s}", .{text});
     if (text.len == 0) return;
@@ -154,7 +154,7 @@ fn sendMessage(e: zx.client.Event) void {
     if (ws) |*w| {
         if (w.isConnected()) {
             w.send(text) catch {};
-            input.ref.set("value", zx.Client.js.string("")) catch {};
+            input.ref.set("value", zx.client.js.string("")) catch {};
         }
     }
 }

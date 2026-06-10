@@ -199,4 +199,4 @@ const zx = @import("zx");
 const std = @import("std");
 const builtin = @import("builtin");
 const client = zx.client;
-const js = zx.Client.js;
+const js = zx.client.js;

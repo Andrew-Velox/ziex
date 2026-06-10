@@ -1006,7 +1006,8 @@ const rndr = @import("render.zig");
 const ctxs = @import("../../contexts.zig");
 const Allocator = std.mem.Allocator;
 const Component = zx.Component;
-const App = zx.Server(void);
+// TODO: directly import things that is needed instead of getting from inside Server struct
+const App = @import("./Server.zig").Server(void);
 const AppConfig = @import("../../AppConfig.zig");
 const Request = @import("../core/Request.zig");
 const Response = @import("../core/Response.zig");
