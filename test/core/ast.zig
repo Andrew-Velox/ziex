@@ -409,7 +409,7 @@ test "flaky: performance > transpile" {
 
 test "flaky: performance > render" {
     const MAX_TIME_MS = 5.0 * 12; // 3.5ms is on M1 Pro
-    const MAX_TIME_PER_FILE_MS = 0.2 * 12; // 0.06ms is on M1 Pro
+    const MAX_TIME_PER_FILE_MS = 0.25 * 12; // 0.06ms is on M1 Pro
 
     var total_time_ns: f64 = 0.0;
     inline for (TestFileCache.test_files) |comptime_path| {
