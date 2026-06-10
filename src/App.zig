@@ -1,11 +1,12 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const platform = @import("platform.zig").platform;
+
+const zx = @import("root.zig");
 const server = @import("runtime/server/Server.zig");
 const server_wasi = @import("runtime/server/wasm/entrypoint.zig");
 const client = @import("runtime/client/Client.zig").Client;
-const zx = @import("root.zig");
-
+const Constant = @import("constant.zig");
+const platform = @import("platform.zig").platform;
 pub const Config = @import("AppConfig.zig");
 
 var debug_allocator: std.heap.DebugAllocator(.{}) = .{};
@@ -36,12 +37,10 @@ var kv_fs: zx.Kv.Fs = undefined;
 var cache_fs: zx.Kv.Fs = undefined;
 
 fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Config {
-    const zx_options = @import("zx_options"); // Remove and from build system pass these as env var
-
     var resolved = config;
 
-    const datadir = config.datadir orelse envVar(alloc, init, "ZX_DATADIR") orelse zx_options.datadir;
-    const staticdir = config.staticdir orelse envVar(alloc, init, "ZX_STATICDIR") orelse zx_options.staticdir;
+    const datadir = envVar(alloc, init, "ZIEX_DATA_DIR") orelse Constant.default_datadir;
+    const staticdir = envVar(alloc, init, "ZIEX_STATIC_DIR") orelse Constant.default_staticdir;
 
     resolved.datadir = datadir;
     resolved.staticdir = staticdir;
@@ -84,7 +83,8 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
 }
 
 fn envVar(alloc: std.mem.Allocator, init: zx.Init, name: []const u8) ?[]const u8 {
-    const minimal: std.process.Init.Minimal = switch (@TypeOf(zx.Init)) {
+    if (platform.os == .freestanding or platform.os == .wasi) return null;
+    const minimal: std.process.Init.Minimal = switch (@TypeOf(init)) {
         std.process.Init.Minimal => init,
         std.process.Init => init.minimal,
         else => return null,

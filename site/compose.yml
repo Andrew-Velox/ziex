@@ -1,12 +1,6 @@
 name: "ziex"
 services:
   site:
-    image: ziex:latest
-    container_name: "ziex.dev"
-    restart: unless-stopped
-    networks:
-      - npm
-
-networks:
-  npm:
-    driver: bridge
+    build: 
+      context: ..
+      dockerfile: site/Dockerfile

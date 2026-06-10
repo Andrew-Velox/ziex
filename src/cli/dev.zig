@@ -121,6 +121,9 @@ fn dev(ctx: zli.CommandContext) !void {
     try env_map.put("ZIEX_INNER_PORT", inner_port_str);
     try env_map.put("ZIEX_OUTER_PORT", outer_port_str);
 
+    if (env_map.get("ZIEX_STATIC_DIR") == null) try env_map.put("ZIEX_STATIC_DIR", "zig-out/static");
+    if (env_map.get("ZIEX_DATA_DIR") == null) try env_map.put("ZIEX_DATA_DIR", "zig-out/data");
+
     log.debug("starting devserver, inner: {d}: outer: {d}", .{ inner_port, outer_port });
     var dev_server = DevServer.init(.{
         .gpa = allocator,

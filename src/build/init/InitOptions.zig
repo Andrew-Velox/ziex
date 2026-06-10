@@ -125,15 +125,14 @@ client: ClientOptions = .default,
 /// If `null`, all experimental features are disabled.
 experimental: ?ExperimentalOptions = null,
 
-/// Path to the directory where static files (compiled assets, public files) are stored.
+/// Build-time output location for compiled assets and public files.
+///
+/// This controls only where the build *emits* assets. The location the
+/// *running app* serves static files and stores data from is controlled at
+/// runtime by the `ZIEX_STATIC_DIR` and `ZIEX_DATA_DIR` environment variables.
 ///
 /// If `null`, defaults to `zig-out/static` in your project root.
 static_path: ?LazyPath = null,
-
-/// Path to the directory where app data (databases, KV stores, logs) is stored.
-///
-/// If `null`, defaults to `data` directory in your project root.
-data_path: ?LazyPath = null,
 
 /// Version string used for cache-busting asset URLs (e.g. `/assets/_/main.wasm?<version>`).
 ///

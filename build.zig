@@ -27,8 +27,6 @@ pub fn build(b: *std.Build) !void {
     options.addOption([]const u8, "minimum_zig_version", build_zon.minimum_zig_version);
 
     const zx_runtime_options = b.addOptions();
-    zx_runtime_options.addOption([]const u8, "staticdir", "zig-out/static");
-    zx_runtime_options.addOption([]const u8, "datadir", "zig-out/data");
     zx_runtime_options.addOption(?[]const u8, "app_base_path", null);
     zx_runtime_options.addOption(?u16, "server_port", null);
     zx_runtime_options.addOption(?[]const u8, "server_address", null);

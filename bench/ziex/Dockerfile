@@ -8,27 +8,32 @@ tar xf zig.tar.xz && \
 mv zig-$(uname -m)-linux-${ZIG_VER}/ /opt/zig
 ENV PATH="/opt/zig:$PATH"
 
-# Build the app
+# Build app
 WORKDIR /build
 
-## Install Zig dependencies
+# Ziex CLI
 COPY build.zig build.zig.zon ./
-RUN zig build --fetch
-
-## Copy source files
-COPY ./bench/ziex/ ./bench/ziex/
 COPY src/ ./src/
 COPY vendor/ ./vendor/
 COPY pkg/ pkg/
+COPY templates/Template.zig templates/Template.zig
+COPY templates/_base templates/_base
+COPY templates/_docker templates/_docker
 
+COPY ./bench/ziex/build.zig bench/ziex/build.zig.zon ./bench/ziex/
+RUN cd bench/ziex && zig build --fetch
+RUN cd bench/ziex &&  zig build zx -- version
+
+# App
+COPY ./bench/ziex/app ./bench/ziex/app
 RUN cd bench/ziex && zig build -Doptimize=ReleaseFast
 RUN cd bench/ziex &&  zig build zx -- bundle
 
-# Run the app
+# Run app
 FROM alpine:3.22.2
+WORKDIR /app
 
-# Install curl for health checks
 RUN apk add --no-cache curl
 COPY --from=build /build/bench/ziex/bundle /app
 
-ENTRYPOINT ["/app/zx_bench_client", "--rootdir", "./app/static"]
+ENTRYPOINT ["/app/zx_bench_client"]

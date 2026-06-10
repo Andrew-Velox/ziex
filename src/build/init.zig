@@ -53,7 +53,6 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
         .copy_embedded_sources = false,
         .client = options.client,
         .static_path = options.static_path,
-        .data_path = options.data_path,
         .ziex_js_dep = ziex_js_dep,
         .version = options.version,
         .server_only_stub_mode = .strict,
@@ -83,7 +82,6 @@ const InitInnerOptions = struct {
     copy_embedded_sources: bool,
     client: InitOptions.ClientOptions,
     static_path: ?LazyPath,
-    data_path: ?LazyPath,
     ziex_js_dep: *std.Build.Dependency,
     element_injections: []const AddElementOptions = &.{},
     version: ?[]const u8 = null,
@@ -269,12 +267,7 @@ pub fn initInner(
 
     // --- Dirs Setup --- //
     const static_lazypath: LazyPath = if (opts.static_path) |p| p else .{ .cwd_relative = b.pathJoin(&.{ b.install_path, "static" }) };
-    const staticdir = static_lazypath.getPath(b);
     const assetsdir = static_lazypath.path(b, "assets");
-    const datadir = if (opts.data_path) |p| p.getPath(b) else b.pathJoin(&.{ b.install_path, "data" });
-
-    zx_options.addOption([]const u8, "staticdir", staticdir);
-    zx_options.addOption([]const u8, "datadir", datadir);
 
     // --- ZX Transpilation ---
     const transpile_cmd = getZxRun(b, zx_exe, opts);

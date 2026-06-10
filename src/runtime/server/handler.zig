@@ -830,7 +830,7 @@ pub fn Handler(comptime AppCtxType: type) type {
         }
 
         pub inline fn static(self: *Self, req: *httpz.Request, res: *httpz.Response) !void {
-            const staticdir = self.config.staticdir orelse zx_options.staticdir;
+            const staticdir = self.config.staticdir orelse Constant.default_staticdir;
             const assets_path = try std.fs.path.join(self.allocator, &.{ staticdir, req.url.path });
             defer self.allocator.free(assets_path);
 
@@ -1010,3 +1010,4 @@ const App = zx.Server(void);
 const AppConfig = @import("../../AppConfig.zig");
 const Request = @import("../core/Request.zig");
 const Response = @import("../core/Response.zig");
+const Constant = @import("../../constant.zig");

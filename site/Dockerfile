@@ -8,39 +8,34 @@ tar xf zig.tar.xz && \
 mv zig-$(uname -m)-linux-${ZIG_VER}/ /opt/zig
 ENV PATH="/opt/zig:$PATH"
 
-# Build the app
+# Build App
 WORKDIR /build
-
-# Zig Deps
-COPY build.zig build.zig.zon ./
-RUN zig build --fetch
 
 # Node Deps
 RUN apk add --no-cache nodejs npm
 COPY site/package.json site/package-lock.json ./site/
 RUN cd site && npm ci
 
-# Ziex Exe
+# Ziex CLI
+COPY build.zig build.zig.zon ./
 COPY src ./src
 COPY vendor ./vendor
 COPY pkg ./pkg
 COPY templates ./templates
 
-# Ziex Site
 COPY site/build.zig site/build.zig.zon ./site/
 RUN cd site && zig build --fetch
 RUN cd site && zig build zx -- version
 
-# Ziex Site - Playground Assets
+# App
 RUN cd site && zig build pg
 
-# Ziex Site - App
 COPY site/app ./site/app
-RUN cd site && zig build
+RUN cd site && zig build -Doptimize=ReleaseSmall
 RUN cd site && zig build zx -- bundle
 
-# Run Ziex Site
-FROM scratch
+# Run App
+FROM alpine:3.22.2
 WORKDIR /app
 COPY --from=build /build/site/bundle /app
-ENTRYPOINT ["/app/ziex_dev", "--rootdir", "/app/static"]
+ENTRYPOINT ["/app/ziex_dev"]
