@@ -279,7 +279,7 @@ const benchmark_tabs = [_]BenchmarkTab{
         .id = "bench-tab-ssr",
         .label = "SSR",
         .metric = "Requests per second (higher is better)",
-        .footnote = "Dockerized SSR endpoint hit with 10k requests at 50 concurrent connections, averaged over 3 runs.",
+        .footnote = "Dockerized SSR endpoint hit with 3k requests at 50 concurrent connections, averaged over 3 runs.",
         .rows = benchmark_ssr_rows[0..],
         .checked = true,
     },
@@ -616,7 +616,7 @@ fn BenchmarksPanel(allocator: zx.Allocator, tab: BenchmarkTab) zx.Component {
     const tab_id = std.fmt.allocPrint(allocator, "tab-{s}", .{tab.id}) catch unreachable;
     return (
         <div @allocator={allocator} class="benchmarks-panel" data-tab={tab.id} data-lower-is-better={if (tab.lower_is_better) "true" else "false"} role="tabpanel" id={panel_id} aria-labelledby={tab_id}>
-            <div class="benchmarks-metric">{tab.metric}</div>
+            // <div class="benchmarks-metric">{tab.metric}</div>
             <div class="benchmarks-chart">
                 {for (tab.rows) |row| (
                     <BenchmarkRowView row={row} normalized_value={normalizeValue(row.value, tab.rows)} />

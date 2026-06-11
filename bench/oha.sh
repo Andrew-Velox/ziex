@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # ─── Config ──────────────────────────────────────────
-REQUESTS=10000
+REQUESTS=3000
 CONCURRENCY=50
 RUNS=3
 RESULTS_FILE="result.csv"
-ENDPOINT="ssr"
+ENDPOINT="ssr-performance-showdown"
 
 HOST_PREFIX="http://"
 HOST_SUFFIX=""
