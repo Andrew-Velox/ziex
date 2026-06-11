@@ -41,8 +41,6 @@ pub const Init = switch (builtin.os.tag) {
 
 pub const App = app_mod.App;
 pub const AppConfig = app_mod.Config;
-// TODO: rm in favour of app level "app" module
-pub const app = @import("app");
 
 // --- Namespaces --- //
 pub const client = @import("runtime/client.zig");

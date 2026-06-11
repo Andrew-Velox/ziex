@@ -429,6 +429,7 @@ pub fn initInner(
         .root_source_file = transpile_outdir.path(b, "meta.zig"),
         .imports = meta_imports.items,
     });
+    app_module.addImport("app", app_module);
     site_zx_module.addImport("app", app_module);
     exe.root_module.addImport("app", app_module);
 
