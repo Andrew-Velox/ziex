@@ -113,6 +113,7 @@ jobs:
       name: ssr
       url: https://ssr.ziex.dev
     # runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Deploy (SSR)
     needs: [pre_deploy, build_ssr]
     steps:
