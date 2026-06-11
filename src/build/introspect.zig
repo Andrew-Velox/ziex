@@ -1,13 +1,14 @@
 const std = @import("std");
 const zx = @import("zx");
 const __zx_app_root = @import("zx_app_root");
+const zx_app = @import("app");
 
 //__ZX_REEXPORTS__
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
     const io = init.io;
-    var meta = zx.app.meta;
+    var meta = zx_app.meta;
 
     var serializable = try zx.server.SerilizableAppMeta.init(
         allocator,

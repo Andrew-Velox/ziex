@@ -4,7 +4,7 @@ const kv = @import("kv.zig");
 const render = @import("../../server/render.zig");
 const ext = @import("extern.zig");
 const core_handler = @import("../../core/Handler.zig");
-const app_meta = @import("zx_meta").meta;
+const app_meta = @import("app").meta;
 
 const Router = zx.Router;
 const Component = zx.Component;

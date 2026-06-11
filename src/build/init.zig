@@ -404,7 +404,7 @@ pub fn initInner(
     // Copy all imports from the original zx_module
     var zx_import_it = zx_module.import_table.iterator();
     while (zx_import_it.next()) |entry| {
-        if (!std.mem.eql(u8, entry.key_ptr.*, "zx_meta")) {
+        if (!std.mem.eql(u8, entry.key_ptr.*, "app")) {
             try imports.append(.{ .name = entry.key_ptr.*, .module = entry.value_ptr.* });
         }
     }
@@ -417,18 +417,20 @@ pub fn initInner(
         .imports = imports.items,
     });
 
-    // Build imports for zx_meta (needs access to zx module and all other imports)
+    // Build imports for the "app" module (meta.zig needs access to zx and all other imports)
     var meta_imports = std.array_list.Managed(std.Build.Module.Import).init(b.allocator);
     for (imports.items) |import| {
         try meta_imports.append(import);
     }
     try meta_imports.append(.{ .name = "zx", .module = site_zx_module });
 
-    // Add project-specific zx_meta to the site module
-    site_zx_module.addAnonymousImport("zx_meta", .{
+    // Inject the real generated app module into zx and directly into the user's root module
+    const app_module = b.createModule(.{
         .root_source_file = transpile_outdir.path(b, "meta.zig"),
         .imports = meta_imports.items,
     });
+    site_zx_module.addImport("app", app_module);
+    exe.root_module.addImport("app", app_module);
 
     exe.root_module.addImport("zx", site_zx_module);
 
@@ -450,6 +452,7 @@ pub fn initInner(
             .optimize = optimize,
         });
         introspect_root.addImport("zx", site_zx_module);
+        introspect_root.addImport("app", app_module);
         introspect_root.addImport("zx_app_root", exe.root_module);
 
         const introspect_exe = b.addExecutable(.{

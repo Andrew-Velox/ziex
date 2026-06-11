@@ -4,6 +4,7 @@
 
 const std = @import("std");
 const zx = @import("../../root.zig");
+const app = @import("app");
 
 const Component = zx.Component;
 const ServerMeta = zx.server.ServerMeta;
@@ -52,7 +53,7 @@ pub fn executeProxyChain(
     var count: usize = 0;
 
     // Root "/" proxy
-    for (zx.app.meta.routes) |*route| {
+    for (app.meta.routes) |*route| {
         if (std.mem.eql(u8, route.path, "/")) {
             if (route.proxy) |proxy_fn| {
                 if (count < proxies.len) {
@@ -88,7 +89,7 @@ pub fn executeProxyChain(
         const check_path = path_buf[0..offset];
         if (std.mem.eql(u8, check_path, "/")) continue;
 
-        for (zx.app.meta.routes) |*route| {
+        for (app.meta.routes) |*route| {
             if (std.mem.eql(u8, route.path, check_path)) {
                 if (route.proxy) |proxy_fn| {
                     if (count < proxies.len) {
@@ -167,7 +168,7 @@ pub fn resolveCustomHandler(
 pub fn matchRoute(path: []const u8, opts: FindRouteOptions) ?RouteMatch {
     switch (opts.match) {
         .exact => {
-            for (zx.app.meta.routes) |*route| {
+            for (app.meta.routes) |*route| {
                 var m = RouteMatch{ .route = route };
                 if (!tryExtractParams(route.path, path, &m)) continue;
                 if (opts.has_notfound and route.notfound == null) continue;
@@ -179,7 +180,7 @@ pub fn matchRoute(path: []const u8, opts: FindRouteOptions) ?RouteMatch {
         .closest => {
             var current = path;
             while (true) {
-                for (zx.app.meta.routes) |*route| {
+                for (app.meta.routes) |*route| {
                     var m = RouteMatch{ .route = route };
                     if (!tryExtractParams(route.path, current, &m)) continue;
                     if (opts.has_notfound and route.notfound == null) continue;
@@ -294,7 +295,7 @@ pub fn executeCascadingProxies(
     var count: usize = 0;
 
     // Root "/" proxy
-    for (zx.app.meta.routes) |*route| {
+    for (app.meta.routes) |*route| {
         if (std.mem.eql(u8, route.path, "/")) {
             if (route.proxy) |proxy_fn| {
                 if (count < proxies.len) {
@@ -330,7 +331,7 @@ pub fn executeCascadingProxies(
         const check_path = path_buf[0..offset];
         if (std.mem.eql(u8, check_path, "/")) continue;
 
-        for (zx.app.meta.routes) |*route| {
+        for (app.meta.routes) |*route| {
             if (std.mem.eql(u8, route.path, check_path)) {
                 if (route.proxy) |proxy_fn| {
                     if (count < proxies.len) {
@@ -396,7 +397,7 @@ pub fn applyLayouts(
 
     // Root layout (only if current route is not root)
     if (!is_root) {
-        for (zx.app.meta.routes) |*r| {
+        for (app.meta.routes) |*r| {
             if (std.mem.eql(u8, r.path, "/")) {
                 if (r.layout) |layout_fn| {
                     if (layout_count < layouts.len) {
@@ -436,7 +437,7 @@ pub fn applyLayouts(
             // Skip if this is the current route's own path (already applied)
             if (std.mem.eql(u8, parent_path, route.path)) continue;
 
-            for (zx.app.meta.routes) |*r| {
+            for (app.meta.routes) |*r| {
                 if (std.mem.eql(u8, r.path, parent_path)) {
                     if (r.layout) |layout_fn| {
                         if (layout_count < layouts.len) {

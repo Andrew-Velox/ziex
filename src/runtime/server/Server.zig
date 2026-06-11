@@ -29,7 +29,7 @@ pub fn Server(comptime H: type) type {
             errdefer allocator.destroy(self);
 
             self.allocator = allocator;
-            self.meta = zx.app.meta;
+            self.meta = zx_app.meta;
             self.app_ctx = app_ctx;
             self.io = io;
 
@@ -55,7 +55,7 @@ pub fn Server(comptime H: type) type {
             router.get("/*", HandlerType.public, .{});
 
             // Routes
-            inline for (&zx.app.routes) |*route| {
+            inline for (&zx_app.routes) |*route| {
                 // Check if this is an API-only route (no page)
                 const is_api_only = route.page == null;
 
@@ -881,6 +881,7 @@ const builtin = @import("builtin");
 const httpz = @import("httpz");
 const cachez = @import("cachez");
 const zx = @import("../../root.zig");
+const zx_app = @import("app");
 const module_config = @import("zx_info");
 const zx_options = @import("zx_options");
 const Constant = @import("../../constant.zig");

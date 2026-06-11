@@ -41,13 +41,8 @@ pub const Init = switch (builtin.os.tag) {
 
 pub const App = app_mod.App;
 pub const AppConfig = app_mod.Config;
-pub const app = struct {
-    pub const Route = @import("zx_meta").RoutePaths;
-
-    pub const routes = @import("zx_meta").routes;
-    pub const components = @import("zx_meta").components.components;
-    pub const meta = @import("zx_meta").meta;
-};
+// TODO: rm in favour of app level "app" module
+pub const app = @import("app");
 
 // --- Namespaces --- //
 pub const client = @import("runtime/client.zig");
