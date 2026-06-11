@@ -132,20 +132,23 @@ jobs:
             exit 1
           fi
 
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image-${{ steps.arch.outputs.arch }}
-          path: /tmp
+      # Now the compose is built and run by Dokploy
+      # we can think of invoking Dokploy webhook from here instead in the future
 
-      - name: Load Docker image
-        run: docker load -i /tmp/image-${{ steps.arch.outputs.arch }}.tar
+      # - name: Download Docker image
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: docker-image-${{ steps.arch.outputs.arch }}
+      #     path: /tmp
 
-      - name: Start containers
-        run: cd site && docker compose -f compose.yml up -d
+      # - name: Load Docker image
+      #   run: docker load -i /tmp/image-${{ steps.arch.outputs.arch }}.tar
 
-      - name: Connect to npm network
-        run: docker network connect npm ziex.dev || true
+      # - name: Start containers
+      #   run: cd site && docker compose -f compose.yml up -d
+
+      # - name: Connect to npm network
+      #   run: docker network connect npm ziex.dev || true
 
   build_edge:
     runs-on: ubuntu-latest
