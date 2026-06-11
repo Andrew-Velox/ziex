@@ -32,28 +32,28 @@ pub const builtin = struct {
     };
 
     pub const Caching = struct {
-        pub const none = Caching{ .seconds = 0 };
+        pub const none = Caching{ .ttl = .zero };
 
         // TODO: move to using ttl field instead of seconds field;
-        // ttl: std.Io.Duration,
+        ttl: std.Io.Duration,
 
         /// The number of seconds to cache the page for
-        seconds: u32,
+        // seconds: u32,
         /// The key to cache the page for
         key: ?[]const u8 = null,
 
         /// Examples:
         ///
-        /// - `10s` → `{ .seconds = 10, .key = null }`
-        /// - `5m` → `{ .seconds = 300, .key = null }`
-        /// - `1h` → `{ .seconds = 3600, .key = null }`
-        /// - `1d` → `{ .seconds = 86400, .key = null }`
+        /// - `10s` → `{ .ttl = .fromSeconds(10), .key = null }`
+        /// - `5m` → `{ .ttl = .fromSeconds(300), .key = null }`
+        /// - `1h` → `{ .ttl = .fromSeconds(3600), .key = null }`
+        /// - `1d` → `{ .ttl = .fromSeconds(86400), .key = null }`
         ///
         /// With key:
-        /// - `10s:key` → `{ .seconds = 10, .key = "key" }`
-        /// - `5m:key` → `{ .seconds = 300, .key = "key" }`
-        /// - `1h:key` → `{ .seconds = 3600, .key = "key" }`
-        /// - `1d:key` → `{ .seconds = 86400, .key = "key" }`
+        /// - `10s:key` → `{ .ttl = .fromSeconds(10), .key = "key" }`
+        /// - `5m:key` → `{ .ttl = .fromSeconds(300), .key = "key" }`
+        /// - `1h:key` → `{ .ttl = .fromSeconds(3600), .key = "key" }`
+        /// - `1d:key` → `{ .ttl = .fromSeconds(86400), .key = "key" }`
         pub fn tag(comptime tag_str: []const u8) Caching {
             comptime {
                 var num_end: usize = 0;
@@ -84,7 +84,7 @@ pub const builtin = struct {
 
                 const seconds = num_value * unit_value;
 
-                return .{ .seconds = seconds, .key = key };
+                return .{ .ttl = .fromSeconds(seconds), .key = key };
             }
         }
 

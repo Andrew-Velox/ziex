@@ -34,4 +34,4 @@ pub fn Page(ctx: zx.PageContext, app: Context) zx.Component {
 var count: i64 = 0;
 
 const zx = @import("zx");
-pub const CounterComponent = @import("./client.zig").CounterComponent;
+pub const CounterComponent = @import("./client.zx").CounterComponent;

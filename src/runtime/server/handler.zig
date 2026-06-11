@@ -239,8 +239,8 @@ const PageCache = struct {
             const route: *const App.Meta.Route = @ptrCast(@alignCast(rd));
             if (route.page_opts) |options| {
                 // Return null if caching is disabled (seconds = 0)
-                if (options.caching.seconds == 0) return null;
-                return options.caching.seconds;
+                if (options.caching.ttl.nanoseconds == 0) return null;
+                return @intCast(options.caching.ttl.toSeconds());
             }
         }
         return null;
