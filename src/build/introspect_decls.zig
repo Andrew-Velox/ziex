@@ -14,9 +14,16 @@ pub fn main(init: std.process.Init) !void {
     try aw.writer.writeAll(template[0..idx]);
 
     inline for (@typeInfo(__zx_app_root).@"struct".decls) |decl| {
-        if (comptime !std.mem.eql(u8, decl.name, "main")) {
+        if (comptime std.mem.eql(u8, decl.name, "main")) continue;
+        const ptr = @typeInfo(@TypeOf(&@field(__zx_app_root, decl.name)));
+        if (comptime ptr.pointer.is_const) {
             try aw.writer.print(
                 "pub const {s} = __zx_app_root.{s};\n",
+                .{ decl.name, decl.name },
+            );
+        } else {
+            try aw.writer.print(
+                "pub const {s} = &__zx_app_root.{s};\n",
                 .{ decl.name, decl.name },
             );
         }
