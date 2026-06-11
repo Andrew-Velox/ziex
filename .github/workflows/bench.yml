@@ -11,7 +11,7 @@ on:
 jobs:
   bench:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash
@@ -36,12 +36,7 @@ jobs:
       - name: Build images in parallel
         working-directory: bench
         run: |
-          docker compose build --parallel ${{ steps.frameworks.outputs.list }} bench
-        env:
-          DOCKER_BUILDKIT: 1
-          # Drive the build through buildx/bake so the per-service GHA
-          # cache_from/cache_to scopes in compose.yml take effect.
-          COMPOSE_BAKE: "true"
+          docker buildx bake --file compose.yml ${{ steps.frameworks.outputs.list }} bench
 
       - name: Run benchmark script
         id: bench

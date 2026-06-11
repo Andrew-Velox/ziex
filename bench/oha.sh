@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ─── Config ──────────────────────────────────────────
-REQUESTS=3000
-CONCURRENCY=50
-RUNS=3
+REQUESTS=2000
+CONCURRENCY=20
+RUNS=2
 RESULTS_FILE="result.csv"
 ENDPOINT="ssr-performance-showdown"
 
