@@ -30,7 +30,7 @@ jobs:
           if [ -n "${{ github.event.inputs.frameworks }}" ]; then
             echo "list=${{ github.event.inputs.frameworks }}" >> $GITHUB_OUTPUT
           else
-            echo "list=nextjs solidjs leptos dioxus jetzig ziex" >> $GITHUB_OUTPUT
+            echo "list=nextjs solidjs leptos jetzig ziex" >> $GITHUB_OUTPUT
           fi
 
       - name: Build images in parallel
