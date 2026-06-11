@@ -112,28 +112,32 @@ jobs:
     environment:
       name: ssr
       url: https://ssr.ziex.dev
-    runs-on: self-hosted
+    # runs-on: self-hosted
     name: Deploy (SSR)
     needs: [pre_deploy, build_ssr]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Detect architecture
-        id: arch
-        run: |
-          ARCH=$(uname -m)
-          if [[ "$ARCH" == "x86_64" ]]; then
-            echo "arch=amd64" >> $GITHUB_OUTPUT
-          elif [[ "$ARCH" == "aarch64" ]] || [[ "$ARCH" == "arm64" ]]; then
-            echo "arch=arm64" >> $GITHUB_OUTPUT
-          else
-            echo "Unsupported architecture: $ARCH"
-            exit 1
-          fi
+    - name: Dummy step
+      run: echo "SSR deployment is temporarily disabled while we set up Dokploy"
 
       # Now the compose is built and run by Dokploy
       # we can think of invoking Dokploy webhook from here instead in the future
+
+      # - name: Checkout
+      #   uses: actions/checkout@v4
+
+      # - name: Detect architecture
+      #   id: arch
+      #   run: |
+      #     ARCH=$(uname -m)
+      #     if [[ "$ARCH" == "x86_64" ]]; then
+      #       echo "arch=amd64" >> $GITHUB_OUTPUT
+      #     elif [[ "$ARCH" == "aarch64" ]] || [[ "$ARCH" == "arm64" ]]; then
+      #       echo "arch=arm64" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "Unsupported architecture: $ARCH"
+      #       exit 1
+      #     fi
 
       # - name: Download Docker image
       #   uses: actions/download-artifact@v4
