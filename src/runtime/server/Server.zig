@@ -135,6 +135,13 @@ pub fn Server(comptime H: type) type {
             allocator.destroy(self);
         }
 
+        pub fn stop(self: *Self) void {
+            if (self._is_listening) {
+                self.server.stop();
+                self._is_listening = false;
+            }
+        }
+
         pub fn start(self: *Self) !void {
             if (self._is_listening) return;
             self._is_listening = true;

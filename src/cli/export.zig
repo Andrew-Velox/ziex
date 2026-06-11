@@ -70,7 +70,7 @@ fn @"export"(ctx: zli.CommandContext) !void {
     };
     defer util.freeBuildMeta(ctx.allocator, &app_meta);
 
-    const port = DevServer.findFreePort() catch app_meta.port() orelse 3000;
+    const port = DevServer.findFreePort(io) catch app_meta.port() orelse 3000;
     const port_str = try std.fmt.allocPrint(ctx.allocator, "{d}", .{port});
     defer ctx.allocator.free(port_str);
     const appoutdir = app_meta.rootdir orelse "";

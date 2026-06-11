@@ -323,8 +323,7 @@ pub fn Handler(comptime AppCtxType: type) type {
                     }
                 };
 
-                var buf: [512]u8 = undefined;
-                const msg = std.fmt.bufPrint(&buf, "{s}{s}{s}{s} {s}{s}{s} {s}{d}{s} {s}{d:.3}ms{s}\x1b[K", .{
+                const msg = std.fmt.allocPrint(req.arena, "{s}{s}{s}{s} {s}{s}{s} {s}{d}{s} {s}{d:.3}ms{s}\x1b[K", .{
                     StatusIndicator.get(cache_status, res.status),
                     c.method_c,
                     @tagName(req.method),

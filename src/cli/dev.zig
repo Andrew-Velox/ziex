@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const zli = @import("zli");
 const cli_options = @import("cli_options");
 const util = @import("shared/util.zig");
@@ -9,9 +10,18 @@ const tui = @import("../tui/main.zig");
 const Diagnostics = @import("dev/Diagnostics.zig");
 const DevServer = @import("dev/DevServer.zig");
 const Highlight = @import("dev/Highlight.zig");
+const sig = @import("../util/sig.zig");
 
 const Colors = tui.Colors;
 const log = std.log.scoped(.cli);
+
+var g_dev_shutting_down: bool = false;
+
+fn onDevShutdown() void {
+    if (g_dev_shutting_down) return;
+    g_dev_shutting_down = true;
+    std.debug.print("\n{s}Stopping dev server...{s}\n", .{ Colors.gray, Colors.reset });
+}
 
 pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.mem.Allocator) !*zli.Command {
     const cmd = try zli.Command.init(writer, reader, allocator, .{
@@ -60,12 +70,15 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 const BIN_DIR = "zig-out/bin";
 
 fn dev(ctx: zli.CommandContext) !void {
+    if (comptime builtin.mode == .Debug) sig.register(onDevShutdown);
+    defer if (comptime builtin.mode == .Debug) sig.unregister();
+
     const allocator = ctx.allocator;
     const binpath = ctx.flag("binpath", []const u8);
     const install_prefix = ctx.flag("install-prefix", []const u8);
     const port = ctx.flag("port", u32);
-    const port_str = try std.fmt.allocPrint(ctx.allocator, "{d}", .{port});
-    defer ctx.allocator.free(port_str);
+    const port_str = try std.fmt.allocPrint(allocator, "{d}", .{port});
+    defer allocator.free(port_str);
     const build_args_str = ctx.flag("build-args", []const u8);
     const use_spinner = ctx.flag("tui-spinner", bool);
     const clear_on_restart = ctx.flag("tui-clear", bool);
@@ -113,7 +126,7 @@ fn dev(ctx: zli.CommandContext) !void {
 
     // Spin up the dev proxy: it owns the user-facing port for the entire session
     const outer_port: u16 = if (port != 0) @intCast(port) else 3000;
-    const inner_port = DevServer.findFreePort() catch outer_port + 1;
+    const inner_port = DevServer.findFreePort(io) catch outer_port + 1;
     const inner_port_str = try std.fmt.allocPrint(allocator, "{d}", .{inner_port});
     defer allocator.free(inner_port_str);
     const outer_port_str = try std.fmt.allocPrint(allocator, "{d}", .{outer_port});
@@ -378,7 +391,7 @@ fn dev(ctx: zli.CommandContext) !void {
                         .stdout = .pipe,
                     });
 
-                    runner_output = try util.captureChildOutput(io, ctx.allocator, &runner.?, .{
+                    runner_output = try util.captureChildOutput(io, allocator, &runner.?, .{
                         .stderr = .{ .mode = .transparent, .target = .stderr },
                         .stdout = .{ .mode = .transparent, .target = .stdout },
                     });

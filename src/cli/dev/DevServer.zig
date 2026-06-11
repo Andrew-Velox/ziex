@@ -55,6 +55,10 @@ pub const Notification = struct {
         source: ?[]const u8 = null,
         source_html: ?[]const u8 = null,
     };
+
+    pub fn format(self: Notification, writer: *std.Io.Writer) !void {
+        try std.json.Stringify.value(self, .{ .emit_null_optional_fields = false }, writer);
+    }
 };
 
 const QueuedEvent = struct {
@@ -73,6 +77,8 @@ serve_thread: ?std.Thread,
 
 /// Incremented on each event. WebSocket threads block on this with Futex.
 update_id: std.atomic.Value(u32),
+shutting_down: std.atomic.Value(bool),
+active_workers: std.atomic.Value(u32),
 
 /// Bounded event queue so rapid transitions (building → reload) don't drop events.
 event_mutex: std.Io.Mutex,
@@ -101,17 +107,31 @@ pub fn init(opts: Options) DevServer {
         .tcp_server = null,
         .serve_thread = null,
         .update_id = .init(0),
+        .shutting_down = .init(false),
+        .active_workers = .init(0),
         .event_mutex = .init,
         .io = opts.io,
     };
 }
 
 pub fn deinit(ds: *DevServer) void {
+    ds.shutting_down.store(true, .release);
+    ds.update_id.store(std.math.maxInt(u32), .release);
+    ds.io.futexWake(u32, &ds.update_id.raw, std.math.maxInt(u32));
+
     if (ds.serve_thread) |t| {
-        if (ds.tcp_server) |*s| s.socket.close(ds.io);
+        if (ds.tcp_server) |*s| {
+            s.socket.close(ds.io);
+            ds.tcp_server = null;
+        }
         t.join();
     }
     if (ds.tcp_server) |*s| s.deinit(ds.io);
+
+    var spins: u32 = 0;
+    while (ds.active_workers.load(.acquire) != 0 and spins < 2000) : (spins += 1) {
+        std.Io.sleep(ds.io, .fromMilliseconds(1), .awake) catch {};
+    }
     // Drain any remaining queued events
     while (ds.event_tail != ds.event_head) {
         const idx = ds.event_tail % EVENT_QUEUE_CAP;
@@ -142,9 +162,11 @@ pub fn start(ds: *DevServer) error{AlreadyReported}!void {
 }
 
 /// Push a serialized notification onto the queue and wake WS threads.
-/// Thread-safe.
-fn pushEvent(ds: *DevServer, json: []u8) void {
-    const io = std.Io.Threaded.global_single_threaded.io();
+/// Takes its own owned copy of `json`; the caller keeps ownership of the
+/// passed-in slice. Thread-safe.
+fn pushEvent(ds: *DevServer, json: []const u8) void {
+    const owned = ds.gpa.dupe(u8, json) catch return;
+    const io = ds.io;
     ds.event_mutex.lockUncancelable(io);
     const idx = ds.event_head % EVENT_QUEUE_CAP;
     // If queue is full, drop oldest event
@@ -153,7 +175,7 @@ fn pushEvent(ds: *DevServer, json: []u8) void {
         ds.gpa.free(ds.event_queue[old_idx].json);
         ds.event_tail +%= 1;
     }
-    ds.event_queue[idx] = .{ .json = json };
+    ds.event_queue[idx] = .{ .json = owned };
     ds.event_head +%= 1;
     ds.event_mutex.unlock(io);
     _ = ds.update_id.rmw(.Add, 1, .release);
@@ -161,13 +183,15 @@ fn pushEvent(ds: *DevServer, json: []u8) void {
 }
 
 pub fn notify(ds: *DevServer, notification: Notification) void {
-    const json = serializeNotification(ds.gpa, notification) catch return;
+    const json = std.fmt.allocPrint(ds.gpa, "{f}", .{notification}) catch return;
+    defer ds.gpa.free(json);
+
     ds.updateStickyState(notification, json);
     ds.pushEvent(json);
 }
 
 fn updateStickyState(ds: *DevServer, notification: Notification, json: []const u8) void {
-    const io = std.Io.Threaded.global_single_threaded.io();
+    const io = ds.io;
     ds.event_mutex.lockUncancelable(io);
     defer ds.event_mutex.unlock(io);
 
@@ -187,8 +211,7 @@ fn updateStickyState(ds: *DevServer, notification: Notification, json: []const u
 }
 
 /// Find a free OS-assigned port by briefly binding to port 0.
-pub fn findFreePort() !u16 {
-    const io = std.Io.Threaded.global_single_threaded.io();
+pub fn findFreePort(io: std.Io) !u16 {
     var server = try (try std.Io.net.IpAddress.parse("127.0.0.1", 0)).listen(io, .{});
     defer server.deinit(io);
     return server.socket.address.getPort();
@@ -212,7 +235,10 @@ fn serve(ds: *DevServer) void {
     var retry_count: u8 = 0;
 
     while (true) {
-        const connection = ds.tcp_server.?.accept(ds.io) catch |err| {
+        if (ds.shutting_down.load(.acquire)) return;
+        const server = if (ds.tcp_server) |*s| s else return;
+        const connection = server.accept(ds.io) catch |err| {
+            if (ds.shutting_down.load(.acquire)) return;
             switch (err) {
                 error.Unexpected => {
                     retry_count += 1;
@@ -241,6 +267,8 @@ fn serve(ds: *DevServer) void {
 }
 
 fn handleConnection(ds: *DevServer, stream: std.Io.net.Stream) void {
+    _ = ds.active_workers.rmw(.Add, 1, .acq_rel);
+    defer _ = ds.active_workers.rmw(.Sub, 1, .acq_rel);
     defer stream.close(ds.io);
 
     // Connection accepted
@@ -275,7 +303,7 @@ fn handleConnection(ds: *DevServer, stream: std.Io.net.Stream) void {
                 var web_socket = request.respondWebSocket(.{ .key = key }) catch {
                     return log.err("failed to respond web socket", .{});
                 };
-                serveWebSocket(ds, &web_socket) catch |err| {
+                serveWebSocket(ds, &web_socket, stream) catch |err| {
                     log.debug("failed to serve websocket: {s}", .{@errorName(err)});
                     return;
                 };
@@ -353,11 +381,12 @@ fn serveRequest(ds: *DevServer, req: *http.Server.Request, client_stream: std.Io
     return error.AlreadyReported;
 }
 
-fn serveWebSocket(ds: *DevServer, sock: *http.Server.WebSocket) !noreturn {
+fn serveWebSocket(ds: *DevServer, sock: *http.Server.WebSocket, stream: std.Io.net.Stream) !noreturn {
     // Send initial connected message (also flushes the 101 handshake response).
     log.debug("ws: sending connected message", .{});
-    const connected = try serializeNotification(ds.gpa, .{ .type = .connected });
+    const connected = try std.fmt.allocPrint(ds.gpa, "{f}", .{Notification{ .type = .connected }});
     defer ds.gpa.free(connected);
+
     sock.writeMessage(connected, .text) catch |err| {
         log.err("ws: failed to send connected message: {s}", .{@errorName(err)});
         return err;
@@ -372,9 +401,10 @@ fn serveWebSocket(ds: *DevServer, sock: *http.Server.WebSocket) !noreturn {
         return err;
     };
     defer recv_thread.join();
+    defer stream.shutdown(ds.io, .recv) catch {};
     log.debug("ws: recv thread spawned, entering event loop", .{});
 
-    const io = std.Io.Threaded.global_single_threaded.io();
+    const io = ds.io;
     var sticky_snapshot: ?[]u8 = null;
     var last_id: u32 = 0;
     ds.event_mutex.lockUncancelable(io);
@@ -390,6 +420,7 @@ fn serveWebSocket(ds: *DevServer, sock: *http.Server.WebSocket) !noreturn {
     }
 
     while (true) {
+        if (ds.shutting_down.load(.acquire)) return error.ShuttingDown;
         const cur = ds.update_id.load(.acquire);
         if (cur == last_id) {
             // No pending event - wait up to 30 s then ping to keep the connection alive.
@@ -436,14 +467,6 @@ fn recvWebSocketFrames(sock: *http.Server.WebSocket) void {
         };
         log.debug("ws: received frame opcode={s} len={d}", .{ @tagName(msg.opcode), msg.data.len });
     }
-}
-
-fn serializeNotification(gpa: Allocator, notification: Notification) ![]u8 {
-    return std.fmt.allocPrint(gpa, "{f}", .{
-        std.json.fmt(notification, .{
-            .emit_null_optional_fields = false,
-        }),
-    });
 }
 
 /// Proxy a request to the inner app binary.
