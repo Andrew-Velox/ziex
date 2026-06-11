@@ -32,8 +32,7 @@ pub const VTable = struct {
 };
 
 pub const PutOptions = struct {
-    expiration: ?u64 = null,
-    expiration_ttl: ?u64 = null,
+    ttl: ?std.Io.Duration = null,
 };
 
 pub const KvError = error{

@@ -69,7 +69,7 @@ test "put/get/delete roundtrip" {
 
     defer cache.delete(key) catch {};
 
-    try cache.put(key, "cached value", .{ .expiration_ttl = 30 });
+    try cache.put(key, "cached value", .{ .ttl = .fromSeconds(30) });
 
     const found = (try cache.get(allocator, key)).?;
     defer allocator.free(found);
@@ -89,7 +89,7 @@ test "del reports whether key existed" {
 
     try std.testing.expect(!cache.del(key));
 
-    try cache.put(key, "delete me", .{ .expiration_ttl = 30 });
+    try cache.put(key, "delete me", .{ .ttl = .fromSeconds(30) });
     try std.testing.expect(cache.del(key));
     try std.testing.expect(!cache.del(key));
 }
@@ -161,9 +161,9 @@ test "list and delPrefix work for live entries" {
     defer _ = cache.delPrefix(prefix) catch 0;
     defer cache.delete(other_key) catch {};
 
-    try cache.put(key1, "value-a", .{ .expiration_ttl = 30 });
-    try cache.put(key2, "value-b", .{ .expiration_ttl = 30 });
-    try cache.put(other_key, "value-c", .{ .expiration_ttl = 30 });
+    try cache.put(key1, "value-a", .{ .ttl = .fromSeconds(30) });
+    try cache.put(key2, "value-b", .{ .ttl = .fromSeconds(30) });
+    try cache.put(other_key, "value-c", .{ .ttl = .fromSeconds(30) });
 
     const keys = try cache.list(allocator, prefix);
     defer {
@@ -199,8 +199,8 @@ test "scoped namespaces are isolated" {
     defer scoped.delete(key) catch {};
     defer cache.delete(key) catch {};
 
-    try scoped.put(key, "scoped-value", .{ .expiration_ttl = 30 });
-    try cache.put(key, "default-value", .{ .expiration_ttl = 30 });
+    try scoped.put(key, "scoped-value", .{ .ttl = .fromSeconds(30) });
+    try cache.put(key, "default-value", .{ .ttl = .fromSeconds(30) });
 
     const scoped_value = (try scoped.get(allocator, key)).?;
     defer allocator.free(scoped_value);
@@ -225,7 +225,7 @@ test "putAs/as roundtrip typed value" {
         .id = 42,
         .name = "nurul",
         .active = true,
-    }, .{ .expiration_ttl = 30 });
+    }, .{ .ttl = .fromSeconds(30) });
 
     const profile = (try cache.as(allocator, key, Profile)).?;
     defer freeProfile(profile);
@@ -248,7 +248,7 @@ test "as returns invalid type on schema mismatch" {
         .id = 7,
         .name = "mismatch",
         .active = false,
-    }, .{ .expiration_ttl = 30 });
+    }, .{ .ttl = .fromSeconds(30) });
 
     try std.testing.expectError(error.InvalidType, cache.as(allocator, key, ProfileAlias));
 }
@@ -270,7 +270,7 @@ test "scoped putAs/as roundtrip typed value" {
         .id = 99,
         .name = "scoped-user",
         .active = true,
-    }, .{ .expiration_ttl = 30 });
+    }, .{ .ttl = .fromSeconds(30) });
 
     const profile = (try scoped.as(allocator, key, Profile)).?;
     defer freeProfile(profile);
@@ -295,9 +295,8 @@ test "expired entries are filtered from get and list" {
 
     defer _ = cache.delPrefix(prefix) catch 0;
 
-    const now: u64 = @intCast(@divTrunc(std.Io.Clock.real.now(std.testing.io).nanoseconds, std.time.ns_per_s));
-    try cache.put(expired_key, "stale", .{ .expiration = now });
-    try cache.put(live_key, "fresh", .{ .expiration_ttl = 30 });
+    try cache.put(expired_key, "stale", .{ .ttl = .fromSeconds(0) });
+    try cache.put(live_key, "fresh", .{ .ttl = .fromSeconds(30) });
 
     try std.testing.expect((try cache.get(allocator, expired_key)) == null);
 
@@ -327,7 +326,7 @@ fn runConcurrentWorker(ctx: *WorkerContext) void {
             return;
         };
 
-        scoped.put(key, value, .{ .expiration_ttl = 60 }) catch |err| {
+        scoped.put(key, value, .{ .ttl = .fromSeconds(60) }) catch |err| {
             ctx.err = err;
             return;
         };

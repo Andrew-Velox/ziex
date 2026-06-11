@@ -285,17 +285,17 @@ fn now(io: std.Io) u64 {
 }
 
 fn expirationFromOptions(io: std.Io, opts: PutOptions) !?u64 {
-    if (opts.expiration) |expiration| return expiration;
-    if (opts.expiration_ttl) |ttl| {
-        return now(io) + ttl;
-    }
-    return null;
+    const ttl = opts.ttl orelse return null;
+    const secs = ttl.toSeconds();
+    if (secs <= 0) return now(io);
+    return now(io) + @as(u64, @intCast(secs));
 }
 
-fn ttlFromOptions(io: std.Io, opts: PutOptions) ?u32 {
-    if (opts.expiration_ttl) |ttl| return clampTtl(ttl);
-    if (opts.expiration) |expiration| return ttlFromExpiration(io, expiration);
-    return null;
+fn ttlFromOptions(_: std.Io, opts: PutOptions) ?u32 {
+    const ttl = opts.ttl orelse return null;
+    const secs = ttl.toSeconds();
+    if (secs <= 0) return 0;
+    return clampTtl(@as(u64, @intCast(secs)));
 }
 
 fn ttlFromExpiration(io: std.Io, expires_at: ?u64) ?u32 {

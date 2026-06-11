@@ -86,9 +86,8 @@ pub fn render(self: zx.Component, writer: *std.Io.Writer, options: RenderOptions
             // Check for component-level caching
             if (func.caching) |caching| {
                 const cmp_cache = zx.cache.scoped(.cmp);
-                const ttl_s: u64 = @intCast(caching.ttl.toSeconds());
 
-                if (ttl_s > 0) {
+                if (caching.ttl.nanoseconds > 0) {
                     // Generate cache key from function pointer + props pointer + optional custom key
                     var key_buf: [128]u8 = undefined;
                     const generated_key = key_blk: {
@@ -128,7 +127,7 @@ pub fn render(self: zx.Component, writer: *std.Io.Writer, options: RenderOptions
                     try render(component, &buf_writer.writer, options);
 
                     const rendered = buf_writer.written();
-                    cmp_cache.put(generated_key, rendered, .{ .expiration_ttl = ttl_s }) catch |err| switch (err) {
+                    cmp_cache.put(generated_key, rendered, .{ .ttl = caching.ttl }) catch |err| switch (err) {
                         error.CacheUnavailable => {},
                         else => return err,
                     };
