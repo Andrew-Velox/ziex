@@ -66,6 +66,16 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
 
     opts.cli_path = options.cli.path;
 
+    if (opts.cli_path == null) {
+        const build_zon = @import("../../build.zig.zon");
+        if (findZxInPath(b, build_zon.version)) |zx_path| {
+            // std.debug.print("ziex: using zx from system path: {s}\n", .{zx_path});
+            opts.cli_path = .{ .cwd_relative = zx_path };
+        } else {
+            // std.debug.print("ziex: building zx from source\n", .{});
+        }
+    }
+
     if (options.cli.steps) |cli_steps| {
         opts.steps = cli_steps;
     }
@@ -90,7 +100,7 @@ const InitInnerOptions = struct {
 
 fn getZxRun(b: *std.Build, zx_exe: *std.Build.Step.Compile, opts: InitInnerOptions) *std.Build.Step.Run {
     if (opts.cli_path) |cli_path| {
-        const run = b.addSystemCommand(&.{});
+        const run = std.Build.Step.Run.create(b, "run zx");
         run.addFileArg(cli_path);
         return run;
     }
@@ -232,6 +242,15 @@ fn genIntrospectRoot(
 
     const root_src = decls_wf.addCopyFile(gen_run.captureStdOut(.{}), "ziex_introspect.zig");
     return root_src;
+}
+
+fn findZxInPath(b: *std.Build, expected_version: []const u8) ?[]const u8 {
+    const zx_path = b.findProgram(&.{"zx"}, &.{}) catch return null;
+    var exit_code: u8 = undefined;
+    const stdout = b.runAllowFail(&.{ zx_path, "version" }, &exit_code, .ignore) catch return null;
+    const trimmed = std.mem.trim(u8, stdout, &std.ascii.whitespace);
+    if (!std.mem.eql(u8, trimmed, expected_version)) return null;
+    return zx_path;
 }
 
 pub fn initInner(
@@ -547,7 +566,7 @@ pub fn initInner(
             "zx",
             b.fmt("ZX CLI - \x1b[2m{s}\x1b[0m", .{"zig build zx -- <args>"}),
         );
-        const zx_cmd = b.addRunArtifact(zx_full_exe);
+        const zx_cmd = getZxRun(b, zx_full_exe, opts);
         zx_step.dependOn(&zx_cmd.step);
         if (b.args) |args| zx_cmd.addArgs(args);
     }
