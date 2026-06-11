@@ -78,7 +78,7 @@ fn main_wasm(init: std.process.Init) !void {
         const zx_source = try cwd.readFileAlloc(init.io, file_path, allocator, .unlimited);
         const zx_sourcez = try allocator.dupeSentinel(u8, zx_source, 0);
 
-        const ast = try zx.Ast.parse(allocator, zx_sourcez, .{});
+        const ast = try core_lang.Ast.parse(allocator, zx_sourcez, .{});
         const output = if (is_transpile) ast.zig_source else ast.zx_source;
         try std.Io.File.stdout().writeStreamingAll(init.io, output);
     }
@@ -87,7 +87,8 @@ fn main_wasm(init: std.process.Init) !void {
 const std = @import("std");
 const builtin = @import("builtin");
 const build_options = @import("build_options");
-const zx = @import("zx");
+const core_lang = @import("core_lang");
+const zx_info = @import("zx_info");
 const cli = @import("cli/root.zig");
 const tui = @import("tui/main.zig");
 const AppContext = @import("cli/shared/context.zig").AppContext;

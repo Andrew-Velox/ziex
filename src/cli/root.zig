@@ -1,8 +1,8 @@
 pub fn build(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.mem.Allocator) !*zli.Command {
     const root = try zli.Command.init(writer, reader, allocator, .{
         .name = "zx",
-        .description = zx.info.description,
-        .version = std.SemanticVersion.parse(zx.info.version) catch unreachable,
+        .description = zx_info.description,
+        .version = std.SemanticVersion.parse(zx_info.version) catch unreachable,
     }, showHelp);
 
     try root.addCommands(&.{
@@ -38,6 +38,6 @@ const bundle = @import("bundle.zig");
 const update = @import("update.zig");
 const upgrade = @import("upgrade.zig");
 
-const zx = @import("zx");
+const zx_info = @import("zx_info");
 const std = @import("std");
 const zli = @import("zli");

@@ -1,6 +1,5 @@
 const std = @import("std");
 const zli = @import("zli");
-const zx = @import("zx");
 const cli_options = @import("cli_options");
 const util = @import("shared/util.zig");
 const flag = @import("shared/flag.zig");

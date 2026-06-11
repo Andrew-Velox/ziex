@@ -2,7 +2,7 @@ const std = @import("std");
 const zli = @import("zli");
 const AppContext = @import("shared/context.zig").AppContext;
 const log = std.log.scoped(.cli);
-const zx = @import("zx");
+const core_lang = @import("core_lang");
 const tui = @import("../tui/main.zig");
 const colors = tui.Colors;
 const Builder = @import("dev/Builder.zig");
@@ -170,7 +170,7 @@ fn formatFromStdin(io: std.Io, allocator: std.mem.Allocator, writer: *std.Io.Wri
     const input = try buffer.toOwnedSliceSentinel(0);
     defer allocator.free(input);
 
-    var format_result = try zx.Ast.fmt(allocator, input);
+    var format_result = try core_lang.Ast.fmt(allocator, input);
     defer format_result.deinit(allocator);
 
     if (format_result.source == null) {
@@ -206,7 +206,7 @@ fn formatFile(
     const source_z = try allocator.dupeSentinel(u8, source, 0);
     defer allocator.free(source_z);
 
-    var format_result = try zx.Ast.fmt(allocator, source_z);
+    var format_result = try core_lang.Ast.fmt(allocator, source_z);
     defer format_result.deinit(allocator);
 
     if (format_result.source == null) {
@@ -274,7 +274,7 @@ fn formatDir(
         const source_z = try allocator.dupeSentinel(u8, source, 0);
         defer allocator.free(source_z);
 
-        var format_result = try zx.Ast.fmt(allocator, source_z);
+        var format_result = try core_lang.Ast.fmt(allocator, source_z);
         defer format_result.deinit(allocator);
 
         if (format_result.source == null) {

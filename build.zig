@@ -83,11 +83,6 @@ pub fn build(b: *std.Build) !void {
         mod.addAnonymousImport("zx_injections", .{ .root_source_file = b.path("src/build/stubs/injections.zig") });
     }
 
-    // --- ZX CLI Subset Module (only the parts of zx the CLI needs) --- //
-    const zx_cli_mod = b.createModule(.{ .root_source_file = b.path("src/root_cli.zig"), .target = target, .optimize = optimize });
-    zx_cli_mod.addImport("core_lang", zx_core_lang_mod);
-    zx_cli_mod.addOptions("zx_info", options);
-
     // --- ZX CLI (Transpiler, Exporter, Dev Server) --- //
     const zli_dep = b.dependency("zli", .{ .target = target, .optimize = optimize });
     const exe_rootmod_opts: std.Build.Module.CreateOptions = .{
@@ -96,7 +91,8 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "cli_options", .module = cli_options_dev.createModule() },
-            .{ .name = "zx", .module = zx_cli_mod },
+            .{ .name = "core_lang", .module = zx_core_lang_mod },
+            .{ .name = "zx_info", .module = options.createModule() },
             .{ .name = "zli", .module = zli_dep.module("zli") },
             .{ .name = "tree_sitter", .module = tree_sitter_dep.module("tree_sitter") },
             .{ .name = "tree_sitter_zx", .module = tree_sitter_zx_dep.module("tree_sitter_zx") },
@@ -273,11 +269,6 @@ pub fn build(b: *std.Build) !void {
             release_core_lang_mod.addImport("tree_sitter_zx", release_tree_sitter_zx_dep.module("tree_sitter_zx"));
             release_core_lang_mod.addImport("tree_sitter_mdzx", release_tree_sitter_mdzx_dep.module("tree_sitter_mdzx"));
 
-            // CLI subset of zx (see src/root_cli.zig)
-            const release_zx_cli_mod = b.createModule(.{ .root_source_file = b.path("src/root_cli.zig"), .target = resolved_target, .optimize = .ReleaseSafe });
-            release_zx_cli_mod.addImport("core_lang", release_core_lang_mod);
-            release_zx_cli_mod.addOptions("zx_info", options);
-
             const release_exe = b.addExecutable(.{
                 .name = "zx",
                 .root_module = b.createModule(.{
@@ -286,7 +277,8 @@ pub fn build(b: *std.Build) !void {
                     .optimize = .ReleaseSafe,
                     .imports = &.{
                         .{ .name = "cli_options", .module = cli_options_rel.createModule() },
-                        .{ .name = "zx", .module = release_zx_cli_mod },
+                        .{ .name = "core_lang", .module = release_core_lang_mod },
+                        .{ .name = "zx_info", .module = options.createModule() },
                         .{ .name = "zli", .module = zli_dep.module("zli") },
                         .{ .name = "tree_sitter", .module = release_tree_sitter_dep.module("tree_sitter") },
                         .{ .name = "tree_sitter_zx", .module = release_tree_sitter_zx_dep.module("tree_sitter_zx") },

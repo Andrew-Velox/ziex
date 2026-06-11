@@ -90,6 +90,5 @@ const zli = @import("zli");
 const util = @import("shared/util.zig");
 const flag = @import("shared/flag.zig");
 const AppContext = @import("shared/context.zig").AppContext;
-const zx = @import("zx");
 const tui = @import("../tui/main.zig");
 const log = std.log.scoped(.cli);

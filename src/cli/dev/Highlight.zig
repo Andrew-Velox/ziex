@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const ts = @import("tree_sitter");
 const ts_zx = @import("tree_sitter_zx");
-const zx = @import("zx");
+const platform_mod = @import("../../platform.zig");
 
 const hl_query = @embedFile("highlights.scm");
 
@@ -41,7 +41,7 @@ const HighlightCache = struct {
 };
 
 pub fn highlightZx(allocator: std.mem.Allocator, source: []const u8) ![]u8 {
-    if (zx.platform.role == .client) return try allocator.dupe(u8, source);
+    if (platform_mod.platform.role == .client) return try allocator.dupe(u8, source);
 
     const io = std.Io.Threaded.global_single_threaded.io();
     const cache = try HighlightCache.getOrInit(std.heap.page_allocator);

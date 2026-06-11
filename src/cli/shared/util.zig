@@ -231,7 +231,6 @@ pub const ChildOutput = stdio.ChildOutput;
 pub const captureChildOutput = stdio.captureChildOutput;
 
 const std = @import("std");
-const zx = @import("zx");
 const builtin = @import("builtin");
 const tui = @import("../../tui/main.zig");
 const log = std.log.scoped(.cli);

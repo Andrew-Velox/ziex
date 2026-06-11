@@ -26,7 +26,7 @@ fn update(ctx: zli.CommandContext) !void {
     };
     defer ctx.allocator.free(ref);
 
-    const fetch_uri = try std.fmt.allocPrint(ctx.allocator, "git+{s}{s}", .{ zx.info.repository, ref });
+    const fetch_uri = try std.fmt.allocPrint(ctx.allocator, "git+{s}{s}", .{ zx_info.repository, ref });
     defer ctx.allocator.free(fetch_uri);
 
     var system = try std.process.spawn(app.io, .{ .argv = &.{ cli_options.zig_exe, "fetch", "--save", fetch_uri } });
@@ -51,7 +51,7 @@ fn fetchLatestReleaseTag(
     } else null;
     defer if (auth_header) |h| allocator.free(h.value);
 
-    const slug = std.mem.trimEnd(u8, zx.info.repository, "/");
+    const slug = std.mem.trimEnd(u8, zx_info.repository, "/");
     const owner_repo = if (std.mem.lastIndexOfScalar(u8, slug, '/')) |i|
         if (std.mem.lastIndexOfScalar(u8, slug[0..i], '/')) |j| slug[j + 1 ..] else slug
     else
@@ -111,5 +111,5 @@ const dev_flag = zli.Flag{
 const std = @import("std");
 const zli = @import("zli");
 const AppContext = @import("shared/context.zig").AppContext;
-const zx = @import("zx");
+const zx_info = @import("zx_info");
 const cli_options = @import("cli_options");

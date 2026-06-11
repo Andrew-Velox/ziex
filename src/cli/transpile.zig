@@ -1,6 +1,6 @@
 const std = @import("std");
 const zli = @import("zli");
-const zx = @import("zx");
+const core_lang = @import("core_lang");
 const log = std.log.scoped(.cli);
 const util = @import("shared/util.zig");
 const flags = @import("shared/flag.zig");
@@ -105,7 +105,7 @@ fn transpile(ctx: zli.CommandContext) !void {
     const cache_dir: ?[]const u8 = if (cache_dir_str.len > 0) cache_dir_str else null;
     const base_path_str = ctx.flag("base-path", []const u8);
     const base_path: ?[]const u8 = if (base_path_str.len > 0) base_path_str else null;
-    const map: zx.Ast.ParseOptions.MapMode = if (std.mem.eql(u8, sourcemap_str, "inline"))
+    const map: core_lang.Ast.ParseOptions.MapMode = if (std.mem.eql(u8, sourcemap_str, "inline"))
         .inlined
     else if (std.mem.eql(u8, sourcemap_str, "none"))
         .none
@@ -175,7 +175,7 @@ fn transpile(ctx: zli.CommandContext) !void {
                 defer ctx.allocator.free(source_z);
 
                 // Parse and transpile
-                var result = try zx.Ast.parse(ctx.allocator, source_z, .{ .path = path, .map = map });
+                var result = try core_lang.Ast.parse(ctx.allocator, source_z, .{ .path = path, .map = map });
                 defer result.deinit(ctx.allocator);
 
                 // Output to stdout
@@ -656,7 +656,7 @@ fn copyDirectory(
 }
 
 // ---- Client Component Handling ---- //
-const ClientComponentSerializable = struct { type: zx.Ast.ClientComponentMetadata.Type, id: []const u8, name: []const u8, path: []const u8, import: []const u8, route: []const u8 };
+const ClientComponentSerializable = struct { type: core_lang.Ast.ClientComponentMetadata.Type, id: []const u8, name: []const u8, path: []const u8, import: []const u8, route: []const u8 };
 fn genClientComponents(allocator: std.mem.Allocator, components: []const ClientComponentSerializable, output_dir: []const u8, verbose: bool) !void {
     _ = verbose;
     // Generate Zig array literal contents (without outer array declaration)
@@ -1319,7 +1319,7 @@ fn transpileFile(
     }
     defer if (rel_path_allocated) allocator.free(relative_source_path);
 
-    var result = try zx.Ast.parse(allocator, source_z, .{
+    var result = try core_lang.Ast.parse(allocator, source_z, .{
         .path = relative_source_path,
         .map = opts.map,
         .lang = if (std.mem.endsWith(u8, source_path, ".mdzx")) .mdzx else .zx,
@@ -1665,7 +1665,7 @@ const TranspileOptions = struct {
     path: []const u8,
     outdir: []const u8,
     verbose: bool,
-    map: zx.Ast.ParseOptions.MapMode = .none,
+    map: core_lang.Ast.ParseOptions.MapMode = .none,
     copy_embedded_sources: bool = false,
     rootdir: ?[]const u8 = null,
     dep_file: ?[]const u8 = null,

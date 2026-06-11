@@ -105,7 +105,7 @@ fn @"export"(ctx: zli.CommandContext) !void {
     log.debug("Building static ZX site! binpath={s} rootdir={s}", .{ app_meta.binpath.?, appoutdir });
     log.debug("Port: {d}, Outdir: {s}", .{ port, appoutdir });
 
-    const routes_owned = try ctx.allocator.alloc(zx.server.SerilizableAppMeta.Route, app_meta.routes.len);
+    const routes_owned = try ctx.allocator.alloc(Server.SerilizableAppMeta.Route, app_meta.routes.len);
     defer ctx.allocator.free(routes_owned);
     for (app_meta.routes, 0..) |r, i| {
         routes_owned[i] = .{
@@ -134,7 +134,7 @@ fn @"export"(ctx: zli.CommandContext) !void {
 
                 if (static_params.items.len > 0) {
                     for (static_params.items) |expanded_path| {
-                        const expanded_route = zx.server.SerilizableAppMeta.Route{
+                        const expanded_route = Server.SerilizableAppMeta.Route{
                             .path = expanded_path,
                             .kind = route.kind,
                             .methods = route.methods,
@@ -218,7 +218,7 @@ fn processRoute(
     allocator: std.mem.Allocator,
     host: []const u8,
     port: u16,
-    route: zx.server.SerilizableAppMeta.Route,
+    route: Server.SerilizableAppMeta.Route,
     outdir: []const u8,
     printer: *tui.Printer,
     export_type: ExportType,
@@ -361,7 +361,7 @@ fn fetchStaticParams(io: std.Io, allocator: std.mem.Allocator, host: []const u8,
     const response_z = try allocator.dupeSentinel(u8, response, 0);
     defer allocator.free(response_z);
 
-    const parsed = std.zon.parse.fromSliceAlloc([]const []const zx.StaticParam, allocator, response_z, null, .{}) catch |err| {
+    const parsed = std.zon.parse.fromSliceAlloc([]const []const options_mod.StaticParam, allocator, response_z, null, .{}) catch |err| {
         log.warn("Failed to parse static params ZON: {any}", .{err});
         return .{ .items = &.{}, .allocator = null };
     };
@@ -392,7 +392,7 @@ fn fetchStaticParams(io: std.Io, allocator: std.mem.Allocator, host: []const u8,
 }
 
 /// Replace :param placeholders in a route path with actual values
-fn expandDynamicPath(allocator: std.mem.Allocator, route_path: []const u8, params: []const zx.StaticParam) ![]const u8 {
+fn expandDynamicPath(allocator: std.mem.Allocator, route_path: []const u8, params: []const options_mod.StaticParam) ![]const u8 {
     var result = try allocator.dupe(u8, route_path);
 
     for (params) |param| {
@@ -419,7 +419,8 @@ const cli_options = @import("cli_options");
 const util = @import("shared/util.zig");
 const flag = @import("shared/flag.zig");
 const AppContext = @import("shared/context.zig").AppContext;
-const zx = @import("zx");
+const Server = @import("../runtime/server/Server.zig");
+const options_mod = @import("../options.zig");
 const DevServer = @import("dev/DevServer.zig");
 const tui = @import("../tui/main.zig");
 const log = std.log.scoped(.cli);
