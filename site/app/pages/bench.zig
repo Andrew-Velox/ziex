@@ -2,10 +2,11 @@
 //! CI run (or a specific run) and regenerates bench.zon from it.
 //!
 //! Usage (from the repo root):
-//!   zig run site/app/pages/bench.zig            # latest successful run
-//!   zig run site/app/pages/bench.zig -- <run-id> # specific run
+//!   zig run site/app/pages/bench.zig                    # latest successful run
+//!   zig run site/app/pages/bench.zig -- <run-id>        # specific run
+//!   zig run site/app/pages/bench.zig -- --csv <path>    # local CSV file
 //!
-//! Requires the GitHub CLI (`gh`) to be installed and authenticated.
+//! Requires the GitHub CLI (`gh`) to be installed and authenticated (except --csv mode).
 
 const std = @import("std");
 
@@ -25,16 +26,36 @@ pub fn main(init: std.process.Init) !void {
 
     var args = try std.process.Args.Iterator.initAllocator(init.minimal.args, arena);
     _ = args.skip(); // program name
-    const requested_run_id = args.next();
+    const first_arg = args.next();
 
-    const run_info = if (requested_run_id) |id|
-        try runById(arena, io, id)
-    else
-        try latestRun(arena, io);
-    std.log.info("benchmark run: {s} ({s})", .{ run_info.url, run_info.date });
+    const zon = zon: {
+        if (first_arg != null and std.mem.eql(u8, first_arg.?, "--csv")) {
+            const csv_path = args.next() orelse {
+                std.log.err("--csv requires a path argument", .{});
+                return error.MissingArgument;
+            };
+            const csv = std.Io.Dir.cwd().readFileAlloc(io, csv_path, arena, .limited(1 << 20)) catch |err| {
+                std.log.err("failed to read {s}: {t}", .{ csv_path, err });
+                return err;
+            };
+            const run_info = RunInfo{
+                .id = "",
+                .url = "",
+                .date = "",
+                .commit = "",
+            };
+            break :zon try csvToZon(arena, csv, run_info);
+        }
 
-    const csv = try downloadResults(arena, io, run_info);
-    const zon = try csvToZon(arena, csv, run_info);
+        const run_info = if (first_arg) |id|
+            try runById(arena, io, id)
+        else
+            try latestRun(arena, io);
+        std.log.info("benchmark run: {s} ({s})", .{ run_info.url, run_info.date });
+
+        const csv = try downloadResults(arena, io, run_info);
+        break :zon try csvToZon(arena, csv, run_info);
+    };
 
     std.Io.Dir.cwd().writeFile(io, .{ .sub_path = zon_path, .data = zon }) catch |err| {
         std.log.err("failed to write {s}: {t} (run this from the repo root)", .{ zon_path, err });
