@@ -9,13 +9,13 @@ const features = [_]Feature{
     .{ .icon_fn = icons.Monitor, .title = "Hybrid Rendering", .description = "Optional client-side rendering for interactive experiences when you need it. SSR by default." },
     .{ .icon_fn = icons.Flow, .title = "Control Flow", .description = "if/else, for/while, and switch all work as expected. It's just Zig syntax." },
     .{ .icon_fn = icons.Wrench, .title = "Developer Tooling", .description = "CLI, hot reload, and editor extensions for the best development experience." },
-    .{ .icon_fn = icons.Rocket, .title = "Deploy Anywhere", .description = "Standalone binaries, Cloudflare, Vercel (soon), or any WASI-compatible host. Build once, run anywhere." },
+    .{ .icon_fn = icons.Rocket, .title = "Deploy Anywhere", .description = "Standalone binaries, Cloudflare, Vercel, or any edge runtime host. Build once, run anywhere." },
     .{ .icon_fn = icons.Layers, .title = "Predictable Memory", .description = "Explicit memory management. No GC pauses, no hidden allocations. Total control over your app's footprint." },
  };
 
 const deployments = [_]Deployment{
     .{ .icon_fn = icons.Terminal, .title = "Standalone", .description = "Deploy as a self-contained binary on Linux, macOS, or Windows. Statically linked with zero runtime dependencies." },
-    .{ .icon_fn = icons.Globe, .title = "Edge Anywhere", .description = "Deploy to the edge via WASI. Native support for Cloudflare and Vercel (soon)." },
+    .{ .icon_fn = icons.Globe, .title = "Edge Anywhere", .description = "Deploy to the edge via WASI. Native support for Cloudflare and Vercel." },
     .{ .icon_fn = icons.Layers, .title = "Static", .description = "Generate a statically pre-rendered site at build time. Deploy to GitHub Pages, Netlify, S3, or any CDN." },
     .{ .icon_fn = icons.Package, .title = "Cross-Platform", .description = "Build for any target from any host. Easily cross-compile optimized binaries for x86_64, aarch64, and more." },
 };
@@ -29,7 +29,9 @@ const benchmark_cwv_rows = [_]BenchmarkRow{
 
 // Import benchmark data from auto-generated file
 const bench_data = @import("bench.zon");
-const bench_len = @typeInfo(@TypeOf(bench_data)).@"struct".fields.len;
+const bench_run = bench_data.run;
+const bench_results = bench_data.results;
+const bench_len = @typeInfo(@TypeOf(bench_results)).@"struct".fields.len;
 
 // Helper function to format large numbers (e.g., 25153 -> "25k")
 fn formatLargeNumber(n: f64) []const u8 {
@@ -127,9 +129,9 @@ fn sortRows(rows: []BenchmarkRow, comptime lower_is_better: bool) void {
 fn buildSsrRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_data)).@"struct".fields;
+    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
     inline for (fields, 0..) |field, i| {
-        const d = @field(bench_data, field.name);
+        const d = @field(bench_results, field.name);
         rows[i] = .{
             .label = d.label,
             .value = d.requests_per_sec,
@@ -150,9 +152,9 @@ fn buildSsrRows() [bench_len]BenchmarkRow {
 fn buildMemoryRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_data)).@"struct".fields;
+    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
     inline for (fields, 0..) |field, i| {
-        const d = @field(bench_data, field.name);
+        const d = @field(bench_results, field.name);
         rows[i] = .{
             .label = d.label,
             .value = d.peak_memory_mb,
@@ -172,9 +174,9 @@ fn buildMemoryRows() [bench_len]BenchmarkRow {
 fn buildBuildTimeRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_data)).@"struct".fields;
+    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
     inline for (fields, 0..) |field, i| {
-        const d = @field(bench_data, field.name);
+        const d = @field(bench_results, field.name);
         rows[i] = .{
             .label = d.label,
             .value = d.build_time_s,
@@ -193,9 +195,9 @@ fn buildBuildTimeRows() [bench_len]BenchmarkRow {
 fn buildColdStartRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_data)).@"struct".fields;
+    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
     inline for (fields, 0..) |field, i| {
-        const d = @field(bench_data, field.name);
+        const d = @field(bench_results, field.name);
         rows[i] = .{
             .label = d.label,
             .value = d.cold_start_ms,
@@ -215,9 +217,9 @@ fn buildColdStartRows() [bench_len]BenchmarkRow {
 fn buildImageSizeRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_data)).@"struct".fields;
+    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
     inline for (fields, 0..) |field, i| {
-        const d = @field(bench_data, field.name);
+        const d = @field(bench_results, field.name);
         rows[i] = .{
             .label = d.label,
             .value = d.image_mb,
@@ -237,9 +239,9 @@ fn buildImageSizeRows() [bench_len]BenchmarkRow {
 fn buildCpuUsageRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_data)).@"struct".fields;
+    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
     inline for (fields, 0..) |field, i| {
-        const d = @field(bench_data, field.name);
+        const d = @field(bench_results, field.name);
         rows[i] = .{
             .label = d.label,
             .value = d.cpu_avg_pct,
@@ -445,7 +447,7 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
                         {for (features) |f| (<FeatureCard icon_fn={f.icon_fn} title={f.title} description={f.description} />)}
                     </div>
                 </section>
-                <BenchmarksSection eyebrow="" title="Performance" subtitle=`<a href='{zx.info.repository}/tree/main/bench' target='_blank' class='bench-label-link'>View benchmark →</a> <br/> Each framework runs in a Docker container limited to 2 CPU cores and 2 GB RAM.` tabs={benchmark_tabs[0..]} />
+                <BenchmarksSection eyebrow="" title="Performance" subtitle=`<a href='{zx.info.repository}/tree/main/bench' target='_blank' class='bench-label-link'>View benchmark →</a> <br/> Each framework runs in a Docker container limited to 2 CPU cores and 2 GB RAM.` tabs={benchmark_tabs[0..]} run_url={bench_run.url} run_date={bench_run.date} />
                 // <ArchitectureSection allocator={allocator} />
                 <DeploymentSection allocator={allocator} />
                 // <TestingSection allocator={allocator} />
@@ -542,6 +544,8 @@ const BenchmarksSectionProps = struct {
     title: []const u8,
     subtitle: []const u8,
     tabs: []const BenchmarkTab,
+    run_url: []const u8 = "",
+    run_date: []const u8 = "",
 };
 
 fn buildBenchTabStyles(allocator: zx.Allocator, container_id: []const u8, tabs: []const BenchmarkTab) []const u8 {
@@ -648,6 +652,12 @@ fn BenchmarksSection(allocator: zx.Allocator, props: BenchmarksSectionProps) zx.
                 <div class="benchmarks-panels">
                     {for (props.tabs) |tab| (BenchmarksPanel(allocator, tab))}
                 </div>
+                {if (props.run_url.len > 0) (
+                    <div class="benchmarks-run-meta">
+                        <span class="benchmarks-run-date">Last benchmarked on {props.run_date}</span>
+                        <a href={props.run_url} target="_blank" rel="noopener noreferrer" class="benchmarks-run-link">View CI run →</a>
+                    </div>
+                )}
             </div>
         </section>
     );

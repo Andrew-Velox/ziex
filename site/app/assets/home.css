@@ -2705,6 +2705,29 @@ a.hero-badge:hover {
     color: rgba(255, 255, 255, 0.5);
 }
 
+.benchmarks-run-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.benchmarks-run-link {
+    color: #4ade80;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.benchmarks-run-link:hover {
+    text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 1100px) {
     .hero-inner {

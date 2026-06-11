@@ -2,7 +2,13 @@ name: "ziex_bench"
 
 services:
   nextjs:
-    build: ./nextjs
+    image: ziex_bench-nextjs
+    build:
+      context: ./nextjs
+      cache_from:
+        - type=gha,scope=nextjs
+      cache_to:
+        - type=gha,mode=max,scope=nextjs
     environment:
       - NODE_ENV=production
     healthcheck:
@@ -21,7 +27,13 @@ services:
       - bench-net
 
   solidjs:
-    build: ./solidjs
+    image: ziex_bench-solidjs
+    build:
+      context: ./solidjs
+      cache_from:
+        - type=gha,scope=solidjs
+      cache_to:
+        - type=gha,mode=max,scope=solidjs
     environment:
       - NODE_ENV=production
     healthcheck:
@@ -40,7 +52,13 @@ services:
       - bench-net
 
   leptos:
-    build: ./leptos
+    image: ziex_bench-leptos
+    build:
+      context: ./leptos
+      cache_from:
+        - type=gha,scope=leptos
+      cache_to:
+        - type=gha,mode=max,scope=leptos
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ssr"]
       interval: 1s
@@ -57,7 +75,13 @@ services:
       - bench-net
 
   dioxus:
-    build: ./dioxus
+    image: ziex_bench-dioxus
+    build:
+      context: ./dioxus
+      cache_from:
+        - type=gha,scope=dioxus
+      cache_to:
+        - type=gha,mode=max,scope=dioxus
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ssr"]
       interval: 1s
@@ -74,9 +98,14 @@ services:
       - bench-net
 
   ziex:
+    image: ziex_bench-ziex
     build:
       context: ../
       dockerfile: bench/ziex/Dockerfile
+      cache_from:
+        - type=gha,scope=ziex
+      cache_to:
+        - type=gha,mode=max,scope=ziex
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ssr"]
       interval: 1s
@@ -93,7 +122,13 @@ services:
       - bench-net
 
   jetzig:
-    build: ./jetzig
+    image: ziex_bench-jetzig
+    build:
+      context: ./jetzig
+      cache_from:
+        - type=gha,scope=jetzig
+      cache_to:
+        - type=gha,mode=max,scope=jetzig
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ssr"]
       interval: 1s
@@ -110,9 +145,14 @@ services:
       - bench-net
 
   bench:
+    image: ziex_bench-bench
     build:
       context: .
       dockerfile: Dockerfile.bench
+      cache_from:
+        - type=gha,scope=bench
+      cache_to:
+        - type=gha,mode=max,scope=bench
     # depends_on removed to allow selective startup
     cpuset: "2,3"
     networks:
