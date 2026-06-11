@@ -33,13 +33,76 @@ jobs:
             echo "list=nextjs solidjs leptos dioxus jetzig ziex" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build images in parallel
-        working-directory: bench
-        run: |
-          docker buildx bake --file compose.yml --load ${{ steps.frameworks.outputs.list }} bench
-        env:
-          ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
-          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+      - name: Build nextjs
+        if: contains(steps.frameworks.outputs.list, 'nextjs')
+        uses: docker/build-push-action@v6
+        with:
+          context: bench/nextjs
+          load: true
+          tags: ziex_bench-nextjs:latest
+          cache-from: type=gha,scope=nextjs
+          cache-to: type=gha,mode=max,scope=nextjs
+
+      - name: Build solidjs
+        if: contains(steps.frameworks.outputs.list, 'solidjs')
+        uses: docker/build-push-action@v6
+        with:
+          context: bench/solidjs
+          load: true
+          tags: ziex_bench-solidjs:latest
+          cache-from: type=gha,scope=solidjs
+          cache-to: type=gha,mode=max,scope=solidjs
+
+      - name: Build leptos
+        if: contains(steps.frameworks.outputs.list, 'leptos')
+        uses: docker/build-push-action@v6
+        with:
+          context: bench/leptos
+          load: true
+          tags: ziex_bench-leptos:latest
+          cache-from: type=gha,scope=leptos
+          cache-to: type=gha,mode=max,scope=leptos
+
+      - name: Build dioxus
+        if: contains(steps.frameworks.outputs.list, 'dioxus')
+        uses: docker/build-push-action@v6
+        with:
+          context: bench/dioxus
+          load: true
+          tags: ziex_bench-dioxus:latest
+          cache-from: type=gha,scope=dioxus
+          cache-to: type=gha,mode=max,scope=dioxus
+
+      - name: Build ziex
+        if: contains(steps.frameworks.outputs.list, 'ziex')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: bench/ziex/Dockerfile
+          load: true
+          tags: ziex_bench-ziex:latest
+          cache-from: type=gha,scope=ziex
+          cache-to: type=gha,mode=max,scope=ziex
+
+      - name: Build jetzig
+        if: contains(steps.frameworks.outputs.list, 'jetzig')
+        uses: docker/build-push-action@v6
+        with:
+          context: bench/jetzig
+          load: true
+          tags: ziex_bench-jetzig:latest
+          cache-from: type=gha,scope=jetzig
+          cache-to: type=gha,mode=max,scope=jetzig
+
+      - name: Build bench
+        uses: docker/build-push-action@v6
+        with:
+          context: bench
+          file: bench/Dockerfile.bench
+          load: true
+          tags: ziex_bench-bench:latest
+          cache-from: type=gha,scope=bench
+          cache-to: type=gha,mode=max,scope=bench
 
       - name: Run benchmark script
         id: bench
