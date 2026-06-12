@@ -78,6 +78,9 @@ fn @"export"(ctx: zli.CommandContext) !void {
 
     const environ_map = app.environ_map;
     try environ_map.put("ZIEX_INNER_PORT", port_str);
+    if (environ_map.get("ZIEX_ROOT_DIR") == null and appoutdir.len > 0) {
+        try environ_map.put("ZIEX_ROOT_DIR", appoutdir);
+    }
 
     var app_child = try std.process.spawn(io, .{
         .argv = &.{ app_meta.binpath.?, "--cli-command", "export" },
