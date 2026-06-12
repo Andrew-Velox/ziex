@@ -1,7 +1,7 @@
 .{
-    .name = .zx_site,
+    .name = .ziex_app,
     .version = "0.0.0",
-    .fingerprint = 0xc04151551dc3c31d,
+    .fingerprint = 0x7246d8c92873dff5,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .ziex = .{ .path = "../../" },

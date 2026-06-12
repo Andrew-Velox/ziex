@@ -99,10 +99,10 @@ get_binary_size_mb() {
   local fw="$2"
   local bin_path
   case "$fw" in
-    ziex)    bin_path="/app/zx_bench_client" ;;
+    ziex)    bin_path="/app/ziex_app" ;;
     jetzig)  bin_path="/app/jetzig-demo" ;;
     leptos)  bin_path="/app/leptos-ssr" ;;
-    dioxus)  bin_path="/app/bench_dioxus" ;;
+    dioxus)  bin_path="/app/server" ;;
     *)       echo "0"; return ;;
   esac
   local bytes

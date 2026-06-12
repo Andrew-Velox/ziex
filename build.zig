@@ -77,10 +77,6 @@ pub fn build(b: *std.Build) !void {
         mod.addOptions("zx_info", options);
         mod.addOptions("zx_options", zx_runtime_options);
         mod.addOptions("zx_module_options", zx_module_options);
-
-        // Stubs
-        // mod.addAnonymousImport("zx_meta", .{ .root_source_file = stub_meta_path, .imports = &.{.{ .name = "zx", .module = mod }} });
-        // mod.addAnonymousImport("zx_injections", .{ .root_source_file = stub_injections_path });
     }
 
     // --- ZX CLI (Transpiler, Exporter, Dev Server) --- //

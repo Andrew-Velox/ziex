@@ -469,7 +469,7 @@ pub fn initInner(
         const introspect_root = b.createModule(.{
             .root_source_file = introspect_src,
             .target = target,
-            .optimize = .Debug, // Always Debug to make build faster
+            .optimize = optimize,
         });
         introspect_root.addImport("zx", site_zx_module);
         introspect_root.addImport("app", app_module);

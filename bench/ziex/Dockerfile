@@ -26,7 +26,7 @@ RUN cd bench/ziex &&  zig build zx -- version
 
 # App
 COPY ./bench/ziex/app ./bench/ziex/app
-RUN cd bench/ziex && zig build -Doptimize=ReleaseFast
+RUN cd bench/ziex && zig build --release=fast
 RUN cd bench/ziex &&  zig build zx -- bundle
 
 # Run app
@@ -36,4 +36,4 @@ WORKDIR /app
 RUN apk add --no-cache curl
 COPY --from=build /build/bench/ziex/bundle /app
 
-ENTRYPOINT ["/app/zx_bench_client"]
+ENTRYPOINT ["/app/ziex_app"]
