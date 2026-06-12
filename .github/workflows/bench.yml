@@ -59,6 +59,8 @@ jobs:
       - name: Build ${{ matrix.framework }}
         if: steps.check.outputs.skip == 'false'
         uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
