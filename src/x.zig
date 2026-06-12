@@ -44,7 +44,7 @@ const Options = struct {
 /// Initialize a Context without an allocator
 /// The allocator must be provided via @allocator attribute on the parent element
 pub fn init() Context {
-    return .{ .allocator = std.heap.page_allocator };
+    return .{ .allocator = .failing };
 }
 
 /// Initialize a Context with an allocator (for backward compatibility with direct API usage)

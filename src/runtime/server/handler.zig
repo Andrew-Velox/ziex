@@ -376,7 +376,7 @@ pub fn Handler(comptime AppCtxType: type) type {
             else
                 null;
 
-            if (core_handler.renderNotFound(path, abstract_req, abstract_res, self.allocator, matched_route)) |cmp| {
+            if (core_handler.renderNotFound(path, abstract_req, abstract_res, req.arena, matched_route)) |cmp| {
                 var component = cmp;
 
                 // Dev mode: inject dev script
@@ -409,7 +409,7 @@ pub fn Handler(comptime AppCtxType: type) type {
             const abstract_res = httpz_adapter.createResponse(res, req.arena);
 
             // Delegate to core handler for error rendering
-            if (core_handler.renderError(path, abstract_req, abstract_res, self.allocator, err)) |cmp| {
+            if (core_handler.renderError(path, abstract_req, abstract_res, req.arena, err)) |cmp| {
                 var component = cmp;
 
                 // Dev mode: inject dev script

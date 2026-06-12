@@ -63,21 +63,22 @@ const BIN_DIR = "zig-out/bin";
 
 var runner: ?std.process.Child = null;
 var builder: ?std.process.Child = null;
-var gio: std.Io = undefined;
 var g_dev_shutting_down: bool = false;
 
 fn onDevShutdown() void {
     if (g_dev_shutting_down) return;
     g_dev_shutting_down = true;
-    // if (runner) |*r| r.kill(gio);
-    // if (builder) |*b| b.kill(gio);
     std.debug.print("\n{s}Stopping dev server...{s}\n", .{ Colors.gray, Colors.reset });
+    if (comptime builtin.os.tag != .windows) {
+        if (runner) |r| if (r.id) |pid| std.posix.kill(pid, std.posix.SIG.KILL) catch {};
+        if (builder) |b| if (b.id) |pid| std.posix.kill(pid, std.posix.SIG.KILL) catch {};
+    }
+    std.c._exit(0);
 }
 
 fn dev(ctx: zli.CommandContext) !void {
     const app = AppContext.from(&ctx);
-    gio = app.io;
-    const io = gio;
+    const io = app.io;
     const env_map = app.environ_map;
 
     if (comptime builtin.mode == .Debug) sig.register(onDevShutdown);
