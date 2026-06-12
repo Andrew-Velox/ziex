@@ -20,7 +20,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 const InputProps = struct { value: []const u8, name: []const u8, extra: []const u8 = "" };
 fn Input(ctx: *zx.ComponentCtx(InputProps)) zx.Component {
     return (
-        <div>
+        <div @allocator={ctx.allocator}>
             <label>{ctx.props.name}</label>
             <input type="text" {..ctx.props} />
             <input extra="override-by-spr" {..ctx.props} />

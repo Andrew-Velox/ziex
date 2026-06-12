@@ -15,7 +15,7 @@ fn Component(ctx: *zx.ComponentCtx(struct {
     name: []const u8,
 })) zx.Component {
     return (
-        <div>
+        <div @allocator={ctx.allocator}>
             <p>{ctx.props.text}</p>
             <p>{ctx.props.name}</p>
         </div>

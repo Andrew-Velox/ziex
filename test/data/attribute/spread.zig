@@ -35,10 +35,11 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 
 const InputProps = struct { value: []const u8, name: []const u8, extra: []const u8 = "" };
 fn Input(ctx: *zx.ComponentCtx(InputProps)) zx.Component {
-    var _zx = @import("zx").x.init();
+    var _zx = @import("zx").x.allocInit(ctx.allocator);
     return _zx.ele(
         .div,
         .{
+            .allocator = ctx.allocator,
             .children = &.{
                 _zx.ele(
                     .label,

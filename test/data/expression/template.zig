@@ -44,10 +44,11 @@ fn Component(ctx: *zx.ComponentCtx(struct {
     text: []const u8,
     name: []const u8,
 })) zx.Component {
-    var _zx = @import("zx").x.init();
+    var _zx = @import("zx").x.allocInit(ctx.allocator);
     return _zx.ele(
         .div,
         .{
+            .allocator = ctx.allocator,
             .children = &.{
                 _zx.ele(
                     .p,
