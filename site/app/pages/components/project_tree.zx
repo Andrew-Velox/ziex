@@ -91,7 +91,7 @@ fn EntryRow(allocator: zx.Allocator, props: EntryRowProps) zx.Component {
     const indent = std.fmt.allocPrint(allocator, "padding-left: {d}rem", .{props.depth * 1}) catch "padding-left: 0";
 
     return (
-        <>
+        <fragment @allocator={allocator}>
             <div class="project-tree-row" style={indent} @allocator={allocator}>
                 <span class={if (is_folder) "project-tree-folder" else "project-tree-file"} translate="no">
                     {if (is_folder) (<FolderIcon />) else (<FileIcon name={entry.name} />)}
@@ -104,7 +104,7 @@ fn EntryRow(allocator: zx.Allocator, props: EntryRowProps) zx.Component {
             {if (entry.children) |children| (
                 renderChildren(allocator, children, props.depth + 1, props.show_descriptions)
             )}
-        </>
+        </fragment>
     );
 }
 

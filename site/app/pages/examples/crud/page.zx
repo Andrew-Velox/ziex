@@ -69,7 +69,7 @@ pub fn TaskList(ctx: *zx.ComponentCtx(struct { tasks: []const Task })) zx.Compon
     tasks_state = ctx.state([]const Task, ctx.props.tasks);
     zx.log.info("Tasks: {any}\n", .{ctx.props.tasks});
     return (
-        <tbody>
+        <tbody @allocator={ctx.allocator}>
             {for (tasks_state.get()) |task| (
                 <TaskRow key={task.id} task={task} />
             )}

@@ -247,6 +247,8 @@ fn genIntrospectRoot(
 }
 
 fn findZxInPath(b: *std.Build, expected_version: []const u8) ?[]const u8 {
+    // TODO: disable for now, always use from source
+    if (true) return null;
     const zx_path = b.findProgram(&.{"zx"}, &.{}) catch return null;
     var exit_code: u8 = undefined;
     const stdout = b.runAllowFail(&.{ zx_path, "version" }, &exit_code, .ignore) catch return null;
