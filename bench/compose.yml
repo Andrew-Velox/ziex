@@ -147,8 +147,8 @@ services:
   bench:
     image: ziex_bench-bench
     build:
-      context: .
-      dockerfile: Dockerfile.bench
+      context: ../
+      dockerfile: bench/Dockerfile.bench
       cache_from:
         - type=gha,scope=bench
       cache_to:

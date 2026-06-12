@@ -5,9 +5,26 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ALL_FRAMEWORKS=(ziex jetzig leptos dioxus solidjs nextjs)
 RESULTS_FILE="result.csv"
 BENCH_CONTAINER="ziex_bench-bench-1"
+BENCHFIG="$SCRIPT_DIR/../site/app/pages/benchfig.zon"
+
+# Read a required field from the flat benchfig.zon (.field = value).
+zon_field() {
+  local key="$1" val
+  val=$(grep -oE "\.$key[[:space:]]*=[[:space:]]*[^,]+" "$BENCHFIG" \
+    | head -1 | sed -E "s/.*=[[:space:]]*//; s/^\"//; s/\"$//; s/[[:space:]]*$//")
+  [ -n "$val" ] || { echo "error: missing required field '.$key' in $BENCHFIG" >&2; exit 1; }
+  echo "$val"
+}
+
+[ -f "$BENCHFIG" ] || { echo "error: benchfig.zon not found at $BENCHFIG" >&2; exit 1; }
+REQUESTS=$(zon_field requests)
+CONCURRENCY=$(zon_field concurrency)
+RUNS=$(zon_field runs)
+ENDPOINT=$(zon_field endpoint)
 
 MEASURE_BUILD_TIME=false
 ARGS=()
@@ -113,6 +130,16 @@ get_binary_size_mb() {
 }
 
 echo "framework,idle_mb,peak_mb,build_time_s,image_mb,binary_mb,cold_start_ms,cpu_avg_pct,cpu_peak_pct,rps,p50_ms,p99_ms" > "$RESULTS_FILE"
+
+
+# ─── Config (from benchfig.zon) ───────────────────────────────────────────────
+echo -e "\033[1mBenchmark config\033[0m \033[2m($BENCHFIG)\033[0m"
+echo "  endpoint    : /$ENDPOINT"
+echo "  requests    : $REQUESTS"
+echo "  concurrency : $CONCURRENCY"
+echo "  runs        : $RUNS"
+echo "  frameworks  : ${FRAMEWORKS[*]}"
+echo ""
 
 
 # Build

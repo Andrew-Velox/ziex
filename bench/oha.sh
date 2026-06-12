@@ -1,11 +1,35 @@
 #!/bin/bash
 
 # ─── Config ──────────────────────────────────────────
-REQUESTS=3000
-CONCURRENCY=30
-RUNS=3
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Locate benchfig.zon: copied next to this script (container), or in the
+# site source tree (host checkout).
+BENCHFIG=""
+for candidate in \
+    "$SCRIPT_DIR/benchfig.zon" \
+    "$SCRIPT_DIR/../site/app/pages/benchfig.zon"; do
+    if [ -f "$candidate" ]; then BENCHFIG="$candidate"; break; fi
+done
+
+die() { echo -e "\033[31merror:\033[0m $1" >&2; exit 1; }
+
+[ -n "$BENCHFIG" ] || die "benchfig.zon not found (looked next to oha.sh and in ../site/app/pages/)"
+
+# Read a required field from the flat benchfig.zon (.field = value).
+zon_field() {
+    local key="$1" val
+    val=$(grep -oE "\.$key[[:space:]]*=[[:space:]]*[^,]+" "$BENCHFIG" \
+        | head -1 | sed -E "s/.*=[[:space:]]*//; s/^\"//; s/\"$//; s/[[:space:]]*$//")
+    [ -n "$val" ] || die "missing required field '.$key' in $BENCHFIG"
+    echo "$val"
+}
+
+REQUESTS=$(zon_field requests) || exit 1
+CONCURRENCY=$(zon_field concurrency) || exit 1
+RUNS=$(zon_field runs) || exit 1
+ENDPOINT=$(zon_field endpoint) || exit 1
 RESULTS_FILE="result.csv"
-ENDPOINT="ssr"
 
 HOST_PREFIX="http://"
 HOST_SUFFIX=""
@@ -41,9 +65,6 @@ get_label() {
         *)       echo "$1" ;;
     esac
 }
-
-
-die() { echo -e "${RED}error:${NC} $1" >&2; exit 1; }
 
 # ─── Parse args ──────────────────────────────────────
 
