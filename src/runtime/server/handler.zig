@@ -833,7 +833,7 @@ pub fn Handler(comptime AppCtxType: type) type {
             const assets_path = try std.fs.path.join(self.allocator, &.{ staticdir, req.url.path });
             defer self.allocator.free(assets_path);
 
-            const body = std.Io.Dir.cwd().readFileAlloc(self.io, assets_path, self.allocator, .unlimited) catch |err| {
+            const body = std.Io.Dir.cwd().readFileAlloc(self.io, assets_path, res.arena, .unlimited) catch |err| {
                 switch (err) {
                     error.FileNotFound => return self.notFound(req, res),
                     else => return self.uncaughtError(req, res, err),
