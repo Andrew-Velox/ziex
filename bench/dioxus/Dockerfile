@@ -1,4 +1,6 @@
-FROM rust:1.93 AS chef
+FROM rust:1.96.0 AS chef
+ENV CARGO_BUILD_LOCKED=1
+
 RUN cargo install cargo-chef
 WORKDIR /app
 
@@ -33,7 +35,6 @@ WORKDIR /app
 COPY --from=builder /app/dist/server /app/server
 COPY --from=builder /app/dist/public /app/public
 
-# set our port and make sure to listen for all connections
 ENV PORT=3000
 ENV IP=0.0.0.0
 
