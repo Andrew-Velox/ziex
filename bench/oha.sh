@@ -5,7 +5,7 @@ REQUESTS=2000
 CONCURRENCY=20
 RUNS=2
 RESULTS_FILE="result.csv"
-ENDPOINT="ssr-performance-showdown"
+ENDPOINT="ssr"
 
 HOST_PREFIX="http://"
 HOST_SUFFIX=""
