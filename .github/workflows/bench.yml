@@ -29,7 +29,7 @@ jobs:
             context: .
             file: bench/ziex/Dockerfile
           - framework: bench
-            context: bench
+            context: .
             file: bench/Dockerfile.bench
     defaults:
       run:
