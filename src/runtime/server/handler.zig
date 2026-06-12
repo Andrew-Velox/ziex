@@ -830,8 +830,7 @@ pub fn Handler(comptime AppCtxType: type) type {
 
         pub inline fn static(self: *Self, req: *httpz.Request, res: *httpz.Response) !void {
             const staticdir = self.config.staticdir orelse Constant.default_staticdir;
-            const assets_path = try std.fs.path.join(self.allocator, &.{ staticdir, req.url.path });
-            defer self.allocator.free(assets_path);
+            const assets_path = try std.fs.path.join(res.arena, &.{ staticdir, req.url.path });
 
             const body = std.Io.Dir.cwd().readFileAlloc(self.io, assets_path, res.arena, .unlimited) catch |err| {
                 switch (err) {
