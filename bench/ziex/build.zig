@@ -15,6 +15,6 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    var zx_builder = try ziex.init(b, app_exe, .{});
+    var zx_builder = try ziex.init(b, app_exe, .{ .cli = .{ .optimize = .Debug } });
     zx_builder = zx_builder;
 }
