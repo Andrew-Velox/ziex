@@ -463,7 +463,14 @@ pub fn initInner(
 
     // --- Build-time App Metadata ---
     const is_dev_build = std.mem.eql(u8, cli_command_opt orelse "--", "dev");
-    const can_introspect_exe = if (target) |resolved| resolved.query.isNative() else true;
+    // TODO: get rid of introspection, we should be able to generate the meta
+    // needed from transpile and from build-config alone. We don't need to resolve pageoptions in
+    // any cases
+    const can_introspect_exe = if (target) |resolved| blk: {
+        const host = b.graph.host.result;
+        break :blk resolved.result.cpu.arch == host.cpu.arch and
+            resolved.result.os.tag == host.os.tag;
+    } else true;
     const is_official_build_runner = @hasDecl(@import("root"), "printErrorMessages");
 
     if (is_official_build_runner and can_introspect_exe and !is_dev_build) {
