@@ -9,7 +9,7 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
 pub fn EventForm(ctx: *zx.ComponentContext) zx.Component {
     const count = ctx.state(i32, 1);
     return (
-        <button onclick={ctx.bind(onclick)}>
+        <button @allocator={ctx.allocator} onclick={ctx.bind(onclick)}>
             Click Me {count}
         </button>
     );
