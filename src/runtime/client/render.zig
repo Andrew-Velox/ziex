@@ -277,6 +277,25 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
                 }
             }
 
+            // When escaping is disabled (@escaping={.none}), the element's text
+            // children are raw HTML and must be inserted via innerHTML
+            if (elem.escaping == .none) {
+                var aw = std.Io.Writer.Allocating.init(allocator);
+                defer aw.deinit();
+                for (vnode.children.items) |child| {
+                    const resolved_child = try vdom.resolveComponent(allocator, child.component, child.owner_component_id, 0);
+                    switch (resolved_child) {
+                        .text => |t| try aw.writer.writeAll(t),
+                        .none => {},
+                        // Non-text children fall back to normal node creation below.
+                        else => {},
+                    }
+                }
+                const raw = aw.written();
+                ext._srh(vnode.id, raw.ptr, raw.len);
+                break :blk .{ .element = htmlElementFromRef(allocator, ref_id) };
+            }
+
             for (vnode.children.items) |child| {
                 _ = try createPlatformNodes(allocator, child, client, options);
                 ext._ac(vnode.id, child.id);

@@ -310,6 +310,10 @@ export class ZxBridge extends ZxBridgeCore {
                     const node = domNodes.get(vnodeId);
                     if (node) node.nodeValue = readString(ptr, len);
                 },
+                _srh: (vnodeId: bigint, ptr: number, len: number) => {
+                    const el = domNodes.get(vnodeId) as Element | undefined;
+                    if (el) el.innerHTML = readString(ptr, len);
+                },
                 _ac: (parentId: bigint, childId: bigint) => {
                     const parent = domNodes.get(parentId);
                     const child = domNodes.get(childId);
