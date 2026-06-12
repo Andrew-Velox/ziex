@@ -7,8 +7,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const win_true: std.os.windows.BOOL = 1;
-const win_false: std.os.windows.BOOL = 0;
+const win_true: std.os.windows.BOOL = std.os.windows.BOOL.TRUE;
+const win_false: std.os.windows.BOOL = .FALSE;
 
 var g_on_shutdown: ?*const fn () void = null;
 

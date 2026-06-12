@@ -26,7 +26,7 @@ RUN cd bench/ziex &&  zig build zx -- version
 
 # App
 COPY ./bench/ziex/app ./bench/ziex/app
-RUN cd bench/ziex && zig build --release=fast
+RUN cd bench/ziex && zig build --release=fast -Dcpu=baseline
 RUN cd bench/ziex &&  zig build zx -- bundle
 
 # Run app
