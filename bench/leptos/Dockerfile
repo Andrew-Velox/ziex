@@ -2,9 +2,8 @@ FROM rust:1.96.0-alpine AS builder
 ENV CARGO_BUILD_LOCKED=1
 
 RUN apk update && apk add --no-cache bash curl npm libc-dev binaryen
-
 RUN npm install -g sass
-RUN cargo install --locked cargo-leptos
+RUN curl --proto '=https' --tlsv1.3 -LsSf https://github.com/leptos-rs/cargo-leptos/releases/latest/download/cargo-leptos-installer.sh | sh
 RUN rustup target add wasm32-unknown-unknown
 
 WORKDIR /work
