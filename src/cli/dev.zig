@@ -15,14 +15,6 @@ const sig = @import("../util/sig.zig");
 const Colors = tui.Colors;
 const log = std.log.scoped(.cli);
 
-var g_dev_shutting_down: bool = false;
-
-fn onDevShutdown() void {
-    if (g_dev_shutting_down) return;
-    g_dev_shutting_down = true;
-    std.debug.print("\n{s}Stopping dev server...{s}\n", .{ Colors.gray, Colors.reset });
-}
-
 pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.mem.Allocator) !*zli.Command {
     const cmd = try zli.Command.init(writer, reader, allocator, .{
         .name = "dev",
@@ -69,7 +61,25 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 
 const BIN_DIR = "zig-out/bin";
 
+var runner: ?std.process.Child = null;
+var builder: ?std.process.Child = null;
+var gio: std.Io = undefined;
+var g_dev_shutting_down: bool = false;
+
+fn onDevShutdown() void {
+    if (g_dev_shutting_down) return;
+    g_dev_shutting_down = true;
+    // if (runner) |*r| r.kill(gio);
+    // if (builder) |*b| b.kill(gio);
+    std.debug.print("\n{s}Stopping dev server...{s}\n", .{ Colors.gray, Colors.reset });
+}
+
 fn dev(ctx: zli.CommandContext) !void {
+    const app = AppContext.from(&ctx);
+    gio = app.io;
+    const io = gio;
+    const env_map = app.environ_map;
+
     if (comptime builtin.mode == .Debug) sig.register(onDevShutdown);
     defer if (comptime builtin.mode == .Debug) sig.unregister();
 
@@ -98,10 +108,6 @@ fn dev(ctx: zli.CommandContext) !void {
         try build_args_array.appendSlice(allocator, &.{trimmed_arg});
         try initial_build_args_array.appendSlice(allocator, &.{trimmed_arg});
     }
-
-    const app = AppContext.from(&ctx);
-    const io = app.io;
-    const env_map = app.environ_map;
 
     var initial_build = try std.process.spawn(io, .{ .argv = initial_build_args_array.items });
     const initial_term = initial_build.wait(io) catch |err| {
@@ -151,17 +157,16 @@ fn dev(ctx: zli.CommandContext) !void {
         return;
     };
 
-    var builder = try std.process.spawn(io, .{
+    builder = try std.process.spawn(io, .{
         .argv = build_args_array.items,
         .stderr = .pipe,
         .stdout = .ignore,
     });
-    defer builder.kill(io);
+    defer if (builder) |*b| b.kill(io);
 
     var build_state = Builder.BuildState.init(allocator);
     defer build_state.deinit();
 
-    var runner: ?std.process.Child = null;
     var runner_output: ?util.ChildOutput = null;
     var program_path: ?[]const u8 = null;
 
@@ -181,7 +186,7 @@ fn dev(ctx: zli.CommandContext) !void {
     var last_error_formatted: ?[]const u8 = null;
     defer if (last_error_formatted) |prev| allocator.free(prev);
 
-    var stderr_file = builder.stderr.?;
+    var stderr_file = builder.?.stderr.?;
     var raw_buf: [8192]u8 = undefined;
     var streaming_reader = stderr_file.readerStreaming(io, &raw_buf);
     const io_reader = &streaming_reader.interface;
@@ -442,8 +447,8 @@ fn readOneLine(
     return line;
 }
 
-fn sleepMs(io: std.Io, ms: i64) void {
-    io.sleep(std.Io.Duration.fromMilliseconds(ms), .awake) catch {};
+fn sleepMs(lio: std.Io, ms: i64) void {
+    lio.sleep(.fromMilliseconds(ms), .awake) catch {};
 }
 
 fn emitNoChange(
