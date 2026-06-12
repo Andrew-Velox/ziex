@@ -7,6 +7,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const win_true: std.os.windows.BOOL = 1;
+const win_false: std.os.windows.BOOL = 0;
+
 var g_on_shutdown: ?*const fn () void = null;
 
 fn trigger() void {
@@ -32,9 +35,9 @@ fn windowsCtrlHandler(ctrl_type: std.os.windows.DWORD) callconv(.winapi) std.os.
         // CTRL_C_EVENT=0, CTRL_BREAK_EVENT=1, CTRL_CLOSE_EVENT=2
         0, 1, 2 => {
             trigger();
-            return std.os.windows.TRUE;
+            return win_true;
         },
-        else => return std.os.windows.FALSE,
+        else => return win_false,
     }
 }
 
@@ -49,7 +52,7 @@ extern "kernel32" fn SetConsoleCtrlHandler(
 pub fn register(on_shutdown: *const fn () void) void {
     g_on_shutdown = on_shutdown;
     if (comptime builtin.os.tag == .windows) {
-        _ = SetConsoleCtrlHandler(windowsCtrlHandler, std.os.windows.TRUE);
+        _ = SetConsoleCtrlHandler(windowsCtrlHandler, win_true);
     } else if (comptime builtin.os.tag != .wasi and builtin.os.tag != .freestanding) {
         registerPosixHandlers();
     }
