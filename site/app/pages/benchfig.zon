@@ -1,0 +1,6 @@
+.{
+    .runs = 3,
+    .concurrency = 30,
+    .requests = 3000,
+    .endpoint = "ssr",
+}

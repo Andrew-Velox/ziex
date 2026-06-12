@@ -11,7 +11,7 @@ const features = [_]Feature{
     .{ .icon_fn = icons.Wrench, .title = "Developer Tooling", .description = "CLI, hot reload, and editor extensions for the best development experience." },
     .{ .icon_fn = icons.Rocket, .title = "Deploy Anywhere", .description = "Standalone binaries, Cloudflare, Vercel, or any edge runtime host. Build once, run anywhere." },
     .{ .icon_fn = icons.Layers, .title = "Predictable Memory", .description = "Explicit memory management. No GC pauses, no hidden allocations. Total control over your app's footprint." },
- };
+};
 
 const deployments = [_]Deployment{
     .{ .icon_fn = icons.Terminal, .title = "Standalone", .description = "Deploy as a self-contained binary on Linux, macOS, or Windows. Statically linked with zero runtime dependencies." },
@@ -29,6 +29,7 @@ const benchmark_cwv_rows = [_]BenchmarkRow{
 
 // Import benchmark data from auto-generated file
 const bench_data = @import("bench.zon");
+const benchfig = @import("benchfig.zon");
 const bench_run = bench_data.run;
 const bench_results = bench_data.results;
 const bench_len = @typeInfo(@TypeOf(bench_results)).@"struct".fields.len;
@@ -279,7 +280,14 @@ const benchmark_tabs = [_]BenchmarkTab{
         .id = "bench-tab-ssr",
         .label = "SSR",
         .metric = "Requests per second (higher is better)",
-        .footnote = "Dockerized SSR endpoint hit with 2k requests at 20 concurrent connections, averaged over 2 runs.",
+        .footnote = std.fmt.comptimePrint(
+            "Dockerized SSR endpoint hit with {d} requests at {d} concurrent connections, averaged over {d} runs.",
+            .{
+                benchfig.requests,
+                benchfig.concurrency,
+                benchfig.runs,
+            },
+        ),
         .rows = benchmark_ssr_rows[0..],
         .checked = true,
     },
