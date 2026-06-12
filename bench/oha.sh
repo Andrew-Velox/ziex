@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ─── Config ──────────────────────────────────────────
-REQUESTS=2000
-CONCURRENCY=20
-RUNS=2
+REQUESTS=3000
+CONCURRENCY=30
+RUNS=3
 RESULTS_FILE="result.csv"
 ENDPOINT="ssr"
 
