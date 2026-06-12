@@ -27,15 +27,6 @@ pub fn build(b: *std.Build) !void {
     options.addOption([]const u8, "homepage", build_zon.homepage);
     options.addOption([]const u8, "minimum_zig_version", build_zon.minimum_zig_version);
 
-    const zx_runtime_options = b.addOptions();
-    zx_runtime_options.addOption(?[]const u8, "app_base_path", null);
-    zx_runtime_options.addOption(?u16, "server_port", null);
-    zx_runtime_options.addOption(?[]const u8, "server_address", null);
-    zx_runtime_options.addOption(?[]const u8, "server_rootdir", null);
-    zx_runtime_options.addOption(?[]const u8, "cli_command", null);
-    zx_runtime_options.addOption(bool, "introspect", false);
-    zx_runtime_options.addOption(bool, "feature_sqlite", false);
-
     const cli_options_dev = b.addOptions();
     cli_options_dev.addOption([]const u8, "zig_exe", b.graph.zig_exe);
 
@@ -76,7 +67,6 @@ pub fn build(b: *std.Build) !void {
         if (!exclude_core_lang) mod.addImport("zx_core_lang", zx_core_lang_mod);
         mod.addImport("cachez", cachez_dep.module("cache"));
         mod.addOptions("zx_info", options);
-        mod.addOptions("zx_options", zx_runtime_options);
         mod.addOptions("zx_module_options", zx_module_options);
     }
 
@@ -231,6 +221,22 @@ pub fn build(b: *std.Build) !void {
         }
 
         events_gen_step.dependOn(&events_gen_run.step);
+    }
+
+    // --- Steps: Sync Benchmark --- //
+    {
+        const syncbench_step = b.step("syncbench", "Run synchronization benchmark from GH actions");
+
+        const syncbench_exe = b.addExecutable(.{
+            .name = "syncbench",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("site/app/pages/bench.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        const syncbench_run = b.addRunArtifact(syncbench_exe);
+        syncbench_step.dependOn(&syncbench_run.step);
     }
 
     // --- ZX Releases (Cross-compilation targets for all platforms) --- //
