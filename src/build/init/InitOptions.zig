@@ -57,6 +57,16 @@ pub const CliOptions = struct {
 
 /// Configuration for the ZX app directory.
 pub const AppOptions = struct {
+    pub const FeatureOptions = struct {
+        pub const SqliteOptions = struct {
+            pub const enabled: SqliteOptions = .{};
+        };
+
+        pub const default = FeatureOptions{};
+
+        sqlite: ?SqliteOptions = null,
+    };
+
     /// Path to the ZX app source directory.
     ///
     /// This directory should contain your `.zx` template files, layouts,
@@ -80,6 +90,9 @@ pub const AppOptions = struct {
     ///
     /// Default: `false`
     copy_embedded_sources: bool = false,
+
+    /// Features that can be optionally enabled
+    features: FeatureOptions = .default,
 };
 
 pub const ClientOptions = struct {

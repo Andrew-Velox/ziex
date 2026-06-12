@@ -85,9 +85,6 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
 
     const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
     const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
-    const db_dir = try std.fs.path.join(alloc, &.{ datadir, "db", "default.db" });
-    defer alloc.free(db_dir);
-    const db_url = try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir});
 
     kv_fs = .{ .io = init.io, .subdir = kv_subdir };
     cache_fs = .{ .io = init.io, .subdir = cache_subdir };
@@ -97,18 +94,24 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
         .max_size = resolved.cache.max_size,
     });
 
-    zx.db = try zx.Db.Sqlite.open(alloc, init.io, db_url, .{});
+    // Feature ==> zx.Db.Sqlite
+    if (comptime zx_options.feature_sqlite) {
+        const db_dir = try std.fs.path.join(alloc, &.{ datadir, "db", "default.db" });
+        defer alloc.free(db_dir);
+        const db_url = try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir});
+        zx.db = try zx.Db.Sqlite.open(alloc, init.io, db_url, .{});
+        g_db_url = db_url;
+    }
 
     g_datadir = datadir;
     g_staticdir = staticdir;
-    g_db_url = db_url;
 
     return resolved;
 }
 
 fn cleanupOptions(alloc: std.mem.Allocator) void {
     if (g_datadir == null) return;
-    zx.db.deinit();
+    if (g_db_url != null) zx.db.deinit();
     zx.cache.deinit();
     if (g_db_url) |s| alloc.free(s);
     if (cache_fs.subdir.len > 0) alloc.free(cache_fs.subdir);

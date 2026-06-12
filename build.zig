@@ -34,6 +34,7 @@ pub fn build(b: *std.Build) !void {
     zx_runtime_options.addOption(?[]const u8, "server_rootdir", null);
     zx_runtime_options.addOption(?[]const u8, "cli_command", null);
     zx_runtime_options.addOption(bool, "introspect", false);
+    zx_runtime_options.addOption(bool, "feature_sqlite", false);
 
     const cli_options_dev = b.addOptions();
     cli_options_dev.addOption([]const u8, "zig_exe", b.graph.zig_exe);

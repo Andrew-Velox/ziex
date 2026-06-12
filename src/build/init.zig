@@ -62,6 +62,7 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
         opts.site_path = site_opts.path orelse opts.site_path;
         opts.copy_embedded_sources = site_opts.copy_embedded_sources;
         opts.base_path = site_opts.base_path;
+        opts.features = site_opts.features;
     }
 
     opts.cli_path = options.cli.path;
@@ -90,6 +91,7 @@ const InitInnerOptions = struct {
     site_outdir: ?LazyPath,
     steps: InitOptions.CliOptions.Steps,
     copy_embedded_sources: bool,
+    features: InitOptions.AppOptions.FeatureOptions = .default,
     client: InitOptions.ClientOptions,
     static_path: ?LazyPath,
     ziex_js_dep: *std.Build.Dependency,
@@ -281,6 +283,7 @@ pub fn initInner(
     zx_options.addOption(?[]const u8, "server_rootdir", rootdir_opt);
     zx_options.addOption([]const u8, "cli_command", cli_command_opt orelse "--");
     zx_options.addOption(bool, "introspect", b.option(bool, "introspect", "Print Ziex app metadata and exit") orelse false);
+    zx_options.addOption(bool, "feature_sqlite", opts.features.sqlite != null);
 
     zx_module.addOptions("zx_options", zx_options);
 
