@@ -45,6 +45,10 @@ pub fn applyPatches(
                 const data = patch.data.TEXT;
                 ext._snv(data.vnode_id, data.new_text.ptr, data.new_text.len);
             },
+            .RAW_HTML => {
+                const data = patch.data.RAW_HTML;
+                ext._srh(data.vnode_id, data.html.ptr, data.html.len);
+            },
             .PLACEMENT => {
                 const data = &patch.data.PLACEMENT;
 
