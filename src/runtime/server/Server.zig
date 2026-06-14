@@ -886,7 +886,7 @@ fn envVar(name_z: [*:0]const u8) ?[]const u8 {
 const std = @import("std");
 const builtin = @import("builtin");
 const httpz = @import("httpz");
-const cachez = @import("cachez");
+const cachez = zx.Cache.cachez;
 const zx = @import("../../root.zig");
 const zx_app = @import("app");
 const module_config = @import("zx_info");

@@ -35,7 +35,6 @@ pub fn build(b: *std.Build) !void {
     const tree_sitter_dep = b.dependency("tree_sitter", .{ .target = target, .optimize = optimize });
     const tree_sitter_zx_dep = b.dependency("tree_sitter_zx", .{ .target = target, .optimize = optimize, .@"build-shared" = false });
     const tree_sitter_mdzx_dep = b.dependency("tree_sitter_mdzx", .{ .target = target, .optimize = optimize, .@"build-shared" = false });
-    const cachez_dep = b.dependency("cachez", .{ .target = target, .optimize = optimize });
     const adapters_dep = b.dependency("adapters", .{ .target = target, .optimize = optimize });
 
     // --- Features Module --- //
@@ -65,7 +64,6 @@ pub fn build(b: *std.Build) !void {
         }
 
         if (!exclude_core_lang) mod.addImport("zx_core_lang", zx_core_lang_mod);
-        mod.addImport("cachez", cachez_dep.module("cache"));
         mod.addOptions("zx_info", options);
         mod.addOptions("zx_module_options", zx_module_options);
     }

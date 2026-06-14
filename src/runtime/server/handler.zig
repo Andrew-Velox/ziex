@@ -994,7 +994,7 @@ pub fn Handler(comptime AppCtxType: type) type {
 
 const std = @import("std");
 const builtin = @import("builtin");
-const cachez = @import("cachez");
+const cachez = zx.Cache.cachez;
 
 const zx_options = @import("zx_options");
 const zx = @import("../../root.zig");
