@@ -311,6 +311,53 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
+pub fn createModule(
+    b: *std.Build,
+    opts: std.Build.Module.CreateOptions,
+) *std.Build.Module {
+    const root_src_file = opts.root_source_file orelse unreachable;
+
+    const zx_host_dep = b.dependencyFromBuildZig(@This(), .{
+        // .optimize = options.cli.optimize, // Always in release mode for faster transpilation
+        // No target = host target, so zx CLI can execute during build
+        .@"exclude-lsp" = true, // Skip LSP for faster build-time transpilation
+    });
+
+    const transpiler_exe = zx_host_dep.artifact("zx");
+    const transpile_cmd = b.addRunArtifact(transpiler_exe);
+
+    transpile_cmd.setName("zx transpile");
+    transpile_cmd.addArg("transpile");
+    transpile_cmd.addDirectoryArg(root_src_file);
+    transpile_cmd.addArg("--outdir");
+    const transpiler_mod_path = transpile_cmd.addOutputDirectoryArg("components_gen");
+    // transpile_cmd.addArg("--rootdir");
+    // transpile_cmd.addDirectoryArg(static_lazypath);
+    transpile_cmd.addArg("--dep-file");
+    _ = transpile_cmd.addDepFileOutputArg("transpile.d");
+    // if (opts.copy_embedded_sources) {
+    //     transpile_cmd.addArg("--copy-embedded-sources");
+    // }
+    // if (opts.base_path) |bp| {
+    //     transpile_cmd.addArgs(&.{ "--base-path", bp });
+    // }
+    // Always generate inlined sourcemaps so dev mode can remap errors to .zx files
+    transpile_cmd.addArgs(&.{ "--map", "inline" });
+    const cache_path_arg = b.pathJoin(&.{ b.cache_root.path orelse ".zig-cache", "zx_transpile" });
+    transpile_cmd.addArgs(&.{ "--cache-dir", cache_path_arg });
+    transpile_cmd.expectExitCode(0);
+
+    // _ = try transpile_cmd.step.addDirectoryWatchInput(opts.site_path);
+
+    var transpiled_mod_opts = opts;
+    const root_src_basename = root_src_file.basename(b, &transpile_cmd.step);
+    const root_src_ext = std.fs.path.extension(root_src_basename);
+    const transpiled_src_name = b.fmt("{s}.zig", .{root_src_basename[0 .. root_src_basename.len - root_src_ext.len]});
+
+    transpiled_mod_opts.root_source_file = transpiler_mod_path.path(b, transpiled_src_name);
+    return b.createModule(transpiled_mod_opts);
+}
+
 pub const info = .{
     .version = build_zon.version,
     .description = build_zon.description,

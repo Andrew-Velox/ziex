@@ -100,7 +100,7 @@ const InitInnerOptions = struct {
     server_only_stub_mode: ServerOnlyStubMode = .strict,
 };
 
-fn getZxRun(b: *std.Build, zx_exe: *std.Build.Step.Compile, opts: InitInnerOptions) *std.Build.Step.Run {
+pub fn getZxRun(b: *std.Build, zx_exe: *std.Build.Step.Compile, opts: InitInnerOptions) *std.Build.Step.Run {
     if (opts.cli_path) |cli_path| {
         const run = std.Build.Step.Run.create(b, "run zx");
         run.addFileArg(cli_path);

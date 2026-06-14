@@ -130,6 +130,11 @@ pub fn build(b: *std.Build) !void {
         .cli = .{ .optimize = optimize },
     });
 
+    const component_mod = ziex.createModule(b, .{
+        .root_source_file = b.path("app/components.zx"),
+    });
+    app_exe.root_module.addImport("components", component_mod);
+
     const tailwindcss_b = tailwindcss.addBuild(b, .{
         .config = .{
             .input = b.path("app/styles/tailwind.css"),
