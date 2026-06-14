@@ -1,21 +1,8 @@
 const std = @import("std");
+const Build = @import("../../Build.zig");
+
 const LazyPath = std.Build.LazyPath;
-
-pub const AddElementOptions = struct {
-    pub const ElementDef = struct {
-        tag: []const u8,
-        content: []const u8 = "",
-        attributes: []const u8 = "",
-    };
-
-    pub const Parent = enum { body, head };
-    pub const Position = enum { starting, ending };
-
-    parent: Parent,
-    position: Position,
-    element: ElementDef,
-    priority: u8 = 128,
-};
+pub const AddElementOptions = Build.AddElementOptions;
 
 /// A custom build step that generates a Zig module containing pre-rendered HTML injections.
 pub const InjectionsGenStep = struct {
@@ -41,6 +28,21 @@ pub const InjectionsGenStep = struct {
     pub fn add(self: *InjectionsGenStep, options: AddElementOptions) void {
         const allocator = self.step.owner.allocator;
         self.injections.append(allocator, options) catch @panic("OOM");
+    }
+
+    pub fn getModOpts(self: *InjectionsGenStep, b: *std.Build) !std.Build.Module.CreateOptions {
+        var aw = std.Io.Writer.Allocating.init(b.allocator);
+        defer aw.deinit();
+        try std.zon.stringify.serializeArbitraryDepth(self.injections.items, .{}, &aw.writer);
+        var file = b.addWriteFile("injections.zon", aw.written());
+
+        const injection_dir = file.getDirectory();
+
+        const mod_opts: std.Build.Module.CreateOptions = .{
+            .root_source_file = injection_dir.path(b, "injections.zon"),
+        };
+
+        return mod_opts;
     }
 
     pub fn getOutput(self: *InjectionsGenStep) LazyPath {
@@ -130,18 +132,27 @@ fn renderInjections(
 fn renderSingleElement(allocator: std.mem.Allocator, elem: AddElementOptions.ElementDef) []const u8 {
     var html = std.ArrayListUnmanaged(u8).empty;
     html.appendSlice(allocator, "<") catch @panic("OOM");
-    html.appendSlice(allocator, elem.tag) catch @panic("OOM");
+    html.appendSlice(allocator, @tagName(elem.tag)) catch @panic("OOM");
     if (elem.attributes.len > 0) {
         html.appendSlice(allocator, " ") catch @panic("OOM");
-        html.appendSlice(allocator, elem.attributes) catch @panic("OOM");
+        for (elem.attributes, 0..) |attr, i| {
+            if (i > 0) html.appendSlice(allocator, " ") catch @panic("OOM");
+            // html.appendSlice(allocator, attr.name) catch @panic("OOM");
+            if (attr.value) |v| {
+                _ = v;
+                html.appendSlice(allocator, "=\"") catch @panic("OOM");
+                // html.appendSlice(allocator, v) catch @panic("OOM");
+                html.appendSlice(allocator, "\"") catch @panic("OOM");
+            }
+        }
     }
-    if (isVoidElement(elem.tag)) {
+    if (elem.tag.isVoid()) {
         html.appendSlice(allocator, " />") catch @panic("OOM");
     } else {
         html.appendSlice(allocator, ">") catch @panic("OOM");
-        html.appendSlice(allocator, elem.content) catch @panic("OOM");
+        // html.appendSlice(allocator, elem.content) catch @panic("OOM");
         html.appendSlice(allocator, "</") catch @panic("OOM");
-        html.appendSlice(allocator, elem.tag) catch @panic("OOM");
+        html.appendSlice(allocator, @tagName(elem.tag)) catch @panic("OOM");
         html.appendSlice(allocator, ">") catch @panic("OOM");
     }
     return html.items;

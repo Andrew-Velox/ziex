@@ -389,24 +389,44 @@ pub fn initInner(
         .parent = .head,
         .position = .ending,
         .element = .{
-            .tag = "link",
-            .attributes = b.fmt(
-                "id=\"__$wasmlink\" rel=\"preload\" as=\"fetch\" href=\"{s}?{s}\" crossorigin",
-                .{ wasm_href, version },
-            ),
+            .tag = .link,
+            // .attributes = b.fmt(
+            //     "id=\"__$wasmlink\" rel=\"preload\" as=\"fetch\" href=\"{s}?{s}\" crossorigin",
+            //     .{ wasm_href, version },
+            // ),
+
+            .attributes = &.{
+                .{ .name = "id", .value = "__$wasmlink" },
+                .{ .name = "rel", .value = "preload" },
+                .{ .name = "as", .value = "fetch" },
+                .{ .name = "href", .value = b.fmt("{s}?{s}", .{ wasm_href, version }) },
+                .{ .name = "crossorigin" },
+            },
         },
     });
     // Inject jsglue script tag via the build system
-    injections_step.add(.{ .parent = .head, .position = .ending, .element = .{
-        .tag = "script",
-        .attributes = b.fmt("defer src=\"{s}?{s}\"", .{ zxjs_href, version }),
-    } });
+    injections_step.add(.{
+        .parent = .head,
+        .position = .ending,
+        .element = .{
+            .tag = .script,
+            // .attributes = b.fmt("defer src=\"{s}?{s}\"", .{ zxjs_href, version }),
+            .attributes = &.{
+                .{ .name = "defer" },
+                .{ .name = "src", .value = b.fmt("{s}?{s}", .{ zxjs_href, version }) },
+            },
+        },
+    });
     zx_module.addAnonymousImport("zx_injections", .{
         .root_source_file = injections_step.getOutput(),
     });
     zx_wasm_module.addAnonymousImport("zx_injections", .{
         .root_source_file = injections_step.getOutput(),
     });
+
+    const injection_mod = b.createModule(try injections_step.getModOpts(b));
+    zx_module.addImport("injections", injection_mod);
+    zx_wasm_module.addImport("injections", injection_mod);
 
     // --- ZX Watch Invalidator ---
     // Use directory-level watch input so `zig build --watch` picks up changes.
@@ -433,20 +453,12 @@ pub fn initInner(
         }
     }
 
-    // Create a site-specific zx module with the generated meta
-    const site_zx_module = b.createModule(.{
-        .root_source_file = zx_module.root_source_file,
-        .target = zx_module.resolved_target,
-        .optimize = zx_module.optimize,
-        .imports = imports.items,
-    });
-
     // Build imports for the "app" module (meta.zig needs access to zx and all other imports)
     var meta_imports = std.array_list.Managed(std.Build.Module.Import).init(b.allocator);
     for (imports.items) |import| {
         try meta_imports.append(import);
     }
-    try meta_imports.append(.{ .name = "zx", .module = site_zx_module });
+    try meta_imports.append(.{ .name = "zx", .module = zx_module });
 
     // Inject the real generated app module into zx and directly into the user's root module
     const app_module = b.createModule(.{
@@ -454,10 +466,9 @@ pub fn initInner(
         .imports = meta_imports.items,
     });
     app_module.addImport("app", app_module);
-    site_zx_module.addImport("app", app_module);
+    zx_module.addImport("app", app_module);
     exe.root_module.addImport("app", app_module);
-
-    exe.root_module.addImport("zx", site_zx_module);
+    exe.root_module.addImport("zx", zx_module);
 
     exe.step.dependOn(&transpile_cmd.step);
     exe.step.name = b.fmt("install {s}server{s} {s}", .{ colors.dim, colors.reset, exe.name });
@@ -483,7 +494,7 @@ pub fn initInner(
             .target = target,
             .optimize = optimize,
         });
-        introspect_root.addImport("zx", site_zx_module);
+        introspect_root.addImport("zx", zx_module);
         introspect_root.addImport("app", app_module);
         introspect_root.addImport("zx_app_root", exe.root_module);
 

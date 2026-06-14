@@ -7,6 +7,7 @@ const Component = zx.Component;
 const Allocator = std.mem.Allocator;
 const Request = @import("Request.zig");
 const Response = @import("Response.zig");
+const Build = @import("../../Build.zig");
 const server_dispatch = @import("../server/dispatch.zig");
 const render = @import("../server/render.zig");
 const zx_injections = @import("zx_injections");
@@ -183,10 +184,51 @@ pub fn renderError(
     return Router.renderErrorComponent(allocator, request, response, pathname, err);
 }
 
+const injs: []const Build.AddElementOptions = @import("injections");
+
+fn renderInjsStr() ![]const u8 {
+    const cmps = comptime renderInjs();
+
+    comptime var str: []const u8 = "";
+    inline for (cmps) |comp| {
+        var rendered: [1024]u8 = undefined;
+        var writer = std.Io.Writer.fixed(&rendered);
+        comp.render(&writer, .{}) catch {};
+        str = str ++ rendered;
+    }
+    return str;
+}
+
+fn renderInjs() [injs.len]zx.Component {
+    var cmps: [injs.len]zx.Component = undefined;
+    inline for (injs, 0..) |inj, i| {
+        const inj_ele = inj.element;
+        const attr_len = comptime inj_ele.attributes.len;
+        var inj_attrs: [attr_len]zx.Element.Attribute = undefined;
+        inline for (inj_ele.attributes, 0..) |attr, j| {
+            inj_attrs[j] = zx.Element.Attribute{
+                .name = attr.name,
+                .value = attr.value,
+            };
+        }
+        const elem: zx.Element = .{
+            .tag = inj_ele.tag,
+            .attributes = &inj_attrs,
+        };
+        const comp: zx.Component = .{
+            .element = elem,
+        };
+        cmps[i] = comp;
+    }
+
+    return cmps;
+}
+
 // TODO: move to injecting structured elmeents from build system and render in here
 /// Inject build-time HTML (scripts, styles, etc.) into head/body elements.
 /// This handles zx_injections (head_starting, head_ending, body_starting, body_ending).
 pub fn injectZxInjections(allocator: Allocator, page: *Component) void {
+    // std.log.info("Test INJS: {s}", .{comptime (renderInjsStr() catch "ERR")});
     if (zx_injections.head_starting.len > 0) {
         if (tree.getElementByName(page, allocator, .head)) |el|
             tree.prependChild(el, allocator, .{ .text = zx_injections.head_starting }) catch {};
