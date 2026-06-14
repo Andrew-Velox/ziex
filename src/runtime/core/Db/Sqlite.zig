@@ -2,10 +2,8 @@ const Sqlite = @This();
 
 const std = @import("std");
 const zqlite = @import("zqlite");
+const Db = @import("../Db.zig");
 
-const zx = @import("../../../root.zig");
-
-const Db = zx.Db;
 const c = zqlite.c;
 
 // TODO: get rid of default allocator

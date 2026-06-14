@@ -1,10 +1,7 @@
 const Postgres = @This();
 
 const std = @import("std");
-
-const zx = @import("../../../root.zig");
-
-const Db = zx.Db;
+const Db = @import("../Db.zig");
 
 allocator: std.mem.Allocator,
 

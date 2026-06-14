@@ -1,9 +1,7 @@
 const Wasm = @This();
 
 const std = @import("std");
-const zx = @import("../../../root.zig");
-const Kv = @import("../../core/Kv.zig");
-const ext = @import("extern.zig");
+const Kv = @import("../Kv.zig");
 
 fn get(_: ?*anyopaque, ns: []const u8, allocator: std.mem.Allocator, key: []const u8) !?[]u8 {
     var buf: [8192]u8 = undefined;
@@ -31,7 +29,43 @@ fn list(_: ?*anyopaque, ns: []const u8, allocator: std.mem.Allocator, prefix: []
     return keys;
 }
 
-pub fn kv(wasm: *Wasm) zx.Kv {
+const ext = struct {
+    pub extern "__zx_kv" fn kv_get(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        key_ptr: [*]const u8,
+        key_len: usize,
+        buf_ptr: [*]u8,
+        buf_max: usize,
+    ) i32;
+
+    pub extern "__zx_kv" fn kv_put(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        key_ptr: [*]const u8,
+        key_len: usize,
+        val_ptr: [*]const u8,
+        val_len: usize,
+    ) i32;
+
+    pub extern "__zx_kv" fn kv_delete(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        key_ptr: [*]const u8,
+        key_len: usize,
+    ) i32;
+
+    pub extern "__zx_kv" fn kv_list(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        prefix_ptr: [*]const u8,
+        prefix_len: usize,
+        buf_ptr: [*]u8,
+        buf_max: usize,
+    ) i32;
+};
+
+pub fn kv(wasm: *Wasm) Kv {
     return .{
         .userdata = wasm,
         .vtable = &.{

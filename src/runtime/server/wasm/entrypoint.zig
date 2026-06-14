@@ -1,6 +1,5 @@
 const std = @import("std");
 const zx = @import("../../../root.zig");
-const kv = @import("kv.zig");
 const render = @import("../../server/render.zig");
 const ext = @import("extern.zig");
 const core_handler = @import("../../core/Handler.zig");
