@@ -1,10 +1,8 @@
 const std = @import("std");
-const injection = @import("init/injection.zig");
 const html_util = @import("../util/html.zig");
 
 const LazyPath = std.Build.LazyPath;
-const AddElementOptions = injection.AddElementOptions;
-const InjectionsGenStep = injection.InjectionsGenStep;
+const AddElementOptions = @import("../Build.zig").AddElementOptions;
 
 pub const InitOptions = @import("init/InitOptions.zig");
 
@@ -380,21 +378,17 @@ pub fn initInner(
 
     // --- ZX Injections --- //
     const version = opts.version orelse build_zon.version;
-    const injections_step = try InjectionsGenStep.create(b);
+    const injections = try b.allocator.create(Injections);
+    injections.* = .{};
     for (opts.element_injections) |inj| {
-        injections_step.add(inj);
+        injections.add(b, inj);
     }
     // Inject wasm preload link tag into head
-    injections_step.add(.{
+    injections.add(b, .{
         .parent = .head,
         .position = .ending,
         .element = .{
             .tag = .link,
-            // .attributes = b.fmt(
-            //     "id=\"__$wasmlink\" rel=\"preload\" as=\"fetch\" href=\"{s}?{s}\" crossorigin",
-            //     .{ wasm_href, version },
-            // ),
-
             .attributes = &.{
                 .{ .name = "id", .value = "__$wasmlink" },
                 .{ .name = "rel", .value = "preload" },
@@ -405,26 +399,18 @@ pub fn initInner(
         },
     });
     // Inject jsglue script tag via the build system
-    injections_step.add(.{
+    injections.add(b, .{
         .parent = .head,
         .position = .ending,
         .element = .{
             .tag = .script,
-            // .attributes = b.fmt("defer src=\"{s}?{s}\"", .{ zxjs_href, version }),
             .attributes = &.{
                 .{ .name = "defer" },
                 .{ .name = "src", .value = b.fmt("{s}?{s}", .{ zxjs_href, version }) },
             },
         },
     });
-    zx_module.addAnonymousImport("zx_injections", .{
-        .root_source_file = injections_step.getOutput(),
-    });
-    zx_wasm_module.addAnonymousImport("zx_injections", .{
-        .root_source_file = injections_step.getOutput(),
-    });
-
-    const injection_mod = b.createModule(try injections_step.getModOpts(b));
+    const injection_mod = b.createModule(try injections.getModOpts(b));
     zx_module.addImport("injections", injection_mod);
     zx_wasm_module.addImport("injections", injection_mod);
 
@@ -645,10 +631,27 @@ pub fn initInner(
         .cli = .{
             .exe = zx_exe,
         },
-        .transformer = .{ .userdata = injections_step },
+        .transformer = .{ .b = b, .userdata = injections },
     };
 }
 
+const Injections = struct {
+    items: std.ArrayListUnmanaged(AddElementOptions) = .empty,
+
+    pub fn add(self: *Injections, b: *std.Build, options: AddElementOptions) void {
+        self.items.append(b.allocator, options) catch @panic("OOM");
+    }
+
+    pub fn getModOpts(self: *Injections, b: *std.Build) !std.Build.Module.CreateOptions {
+        var aw = std.Io.Writer.Allocating.init(b.allocator);
+        defer aw.deinit();
+        try std.zon.stringify.serializeArbitraryDepth(self.items.items, .{}, &aw.writer);
+        const file = b.addWriteFile("injections.zon", aw.written());
+        return .{ .root_source_file = file.getDirectory().path(b, "injections.zon") };
+    }
+};
+
+// TODO: move to src/Build.zig
 pub const Build = struct {
     pub const BuildZiex = struct {
         exe: *std.Build.Step.Compile,
@@ -660,11 +663,12 @@ pub const Build = struct {
 
     /// Output transformer: injects elements into the generated output
     pub const Transformer = struct {
+        b: *std.Build,
         userdata: *anyopaque,
 
         pub fn addElement(self: Transformer, options: AddElementOptions) void {
-            const injections_step: *InjectionsGenStep = @ptrCast(@alignCast(self.userdata));
-            injections_step.add(options);
+            const injections: *Injections = @ptrCast(@alignCast(self.userdata));
+            injections.add(self.b, options);
         }
     };
 

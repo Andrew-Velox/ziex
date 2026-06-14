@@ -1,6 +1,5 @@
 const httpz = @import("httpz");
 const log = std.log.scoped(.app);
-const zx_injections = @import("zx_injections");
 const tree = @import("../core/tree.zig");
 const core_handler = @import("../core/Handler.zig");
 
