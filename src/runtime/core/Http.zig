@@ -12,17 +12,10 @@ pub const MultiFormValue = @import("MultiFormData.zig").Value;
 userdata: ?*anyopaque = null,
 vtable: *const VTable = &failing_vtable,
 
-/// Internal carrier embedded in the web-API facades (`Request.Params`,
-/// `Request.Headers`, `FormData`, `Socket`, ...). It holds the backend handle
-/// behind an `_internal` field so callers never touch the transport directly.
 pub const Facade = struct {
     http: Http = .{},
 };
 
-/// One vtable to rule them all. Fields are grouped by concern:
-/// `req*` read the incoming request, `res*` mutate the outgoing response,
-/// `ws*` drive a WebSocket connection. A backend that does not support a
-/// given concern can reuse the corresponding `failing*` stub.
 pub const VTable = struct {
     // --- Request: body --- //
     reqText: *const fn (userdata: ?*anyopaque) ?[]const u8,
