@@ -1,5 +1,6 @@
 const std = @import("std");
 const common = @import("common.zig");
+const Http = @import("Http.zig");
 const FormDataModule = @import("FormData.zig");
 const MultiFormDataModule = @import("MultiFormData.zig");
 
@@ -31,8 +32,6 @@ method: Method,
 /// Contains the request's method as a string.
 method_str: []const u8 = "",
 
-/// Contains the pathname portion of the URL.
-///
 /// Contains the pathname portion of the URL.
 ///
 /// MDN: [URL.pathname](https://developer.mozilla.org/en-US/docs/Web/API/URL/pathname)
@@ -72,40 +71,8 @@ protocol: Version = .@"HTTP/1.1",
 /// Arena allocator for request-scoped allocations.
 arena: std.mem.Allocator,
 
-_internal: Internal = .{},
-
-const Internal = struct {
-    const UserData = struct {
-        request: ?*anyopaque = null,
-        headers: ?*anyopaque = null,
-        search_params: ?*anyopaque = null,
-        params: ?*anyopaque = null,
-        formdata: ?*anyopaque = null,
-        multiformdata: ?*anyopaque = null,
-    };
-
-    const VTables = struct {
-        request: ?*const VTable = null,
-        headers: ?*const Headers.HeadersVTable = null,
-        search_params: ?*const URLSearchParams.URLSearchParamsVTable = null,
-        params: ?*const Params.ParamsVTable = null,
-        formdata: ?*const FormDataVTable = null,
-        multiformdata: ?*const MultiFormDataVTable = null,
-    };
-
-    userdata: UserData = .{},
-    vtable: VTables = .{},
-};
-
-/// VTable interface for backend-specific request operations.
-pub const VTable = struct {
-    /// Returns the request body as text.
-    text: *const fn (ctx: *anyopaque) ?[]const u8 = &defaultText,
-
-    fn defaultText(_: *anyopaque) ?[]const u8 {
-        return null;
-    }
-};
+/// Internal backend transport carrier. All request reads delegate here.
+_internal: Http.Facade = .{},
 
 // --- Instance Methods --- //
 // MDN: [Request instance methods](https://developer.mozilla.org/en-US/docs/Web/API/Request#instance_methods)
@@ -114,12 +81,7 @@ pub const VTable = struct {
 ///
 /// MDN: [Request.text](https://developer.mozilla.org/en-US/docs/Web/API/Request/text)
 pub fn text(self: *const Request) ?[]const u8 {
-    if (self._internal.vtable.request) |vt| {
-        if (self._internal.userdata.request) |ctx| {
-            return vt.text(ctx);
-        }
-    }
-    return null;
+    return self._internal.http.reqText();
 }
 
 pub fn json(self: *const Request, comptime T: type, opts: std.json.ParseOptions) !?T {
@@ -132,22 +94,13 @@ pub fn json(self: *const Request, comptime T: type, opts: std.json.ParseOptions)
 ///
 /// MDN: [Request.formData](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData)
 pub fn formData(self: *const Request) FormDataModule {
-    return (FormDataModule.Builder{
-        .backend_ctx = self._internal.userdata.formdata,
-        .vtable = self._internal.vtable.formdata,
-    }).build();
+    return .{ ._internal = self._internal };
 }
 
 /// Returns the multipart form data of the request body.
 pub fn multiFormData(self: *const Request) MultiFormDataModule {
-    return (MultiFormDataModule.Builder{
-        .backend_ctx = self._internal.userdata.multiformdata,
-        .vtable = self._internal.vtable.multiformdata,
-    }).build();
+    return .{ ._internal = self._internal };
 }
-
-pub const FormDataVTable = FormDataModule.VTable;
-pub const MultiFormDataVTable = MultiFormDataModule.VTable;
 
 // --- URLSearchParams --- //
 // MDN: [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
@@ -156,39 +109,19 @@ pub const MultiFormDataVTable = MultiFormDataModule.VTable;
 ///
 /// MDN: [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
 pub const URLSearchParams = struct {
-    _internal: State = .{},
-
-    const State = struct {
-        userdata: ?*anyopaque = null,
-        vtable: ?*const URLSearchParamsVTable = null,
-    };
-
-    pub const URLSearchParamsVTable = struct {
-        get: *const fn (ctx: *anyopaque, name: []const u8) ?[]const u8,
-        has: *const fn (ctx: *anyopaque, name: []const u8) bool,
-    };
+    _internal: Http.Facade = .{},
 
     /// Returns the first value associated with the given search parameter.
     /// MDN: [URLSearchParams.get](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/get)
     pub fn get(self: *const URLSearchParams, name: []const u8) ?[]const u8 {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                return vt.get(ctx, name);
-            }
-        }
-        return null;
+        return self._internal.http.reqQueryGet(name);
     }
 
     /// Returns a boolean indicating if the given parameter exists.
     ///
     /// MDN: [URLSearchParams.has](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/has)
     pub fn has(self: *const URLSearchParams, name: []const u8) bool {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                return vt.has(ctx, name);
-            }
-        }
-        return false;
+        return self._internal.http.reqQueryHas(name);
     }
 };
 
@@ -197,29 +130,11 @@ pub const URLSearchParams = struct {
 /// The Params interface provides utility methods to work with URL parameters.
 /// extracted from dynamic routes.
 pub const Params = struct {
-    _internal: State = .{},
-
-    const State = struct {
-        userdata: ?*anyopaque = null,
-        vtable: ?*const ParamsVTable = null,
-    };
-
-    pub const ParamsVTable = struct {
-        getParam: *const fn (ctx: *anyopaque, name: []const u8) ?[]const u8 = &defaultGetParam,
-
-        fn defaultGetParam(_: *anyopaque, _: []const u8) ?[]const u8 {
-            return null;
-        }
-    };
+    _internal: Http.Facade = .{},
 
     /// Returns the value of a URL parameter by name.
     pub fn get(self: *const Params, name: []const u8) ?[]const u8 {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                return vt.getParam(ctx, name);
-            }
-        }
-        return null;
+        return self._internal.http.reqParam(name);
     }
 
     /// Returns a typed value of a URL parameter by name.
@@ -247,40 +162,20 @@ pub const Params = struct {
 ///
 /// MDN: [Headers](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
 pub const Headers = struct {
-    _internal: State = .{},
-
-    const State = struct {
-        userdata: ?*anyopaque = null,
-        vtable: ?*const HeadersVTable = null,
-    };
-
-    pub const HeadersVTable = struct {
-        get: *const fn (ctx: *anyopaque, name: []const u8) ?[]const u8,
-        has: *const fn (ctx: *anyopaque, name: []const u8) bool,
-    };
+    _internal: Http.Facade = .{},
 
     /// Returns the values of a header with the given name.
     ///
     /// MDN: [Headers.get](https://developer.mozilla.org/en-US/docs/Web/API/Headers/get)
     pub fn get(self: *const Headers, name: []const u8) ?[]const u8 {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                return vt.get(ctx, name);
-            }
-        }
-        return null;
+        return self._internal.http.reqHeaderGet(name);
     }
 
     /// Returns a boolean stating whether a Headers object contains a certain header.
     ///
     /// MDN: [Headers.has](https://developer.mozilla.org/en-US/docs/Web/API/Headers/has)
     pub fn has(self: *const Headers, name: []const u8) bool {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                return vt.has(ctx, name);
-            }
-        }
-        return false;
+        return self._internal.http.reqHeaderHas(name);
     }
 };
 
@@ -294,19 +189,9 @@ pub const Builder = struct {
     search: []const u8 = "",
     protocol: Version = .@"HTTP/1.1",
     arena: std.mem.Allocator,
-    userdata: ?*anyopaque = null,
-    vtable: ?*const VTable = null,
-    headers_userdata: ?*anyopaque = null,
-    headers_vtable: ?*const Headers.HeadersVTable = null,
     cookie_header: []const u8 = "",
-    search_params_userdata: ?*anyopaque = null,
-    search_params_vtable: ?*const URLSearchParams.URLSearchParamsVTable = null,
-    params_userdata: ?*anyopaque = null,
-    params_vtable: ?*const Params.ParamsVTable = null,
-    formdata_userdata: ?*anyopaque = null,
-    formdata_vtable: ?*const FormDataVTable = null,
-    multiformdata_userdata: ?*anyopaque = null,
-    multiformdata_vtable: ?*const MultiFormDataVTable = null,
+    /// The unified backend transport for this request/response pair.
+    http: Http = .{},
 
     /// Builds the Request object with all configured values.
     pub fn build(self: Builder) Request {
@@ -319,43 +204,11 @@ pub const Builder = struct {
             .search = self.search,
             .protocol = self.protocol,
             .arena = self.arena,
-            ._internal = .{
-                .userdata = .{
-                    .request = self.userdata,
-                    .headers = self.headers_userdata,
-                    .search_params = self.search_params_userdata,
-                    .params = self.params_userdata,
-                    .formdata = self.formdata_userdata,
-                    .multiformdata = self.multiformdata_userdata,
-                },
-                .vtable = .{
-                    .request = self.vtable,
-                    .headers = self.headers_vtable,
-                    .search_params = self.search_params_vtable,
-                    .params = self.params_vtable,
-                    .formdata = self.formdata_vtable,
-                    .multiformdata = self.multiformdata_vtable,
-                },
-            },
-            .headers = .{
-                ._internal = .{
-                    .userdata = self.headers_userdata,
-                    .vtable = self.headers_vtable,
-                },
-            },
+            ._internal = .{ .http = self.http },
+            .headers = .{ ._internal = .{ .http = self.http } },
             .cookies = .{ .header_value = self.cookie_header },
-            .queries = .{
-                ._internal = .{
-                    .userdata = self.search_params_userdata,
-                    .vtable = self.search_params_vtable,
-                },
-            },
-            .params = .{
-                ._internal = .{
-                    .userdata = self.params_userdata orelse self.userdata,
-                    .vtable = self.params_vtable,
-                },
-            },
+            .queries = .{ ._internal = .{ .http = self.http } },
+            .params = .{ ._internal = .{ .http = self.http } },
         };
     }
 };

@@ -2,9 +2,10 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const zx = @import("root.zig");
-const server = @import("runtime/server/Server.zig");
-const server_wasi = @import("runtime/server/wasm/entrypoint.zig");
-const client = @import("runtime/client/Client.zig").Client;
+const entry = @import("runtime/core/App.zig");
+const server = entry.Server; // exposes Server(H)
+const server_wasi = entry.Wasm; // exposes run(Init)
+const client = entry.Client.Client;
 const Constant = @import("constant.zig");
 const platform = @import("platform.zig").platform;
 const sig = @import("util/sig.zig");
@@ -47,17 +48,17 @@ pub fn io() Io {
     return threaded_instance.io();
 }
 
-const feature_sqlite_server = zx_options.feature_sqlite_server;
-const feature_kv_server = zx_options.feature_kv_server;
-const feature_kv_client = zx_options.feature_kv_client;
-const feature_cache_server = zx_options.feature_cache_server;
+const feat_sqlite_server = zx_options.feat_sqlite_server;
+const feat_kv_server = zx_options.feat_kv_server;
+const feat_kv_client = zx_options.feat_kv_client;
+const feat_cache_server = zx_options.feat_cache_server;
 
 var kv: zx.Kv = undefined;
 var cache: zx.Cache = undefined;
 var db: zx.Db = undefined;
 
-var kv_fs: if (feature_kv_server) zx.Kv.Fs else void = undefined;
-var cache_fs: if (feature_cache_server) zx.Kv.Fs else void = undefined;
+var kv_fs: if (feat_kv_server) zx.Kv.Fs else void = undefined;
+var cache_fs: if (feat_cache_server) zx.Kv.Fs else void = undefined;
 
 var g_datadir: ?[]const u8 = null;
 var g_staticdir: ?[]const u8 = null;
@@ -86,12 +87,12 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
         .freestanding, .wasi => |os| {
             // freestanding => client (browser wasm); wasi => server (server wasm).
             const wasm_kv_enabled = switch (os) {
-                .wasi => feature_kv_server,
-                else => feature_kv_client,
+                .wasi => feat_kv_server,
+                else => feat_kv_client,
             };
 
             // Feature ==> zx.db (wasm backend, server-side only)
-            if (comptime feature_sqlite_server) {
+            if (comptime feat_sqlite_server) {
                 if (os == .wasi) zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
             }
 
@@ -109,7 +110,7 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
     // Native target is always server-side from here on.
 
     // Feature ==> zx.kv (filesystem backend)
-    if (comptime feature_kv_server) {
+    if (comptime feat_kv_server) {
         const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
         kv_fs = .{ .io = init.io, .subdir = kv_subdir };
         kv = kv_fs.kv();
@@ -118,7 +119,7 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
     }
 
     // Feature ==> zx.cache (filesystem backend)
-    if (comptime feature_cache_server) {
+    if (comptime feat_cache_server) {
         const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
         cache_fs = .{ .io = init.io, .subdir = cache_subdir };
         const cache_kv: zx.Kv = cache_fs.kv();
@@ -129,7 +130,7 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
     }
 
     // Feature ==> zx.db (sqlite backend)
-    if (comptime feature_sqlite_server) {
+    if (comptime feat_sqlite_server) {
         const db_dir = try std.fs.path.join(alloc, &.{ datadir, "db", "default.db" });
         defer alloc.free(db_dir);
         const db_url = try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir});
@@ -147,7 +148,7 @@ fn cleanupOptions(alloc: std.mem.Allocator) void {
     if (g_datadir == null) return;
 
     // Feature ==> zx.db (sqlite backend)
-    if (comptime feature_sqlite_server) {
+    if (comptime feat_sqlite_server) {
         if (g_db_url) |s| {
             zx.db.deinit();
             alloc.free(s);
@@ -155,7 +156,7 @@ fn cleanupOptions(alloc: std.mem.Allocator) void {
     }
 
     // Feature ==> zx.cache
-    if (comptime feature_cache_server) {
+    if (comptime feat_cache_server) {
         if (g_cache_subdir) |s| {
             zx.cache.deinit();
             alloc.free(s);
@@ -163,7 +164,7 @@ fn cleanupOptions(alloc: std.mem.Allocator) void {
     }
 
     // Feature ==> zx.kv
-    if (comptime feature_kv_server) {
+    if (comptime feat_kv_server) {
         if (g_kv_subdir) |s| alloc.free(s);
     }
 

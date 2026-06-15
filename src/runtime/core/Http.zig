@@ -1,0 +1,251 @@
+const Http = @This();
+
+const std = @import("std");
+const common = @import("common.zig");
+
+pub const Httpz = @import("Http/Httpz.zig");
+pub const Wasm = @import("Http/Wasm.zig");
+
+pub const CookieOptions = common.CookieOptions;
+pub const MultiFormValue = @import("MultiFormData.zig").Value;
+
+userdata: ?*anyopaque = null,
+vtable: *const VTable = &failing_vtable,
+
+/// Internal carrier embedded in the web-API facades (`Request.Params`,
+/// `Request.Headers`, `FormData`, `Socket`, ...). It holds the backend handle
+/// behind an `_internal` field so callers never touch the transport directly.
+pub const Facade = struct {
+    http: Http = .{},
+};
+
+/// One vtable to rule them all. Fields are grouped by concern:
+/// `req*` read the incoming request, `res*` mutate the outgoing response,
+/// `ws*` drive a WebSocket connection. A backend that does not support a
+/// given concern can reuse the corresponding `failing*` stub.
+pub const VTable = struct {
+    // --- Request: body --- //
+    reqText: *const fn (userdata: ?*anyopaque) ?[]const u8,
+
+    // --- Request: headers --- //
+    reqHeaderGet: *const fn (userdata: ?*anyopaque, name: []const u8) ?[]const u8,
+    reqHeaderHas: *const fn (userdata: ?*anyopaque, name: []const u8) bool,
+
+    // --- Request: route params --- //
+    reqParam: *const fn (userdata: ?*anyopaque, name: []const u8) ?[]const u8,
+
+    // --- Request: URL search params --- //
+    reqQueryGet: *const fn (userdata: ?*anyopaque, name: []const u8) ?[]const u8,
+    reqQueryHas: *const fn (userdata: ?*anyopaque, name: []const u8) bool,
+
+    // --- Request: application/x-www-form-urlencoded --- //
+    reqFormGet: *const fn (userdata: ?*anyopaque, name: []const u8) ?[]const u8,
+    reqFormHas: *const fn (userdata: ?*anyopaque, name: []const u8) bool,
+
+    // --- Request: multipart/form-data --- //
+    reqMultiGet: *const fn (userdata: ?*anyopaque, name: []const u8) ?MultiFormValue,
+    reqMultiHas: *const fn (userdata: ?*anyopaque, name: []const u8) bool,
+    reqMultiGetAll: *const fn (userdata: ?*anyopaque, name: []const u8, allocator: std.mem.Allocator) ?[]const MultiFormValue,
+
+    // --- Response: status / body --- //
+    resSetStatus: *const fn (userdata: ?*anyopaque, code: u16) void,
+    resSetBody: *const fn (userdata: ?*anyopaque, content: []const u8) void,
+
+    // --- Response: headers --- //
+    resHeaderGet: *const fn (userdata: ?*anyopaque, name: []const u8) ?[]const u8,
+    resHeaderSet: *const fn (userdata: ?*anyopaque, name: []const u8, value: []const u8) void,
+    resHeaderAdd: *const fn (userdata: ?*anyopaque, name: []const u8, value: []const u8) void,
+
+    // --- Response: streaming --- //
+    resWriter: *const fn (userdata: ?*anyopaque) ?*std.Io.Writer,
+    resWriteChunk: *const fn (userdata: ?*anyopaque, data: []const u8) anyerror!void,
+    resClearWriter: *const fn (userdata: ?*anyopaque) void,
+
+    // --- Response: cookies --- //
+    resSetCookie: *const fn (userdata: ?*anyopaque, name: []const u8, value: []const u8, opts: CookieOptions) anyerror!void,
+
+    // --- WebSocket --- //
+    wsUpgrade: *const fn (userdata: ?*anyopaque, data: ?[]const u8) anyerror!void,
+    wsWrite: *const fn (userdata: ?*anyopaque, data: []const u8) anyerror!void,
+    wsRead: *const fn (userdata: ?*anyopaque) ?[]const u8,
+    wsClose: *const fn (userdata: ?*anyopaque) void,
+    wsSubscribe: *const fn (userdata: ?*anyopaque, topic: []const u8) void,
+    wsUnsubscribe: *const fn (userdata: ?*anyopaque, topic: []const u8) void,
+    wsPublish: *const fn (userdata: ?*anyopaque, topic: []const u8, message: []const u8) usize,
+    wsIsSubscribed: *const fn (userdata: ?*anyopaque, topic: []const u8) bool,
+    wsSetPublishToSelf: *const fn (userdata: ?*anyopaque, value: bool) void,
+};
+
+// --- Request thin wrappers --- //
+
+pub fn reqText(self: Http) ?[]const u8 {
+    return self.vtable.reqText(self.userdata);
+}
+pub fn reqHeaderGet(self: Http, name: []const u8) ?[]const u8 {
+    return self.vtable.reqHeaderGet(self.userdata, name);
+}
+pub fn reqHeaderHas(self: Http, name: []const u8) bool {
+    return self.vtable.reqHeaderHas(self.userdata, name);
+}
+pub fn reqParam(self: Http, name: []const u8) ?[]const u8 {
+    return self.vtable.reqParam(self.userdata, name);
+}
+pub fn reqQueryGet(self: Http, name: []const u8) ?[]const u8 {
+    return self.vtable.reqQueryGet(self.userdata, name);
+}
+pub fn reqQueryHas(self: Http, name: []const u8) bool {
+    return self.vtable.reqQueryHas(self.userdata, name);
+}
+pub fn reqFormGet(self: Http, name: []const u8) ?[]const u8 {
+    return self.vtable.reqFormGet(self.userdata, name);
+}
+pub fn reqFormHas(self: Http, name: []const u8) bool {
+    return self.vtable.reqFormHas(self.userdata, name);
+}
+pub fn reqMultiGet(self: Http, name: []const u8) ?MultiFormValue {
+    return self.vtable.reqMultiGet(self.userdata, name);
+}
+pub fn reqMultiHas(self: Http, name: []const u8) bool {
+    return self.vtable.reqMultiHas(self.userdata, name);
+}
+pub fn reqMultiGetAll(self: Http, name: []const u8, allocator: std.mem.Allocator) ?[]const MultiFormValue {
+    return self.vtable.reqMultiGetAll(self.userdata, name, allocator);
+}
+
+// --- Response thin wrappers --- //
+
+pub fn resSetStatus(self: Http, code: u16) void {
+    self.vtable.resSetStatus(self.userdata, code);
+}
+pub fn resSetBody(self: Http, content: []const u8) void {
+    self.vtable.resSetBody(self.userdata, content);
+}
+pub fn resHeaderGet(self: Http, name: []const u8) ?[]const u8 {
+    return self.vtable.resHeaderGet(self.userdata, name);
+}
+pub fn resHeaderSet(self: Http, name: []const u8, value: []const u8) void {
+    self.vtable.resHeaderSet(self.userdata, name, value);
+}
+pub fn resHeaderAdd(self: Http, name: []const u8, value: []const u8) void {
+    self.vtable.resHeaderAdd(self.userdata, name, value);
+}
+pub fn resWriter(self: Http) ?*std.Io.Writer {
+    return self.vtable.resWriter(self.userdata);
+}
+pub fn resWriteChunk(self: Http, data: []const u8) anyerror!void {
+    return self.vtable.resWriteChunk(self.userdata, data);
+}
+pub fn resClearWriter(self: Http) void {
+    self.vtable.resClearWriter(self.userdata);
+}
+pub fn resSetCookie(self: Http, name: []const u8, value: []const u8, opts: CookieOptions) anyerror!void {
+    return self.vtable.resSetCookie(self.userdata, name, value, opts);
+}
+
+// --- WebSocket thin wrappers --- //
+
+pub fn wsUpgrade(self: Http, data: ?[]const u8) anyerror!void {
+    return self.vtable.wsUpgrade(self.userdata, data);
+}
+pub fn wsWrite(self: Http, data: []const u8) anyerror!void {
+    return self.vtable.wsWrite(self.userdata, data);
+}
+pub fn wsRead(self: Http) ?[]const u8 {
+    return self.vtable.wsRead(self.userdata);
+}
+pub fn wsClose(self: Http) void {
+    self.vtable.wsClose(self.userdata);
+}
+pub fn wsSubscribe(self: Http, topic: []const u8) void {
+    self.vtable.wsSubscribe(self.userdata, topic);
+}
+pub fn wsUnsubscribe(self: Http, topic: []const u8) void {
+    self.vtable.wsUnsubscribe(self.userdata, topic);
+}
+pub fn wsPublish(self: Http, topic: []const u8, message: []const u8) usize {
+    return self.vtable.wsPublish(self.userdata, topic, message);
+}
+pub fn wsIsSubscribed(self: Http, topic: []const u8) bool {
+    return self.vtable.wsIsSubscribed(self.userdata, topic);
+}
+pub fn wsSetPublishToSelf(self: Http, value: bool) void {
+    self.vtable.wsSetPublishToSelf(self.userdata, value);
+}
+
+// --- Failing defaults --- //
+fn failNullStr(_: ?*anyopaque) ?[]const u8 {
+    return null;
+}
+fn failNamedStr(_: ?*anyopaque, _: []const u8) ?[]const u8 {
+    return null;
+}
+fn failNamedBool(_: ?*anyopaque, _: []const u8) bool {
+    return false;
+}
+fn failMultiGet(_: ?*anyopaque, _: []const u8) ?MultiFormValue {
+    return null;
+}
+fn failMultiGetAll(_: ?*anyopaque, _: []const u8, _: std.mem.Allocator) ?[]const MultiFormValue {
+    return null;
+}
+fn failSetStatus(_: ?*anyopaque, _: u16) void {}
+fn failSetBody(_: ?*anyopaque, _: []const u8) void {}
+fn failHeaderSet(_: ?*anyopaque, _: []const u8, _: []const u8) void {}
+fn failWriter(_: ?*anyopaque) ?*std.Io.Writer {
+    return null;
+}
+fn failWriteChunk(_: ?*anyopaque, _: []const u8) anyerror!void {}
+fn failClearWriter(_: ?*anyopaque) void {}
+fn failSetCookie(_: ?*anyopaque, _: []const u8, _: []const u8, _: CookieOptions) anyerror!void {}
+fn failWsUpgrade(_: ?*anyopaque, _: ?[]const u8) anyerror!void {
+    return error.WebSocketNotConnected;
+}
+fn failWsWrite(_: ?*anyopaque, _: []const u8) anyerror!void {
+    return error.WebSocketNotConnected;
+}
+fn failWsRead(_: ?*anyopaque) ?[]const u8 {
+    return null;
+}
+fn failWsClose(_: ?*anyopaque) void {}
+fn failWsSubscribe(_: ?*anyopaque, _: []const u8) void {}
+fn failWsPublish(_: ?*anyopaque, _: []const u8, _: []const u8) usize {
+    return 0;
+}
+fn failWsIsSubscribed(_: ?*anyopaque, _: []const u8) bool {
+    return false;
+}
+fn failWsSetPublishToSelf(_: ?*anyopaque, _: bool) void {}
+
+pub const failing_vtable = VTable{
+    .reqText = &failNullStr,
+    .reqHeaderGet = &failNamedStr,
+    .reqHeaderHas = &failNamedBool,
+    .reqParam = &failNamedStr,
+    .reqQueryGet = &failNamedStr,
+    .reqQueryHas = &failNamedBool,
+    .reqFormGet = &failNamedStr,
+    .reqFormHas = &failNamedBool,
+    .reqMultiGet = &failMultiGet,
+    .reqMultiHas = &failNamedBool,
+    .reqMultiGetAll = &failMultiGetAll,
+    .resSetStatus = &failSetStatus,
+    .resSetBody = &failSetBody,
+    .resHeaderGet = &failNamedStr,
+    .resHeaderSet = &failHeaderSet,
+    .resHeaderAdd = &failHeaderSet,
+    .resWriter = &failWriter,
+    .resWriteChunk = &failWriteChunk,
+    .resClearWriter = &failClearWriter,
+    .resSetCookie = &failSetCookie,
+    .wsUpgrade = &failWsUpgrade,
+    .wsWrite = &failWsWrite,
+    .wsRead = &failWsRead,
+    .wsClose = &failWsClose,
+    .wsSubscribe = &failWsSubscribe,
+    .wsUnsubscribe = &failWsSubscribe,
+    .wsPublish = &failWsPublish,
+    .wsIsSubscribed = &failWsIsSubscribed,
+    .wsSetPublishToSelf = &failWsSetPublishToSelf,
+};
+
+pub const failing = Http{ .vtable = &failing_vtable };

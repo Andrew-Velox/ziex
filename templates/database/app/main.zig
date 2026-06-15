@@ -4,7 +4,7 @@ const Context = @import("Context.zig");
 
 pub fn main(init: zx.Init) !void {
     var ctx: Context = .{ .db = try .init(zx.io(), zx.allocator, dbUri(init)) };
-    var app = try zx.App(*Context).init(init, zx.io(), zx.allocator, .{}, &ctx);
+    var app = try zx.App.init(init, zx.io(), zx.allocator, .{}, &ctx);
     defer app.deinit();
 
     try app.start();

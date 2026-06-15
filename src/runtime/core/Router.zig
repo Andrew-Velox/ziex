@@ -1,11 +1,10 @@
-//! Shared routing logic for edge (WASI) and server runtimes.
-//! Provides route matching, proxy cascading, layout hierarchy,
-//! error/notfound page rendering, action streaming, and handler registry.
-
 const std = @import("std");
 const zx = @import("../../root.zig");
 const app = @import("app");
+const core_handler = @import("Handler.zig");
+const render = @import("../server/render.zig");
 
+const Http = @import("Http.zig");
 const Component = zx.Component;
 const ServerMeta = zx.server.ServerMeta;
 const Route = ServerMeta.Route;
@@ -597,4 +596,147 @@ pub fn renderNotFoundComponent(
     var component = nf_fn(notfoundctx);
     component = applyLayoutsForPath(path, layoutctx, component, null, null);
     return component;
+}
+
+pub const HandleOptions = struct {
+    http: Http,
+    request: zx.server.Request,
+    response: zx.server.Response,
+    pathname: []const u8,
+    method: zx.server.Request.Method,
+    allocator: std.mem.Allocator,
+    arena: std.mem.Allocator,
+    base_path: ?[]const u8 = null,
+    /// App context pointer (native server). WASI passes null.
+    app_ctx: ?*anyopaque = null,
+    /// When the route has a socket handler, the caller supplies a Socket bound
+    /// to the same backend so `handle` can dispatch the upgrade.
+    socket: zx.Socket = .{},
+};
+
+pub const Outcome = union(enum) {
+    /// Response (status/headers/body) is set on the backend. Emit as-is.
+    response_ready: void,
+    /// A full page component is ready; render it to the response writer.
+    /// `streaming` indicates the route opted into HTML streaming.
+    component: struct { component: Component, streaming: bool },
+    /// The route handler upgraded to a WebSocket. The caller must run the
+    /// receive loop and the open/close lifecycle.
+    ws_upgraded: void,
+    /// No route/handler matched. The caller should render not-found.
+    not_found: struct { matched_route: ?*const Route },
+};
+
+pub fn handle(opts: HandleOptions) !Outcome {
+    const http = opts.http;
+    const request = opts.request;
+    const response = opts.response;
+    const pathname = opts.pathname;
+    const allocator = opts.allocator;
+    const arena = opts.arena;
+
+    const route_match = matchRoute(pathname, .{ .match = .exact });
+    const matched_route = if (route_match) |m| m.route else null;
+
+    // -- Proxy chain --
+    const local_proxy = if (matched_route) |r| r.page_proxy orelse r.route_proxy else null;
+    const proxy_result = executeProxyChain(pathname, local_proxy, request, response, arena);
+    if (proxy_result.aborted) return .response_ready;
+
+    if (matched_route) |route| {
+        // -- Page (action/event dispatch + render) --
+        const page_result = try core_handler.handlePage(
+            route,
+            request,
+            response,
+            allocator,
+            arena,
+            opts.app_ctx,
+            proxy_result.state_ptr,
+            opts.base_path,
+        );
+
+        switch (page_result) {
+            .action_handled => |r| {
+                if (r.body) |body| {
+                    http.resHeaderSet("Content-Type", "application/json");
+                    http.resSetBody(body);
+                }
+                return .response_ready;
+            },
+            .action_not_found => {
+                http.resSetStatus(400);
+                http.resSetBody("No action handler registered for this route");
+                return .response_ready;
+            },
+            .event_handled => |r| {
+                http.resHeaderSet("Content-Type", "application/json");
+                http.resSetBody(r.body orelse "{}");
+                return .response_ready;
+            },
+            .event_not_found => {
+                http.resSetStatus(404);
+                http.resSetBody("No server event handler registered for this route");
+                return .response_ready;
+            },
+            .page_error => |err| {
+                http.resSetStatus(500);
+                if (core_handler.renderError(pathname, request, response, allocator, err)) |cmp| {
+                    return .{ .component = .{ .component = cmp, .streaming = false } };
+                }
+                return .response_ready;
+            },
+            .component => |cmp| {
+                http.resHeaderSet("Content-Type", "text/html");
+                return .{ .component = .{
+                    .component = cmp,
+                    .streaming = core_handler.isStreamingEnabled(route),
+                } };
+            },
+            .action_native, .not_found => {
+                // Fall through to API route dispatch below.
+            },
+        }
+
+        // -- API route dispatch --
+        if (route.route) |handlers| {
+            if (resolveCustomHandler(handlers, opts.method, null)) |_| {
+                const api_result = core_handler.handleApi(
+                    route,
+                    request,
+                    response,
+                    allocator,
+                    opts.app_ctx,
+                    proxy_result.state_ptr,
+                    opts.socket,
+                );
+
+                switch (api_result) {
+                    .handler_error => |err| {
+                        if (!opts.socket.isUpgraded()) {
+                            http.resSetStatus(500);
+                            if (core_handler.renderError(pathname, request, response, allocator, err)) |cmp| {
+                                return .{ .component = .{ .component = cmp, .streaming = false } };
+                            }
+                        }
+                    },
+                    .not_found => {},
+                    .handled => {},
+                }
+
+                if (opts.socket.isUpgraded()) return .ws_upgraded;
+                if (api_result != .not_found) return .response_ready;
+            }
+        }
+    }
+
+    return .{ .not_found = .{ .matched_route = matched_route } };
+}
+
+pub const streaming_bootstrap_script = render.streaming_bootstrap_script;
+pub const AsyncComponent = render.AsyncComponent;
+
+pub fn streamComponent(component: Component, allocator: std.mem.Allocator, writer: *std.Io.Writer, base_path: ?[]const u8) ![]AsyncComponent {
+    render.current_route_path = null;
+    return render.stream(component, allocator, writer, .{ .base_path = base_path });
 }

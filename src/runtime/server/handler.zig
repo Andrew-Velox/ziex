@@ -353,8 +353,9 @@ pub fn Handler(comptime AppCtxType: type) type {
         pub fn notFound(self: *Self, req: *httpz.Request, res: *httpz.Response) !void {
             const path = req.url.path;
 
-            const abstract_req = httpz_adapter.createRequest(req);
-            const abstract_res = httpz_adapter.createResponse(res, req.arena);
+            var hctx = httpz_backend.HttpzCtx{ .req = req, .res = res };
+            const abstract_req = httpz_backend.createRequest(&hctx);
+            const abstract_res = httpz_backend.createResponse(&hctx, req.arena);
 
             // Execute proxy handlers for the closest route before handling notfound
             if (zx.Router.findRoute(path, .{ .match = .closest })) |_| {
@@ -404,8 +405,9 @@ pub fn Handler(comptime AppCtxType: type) type {
             res.status = 500;
             res.content_type = .HTML;
 
-            const abstract_req = httpz_adapter.createRequest(req);
-            const abstract_res = httpz_adapter.createResponse(res, req.arena);
+            var hctx = httpz_backend.HttpzCtx{ .req = req, .res = res };
+            const abstract_req = httpz_backend.createRequest(&hctx);
+            const abstract_res = httpz_backend.createResponse(&hctx, req.arena);
 
             // Delegate to core handler for error rendering
             if (core_handler.renderError(path, abstract_req, abstract_res, req.arena, err)) |cmp| {
@@ -438,8 +440,9 @@ pub fn Handler(comptime AppCtxType: type) type {
 
         pub fn api(self: *Self, req: *httpz.Request, res: *httpz.Response) !void {
             const allocator = self.allocator;
-            const abstract_req = httpz_adapter.createRequest(req);
-            const abstract_res = httpz_adapter.createResponse(res, req.arena);
+            var hctx = httpz_backend.HttpzCtx{ .req = req, .res = res };
+            const abstract_req = httpz_backend.createRequest(&hctx);
+            const abstract_res = httpz_backend.createResponse(&hctx, req.arena);
 
             // Get route data
             const route_data: *const App.Meta.Route = if (req.route_data) |rd|
@@ -460,12 +463,12 @@ pub fn Handler(comptime AppCtxType: type) type {
             // Check if this route has a Socket handler and might want to upgrade
             if (handlers.socket) |socket_handler| {
                 // Create upgrade context for socket operations
-                var upgrade_ctx = httpz_adapter.SocketUpgradeContext{
+                var upgrade_ctx = httpz_backend.UpgradeBackend{
                     .allocator = allocator,
                     .req = req,
                     .res = res,
                 };
-                const socket = httpz_adapter.createUpgradeSocket(&upgrade_ctx);
+                const socket = upgrade_ctx.socket();
 
                 // Delegate to core handler
                 const result = core_handler.handleApi(
@@ -543,8 +546,9 @@ pub fn Handler(comptime AppCtxType: type) type {
                 }
             }
 
-            const abstract_req = httpz_adapter.createRequest(req);
-            const abstract_res = httpz_adapter.createResponse(res, req.arena);
+            var hctx = httpz_backend.HttpzCtx{ .req = req, .res = res };
+            const abstract_req = httpz_backend.createRequest(&hctx);
+            const abstract_res = httpz_backend.createResponse(&hctx, req.arena);
 
             // Get route data
             const route: *const App.Meta.Route = if (req.route_data) |rd|
@@ -919,73 +923,59 @@ pub fn Handler(comptime AppCtxType: type) type {
                 }
             }
 
-            /// Create a Socket interface for the current connection
+            /// Create a Socket interface for the current connection, backed by
+            /// this handler via the unified `Http` vtable (only `ws*` slots).
             fn createSocket(self: *WebsocketHandler) zx.Socket {
-                return zx.Socket{
-                    .backend_ctx = @ptrCast(self),
-                    .vtable = &socket_vtable,
-                };
+                return .{ ._internal = .{
+                    .http = .{ .userdata = @ptrCast(self), .vtable = &socket_vtable },
+                    .attached = true,
+                } };
             }
 
-            const socket_vtable = zx.Socket.VTable{
-                .upgrade = &socketUpgrade,
-                .upgradeWithData = &socketUpgradeWithData,
-                .write = &socketWrite,
-                .read = &socketRead,
-                .close = &socketClose,
-                .subscribe = &socketSubscribe,
-                .unsubscribe = &socketUnsubscribe,
-                .publish = &socketPublish,
-                .isSubscribed = &socketIsSubscribed,
-                .setPublishToSelf = &socketSetPublishToSelf,
+            const socket_vtable = blk: {
+                var vt = zx.Http.failing_vtable;
+                vt.wsWrite = &socketWrite;
+                vt.wsClose = &socketClose;
+                vt.wsSubscribe = &socketSubscribe;
+                vt.wsUnsubscribe = &socketUnsubscribe;
+                vt.wsPublish = &socketPublish;
+                vt.wsIsSubscribed = &socketIsSubscribed;
+                vt.wsSetPublishToSelf = &socketSetPublishToSelf;
+                break :blk vt;
             };
 
-            fn socketUpgrade(_: *anyopaque) anyerror!void {
-                return error.WebSocketAlreadyConnected;
+            fn handlerOf(userdata: ?*anyopaque) *WebsocketHandler {
+                return @ptrCast(@alignCast(userdata.?));
             }
 
-            fn socketUpgradeWithData(_: *anyopaque, _: []const u8) anyerror!void {
-                return error.WebSocketAlreadyConnected;
+            fn socketWrite(userdata: ?*anyopaque, data: []const u8) anyerror!void {
+                try handlerOf(userdata).conn.write(data);
             }
 
-            fn socketWrite(ctx: *anyopaque, data: []const u8) anyerror!void {
-                const handler: *WebsocketHandler = @ptrCast(@alignCast(ctx));
-                try handler.conn.write(data);
-            }
-
-            fn socketRead(_: *anyopaque) ?[]const u8 {
-                return null;
-            }
-
-            fn socketClose(ctx: *anyopaque) void {
-                const handler: *WebsocketHandler = @ptrCast(@alignCast(ctx));
-                handler.conn.close(.{ .code = 1000, .reason = "closed" }) catch {};
+            fn socketClose(userdata: ?*anyopaque) void {
+                handlerOf(userdata).conn.close(.{ .code = 1000, .reason = "closed" }) catch {};
             }
 
             // Pub/Sub vtable implementations - use subscriber data stored on connection
-            fn socketSubscribe(ctx: *anyopaque, topic: []const u8) void {
-                const handler: *WebsocketHandler = @ptrCast(@alignCast(ctx));
-                handler.subscriber.subscribe(topic);
+            fn socketSubscribe(userdata: ?*anyopaque, topic: []const u8) void {
+                handlerOf(userdata).subscriber.subscribe(topic);
             }
 
-            fn socketUnsubscribe(ctx: *anyopaque, topic: []const u8) void {
-                const handler: *WebsocketHandler = @ptrCast(@alignCast(ctx));
-                handler.subscriber.unsubscribe(topic);
+            fn socketUnsubscribe(userdata: ?*anyopaque, topic: []const u8) void {
+                handlerOf(userdata).subscriber.unsubscribe(topic);
             }
 
-            fn socketPublish(ctx: *anyopaque, topic: []const u8, message: []const u8) usize {
-                const handler: *WebsocketHandler = @ptrCast(@alignCast(ctx));
+            fn socketPublish(userdata: ?*anyopaque, topic: []const u8, message: []const u8) usize {
+                const handler = handlerOf(userdata);
                 return pubsub.getPubSub().publish(&handler.subscriber, topic, message);
             }
 
-            fn socketIsSubscribed(ctx: *anyopaque, topic: []const u8) bool {
-                const handler: *WebsocketHandler = @ptrCast(@alignCast(ctx));
-                return handler.subscriber.isSubscribed(topic);
+            fn socketIsSubscribed(userdata: ?*anyopaque, topic: []const u8) bool {
+                return handlerOf(userdata).subscriber.isSubscribed(topic);
             }
 
-            fn socketSetPublishToSelf(ctx: *anyopaque, value: bool) void {
-                const handler: *WebsocketHandler = @ptrCast(@alignCast(ctx));
-                handler.subscriber.publish_to_self = value;
+            fn socketSetPublishToSelf(userdata: ?*anyopaque, value: bool) void {
+                handlerOf(userdata).subscriber.publish_to_self = value;
             }
         };
     };
@@ -997,7 +987,7 @@ const cachez = zx.Cache.cachez;
 
 const zx_options = @import("zx_options");
 const zx = @import("../../root.zig");
-const httpz_adapter = @import("adapter.zig");
+const httpz_backend = zx.Http.Httpz;
 const pubsub = @import("pubsub.zig");
 const rndr = @import("render.zig");
 const ctxs = @import("../../contexts.zig");
