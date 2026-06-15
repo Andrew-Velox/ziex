@@ -287,7 +287,8 @@ pub fn initInner(
     zx_module.addOptions("zx_options", zx_options);
 
     // --- Dirs Setup --- //
-    const static_lazypath: LazyPath = if (opts.static_path) |p| p else .{ .cwd_relative = b.pathJoin(&.{ b.install_path, "static" }) };
+    // TODO: b.install_path alternative for zig 0.17, using hardcoded zig-out for now
+    const static_lazypath: LazyPath = if (opts.static_path) |p| p else .{ .cwd_relative = b.pathJoin(&.{ "zig-out", "static" }) };
     const assetsdir = static_lazypath.path(b, "assets");
 
     // --- ZX Transpilation ---
@@ -307,7 +308,8 @@ pub fn initInner(
     }
     // Always generate inlined sourcemaps so dev mode can remap errors to .zx files
     transpile_cmd.addArgs(&.{ "--map", "inline" });
-    const cache_path_arg = b.pathJoin(&.{ b.cache_root.path orelse ".zig-cache", "zx_transpile" });
+    // TODO: b.cache_root.path alternative for zig 0.17, using hardcoded .zig-cache for now
+    const cache_path_arg = b.pathJoin(&.{ ".zig-cache", "zx_transpile" });
     transpile_cmd.addArgs(&.{ "--cache-dir", cache_path_arg });
     transpile_cmd.expectExitCode(0);
 
@@ -318,9 +320,10 @@ pub fn initInner(
     // --- Static Directory Setup --- //
     {
         // Install public directory into static (only if the directory exists)
-        const public_abs_path = opts.site_path.path(b, "public").getPath(b);
+        // TODO: LazyPath.getPath(b) alternative for zig 0.17, using relative path for now
+        const public_path = b.fmt("{f}", .{opts.site_path.path(b, "public")});
 
-        if (std.Io.Dir.accessAbsolute(b.graph.io, public_abs_path, .{})) |_| {
+        if (std.Io.Dir.cwd().access(b.graph.io, public_path, .{})) |_| {
             const install_static = b.addInstallDirectory(.{
                 .source_dir = opts.site_path.path(b, "public"),
                 .install_dir = .prefix,
@@ -330,8 +333,10 @@ pub fn initInner(
         } else |_| {}
 
         // Also install the generated assets into static/assets (only if the directory exists)
-        const assets_abs_path = opts.site_path.path(b, "assets").getPath(b);
-        if (std.Io.Dir.accessAbsolute(b.graph.io, assets_abs_path, .{})) |_| {
+        // TODO: LazyPath.getPath(b) alternative for zig 0.17, using relative path for now
+        const assets_path = b.fmt("{f}", .{opts.site_path.path(b, "assets")});
+        std.log.info("Assets Path: {s}\n", .{assets_path});
+        if (std.Io.Dir.cwd().access(b.graph.io, assets_path, .{})) |_| {
             const install_assets = b.addInstallDirectory(.{
                 .source_dir = opts.site_path.path(b, "assets"),
                 .install_dir = .prefix,
@@ -413,7 +418,8 @@ pub fn initInner(
     // --- ZX Watch Invalidator ---
     // Use directory-level watch input so `zig build --watch` picks up changes.
     // Cache invalidation for non-watch builds is handled by the dep file (--dep-file).
-    _ = try transpile_cmd.step.addDirectoryWatchInput(opts.site_path);
+    // TODO: ste.addDirectoryWatchInput alternative for zig 0.17, for now check if watcher works without it
+    // _ = try transpile_cmd.step.addDirectoryWatchInput(opts.site_path);
 
     // --- ZX Site Main Executable --- //
     var user_imports = std.array_list.Managed(std.Build.Module.Import).init(b.allocator);
@@ -573,7 +579,7 @@ pub fn initInner(
         );
         const zx_cmd = getZxRun(b, zx_full_exe, opts);
         zx_step.dependOn(&zx_cmd.step);
-        if (b.args) |args| zx_cmd.addArgs(args);
+        zx_cmd.addPassthruArgs();
     }
 
     // --- Steps: Serve --- //
@@ -583,7 +589,7 @@ pub fn initInner(
         serve_cmd.step.dependOn(b.getInstallStep());
         serve_cmd.step.dependOn(&transpile_cmd.step);
         serve_step.dependOn(&serve_cmd.step);
-        if (b.args) |args| serve_cmd.addArgs(args);
+        serve_cmd.addPassthruArgs();
     }
 
     // --- Steps: Dev --- //
@@ -593,10 +599,12 @@ pub fn initInner(
             "dev",
             "--binpath",
         });
-        dev_cmd.addArg(b.pathJoin(&.{ b.exe_dir, exe.out_filename }));
+
+        // TODO: find out replacement of b.exe_dir for zig 0.17, using hardcoded zig-out/bin for now
+        dev_cmd.addArg(b.pathJoin(&.{ "zig-out", "bin", exe.out_filename }));
         const dev_step = b.step(dev_step_name, "Run the Ziex app in development mode");
         dev_step.dependOn(&dev_cmd.step);
-        if (b.args) |args| dev_cmd.addArgs(args);
+        dev_cmd.addPassthruArgs();
     }
 
     // --- Steps: Export --- //
@@ -605,7 +613,7 @@ pub fn initInner(
         export_cmd.addArgs(&.{"export"});
         const export_step = b.step(export_step_name, "Export the Ziex app for static hosting");
         export_step.dependOn(&export_cmd.step);
-        if (b.args) |args| export_cmd.addArgs(args);
+        export_cmd.addPassthruArgs();
     }
 
     // --- Steps: Bundle --- //
@@ -614,7 +622,7 @@ pub fn initInner(
         bundle_cmd.addArgs(&.{"bundle"});
         const bundle_step = b.step(bundle_step_name, "Bundle the Ziex app for production deployment");
         bundle_step.dependOn(&bundle_cmd.step);
-        if (b.args) |args| bundle_cmd.addArgs(args);
+        bundle_cmd.addPassthruArgs();
     }
 
     return .{
