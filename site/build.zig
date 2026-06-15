@@ -114,11 +114,11 @@ pub fn build(b: *std.Build) !void {
     app_exe.step.dependOn(&install_pg.step); // Playground disabled
 
     // --- ZX setup: wires dependencies and adds `zx`/`dev` build steps --- //
-    _ = try ziex.init(b, app_exe, .{
+    var zx = try ziex.init(b, app_exe, .{
         .app = .{
             // .path = b.path("app"),
             // .base_path = "/test",
-            .copy_embedded_sources = true,
+            // .copy_embedded_sources = true,
             .features = .{
                 .sqlite = .enabled,
             },
@@ -130,10 +130,17 @@ pub fn build(b: *std.Build) !void {
         .cli = .{ .optimize = optimize },
     });
 
-    const component_mod = ziex.createModule(b, .{
-        .root_source_file = b.path("app/components.zx"),
-    });
-    app_exe.root_module.addImport("components", component_mod);
+    // --- ZX Components --- //
+    // Single File
+    const icons_mod = zx.addComponent(.{ .root_source_file = b.path("component/icon.zx") });
+    zx.app.module.addImport("icon", icons_mod);
+    // multifile
+    zx.addComponentImport("component", .{ .root_source_file = b.path("component/main.zx") });
+    // from deps
+    const ui_dep = b.dependency("ui", .{});
+    const ui_mod = ui_dep.module("ui");
+    ui_mod.addImport("zx", zx.zx_module);
+    zx.addImport("ui", ui_mod);
 
     const tailwindcss_b = tailwindcss.addBuild(b, .{
         .config = .{

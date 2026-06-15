@@ -1,15 +1,14 @@
 const std = @import("std");
 const html_util = @import("../util/html.zig");
+const build_zig = @import("../../build.zig");
+pub const InitOptions = @import("init/InitOptions.zig");
 
 const LazyPath = std.Build.LazyPath;
 const AddElementOptions = @import("../Build.zig").AddElementOptions;
 
-pub const InitOptions = @import("init/InitOptions.zig");
-
 pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !Build {
     const target = exe.root_module.resolved_target;
     const optimize = exe.root_module.optimize;
-    const build_zig = @import("../../build.zig");
     const wasm_target = b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .freestanding, .abi = .none });
 
     const zx_dep = b.dependencyFromBuildZig(build_zig, .{
@@ -48,7 +47,6 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
         .cli_path = null,
         .site_outdir = null,
         .steps = .default,
-        .copy_embedded_sources = false,
         .client = options.client,
         .static_path = options.static_path,
         .ziex_js_dep = ziex_js_dep,
@@ -58,7 +56,6 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
 
     if (options.app) |site_opts| {
         opts.site_path = site_opts.path orelse opts.site_path;
-        opts.copy_embedded_sources = site_opts.copy_embedded_sources;
         opts.base_path = site_opts.base_path;
         opts.features = site_opts.features;
     }
@@ -88,7 +85,6 @@ const InitInnerOptions = struct {
     cli_path: ?LazyPath,
     site_outdir: ?LazyPath,
     steps: InitOptions.CliOptions.Steps,
-    copy_embedded_sources: bool,
     features: InitOptions.AppOptions.FeatureOptions = .default,
     client: InitOptions.ClientOptions,
     static_path: ?LazyPath,
@@ -303,9 +299,6 @@ pub fn initInner(
     transpile_cmd.addDirectoryArg(static_lazypath);
     transpile_cmd.addArg("--dep-file");
     _ = transpile_cmd.addDepFileOutputArg("transpile.d");
-    if (opts.copy_embedded_sources) {
-        transpile_cmd.addArg("--copy-embedded-sources");
-    }
     if (opts.base_path) |bp| {
         transpile_cmd.addArgs(&.{ "--base-path", bp });
     }
@@ -623,6 +616,8 @@ pub fn initInner(
 
     return .{
         .build = b,
+        .zx_module = zx_module,
+        .app = .{ .exe = exe, .module = app_module },
         .cmd = .{
             .transpile = transpile_cmd,
         },
@@ -661,6 +656,11 @@ pub const Build = struct {
         transpile: *std.Build.Step.Run,
     };
 
+    pub const App = struct {
+        exe: *std.Build.Step.Compile,
+        module: *std.Build.Module,
+    };
+
     /// Output transformer: injects elements into the generated output
     pub const Transformer = struct {
         b: *std.Build,
@@ -674,6 +674,13 @@ pub const Build = struct {
 
     build: *std.Build,
 
+    /// The app's canonical `zx` module. Component modules created via
+    /// `addComponent` are bound to this so the whole app shares one zx graph.
+    zx_module: *std.Build.Module,
+
+    /// The app's root executable and generated `app` module.
+    app: App,
+
     cmd: BuildCommand,
 
     outdir: LazyPath,
@@ -682,6 +689,32 @@ pub const Build = struct {
     cli: BuildZiex,
 
     transformer: Transformer,
+
+    /// Transpile a `.zx` component file and return a Zig module wired to this
+    /// app's canonical `zx` module.
+    pub fn addComponent(self: Build, opts: build_zig.TranslatedZx.Options) *std.Build.Module {
+        var component_opts = opts;
+        // Inherit the app's target/optimize unless the caller overrode them.
+        if (component_opts.target == null) component_opts.target = self.zx_module.resolved_target;
+        if (component_opts.optimize == null) component_opts.optimize = self.zx_module.optimize;
+
+        const mod = build_zig.addTranslateZx(self.build, component_opts).createModule();
+        mod.addImport("zx", self.zx_module);
+        return mod;
+    }
+
+    /// Like `addComponent`, but also imports the resulting module onto the app's
+    /// root module and generated `app` module under `name`.
+    pub fn addComponentImport(self: Build, name: []const u8, opts: build_zig.TranslatedZx.Options) void {
+        const mod = self.addComponent(opts);
+        self.addImport(name, mod);
+    }
+
+    /// Add an import to app's root module and generated `app` module under `name`.
+    pub fn addImport(self: Build, name: []const u8, mod: *std.Build.Module) void {
+        self.app.exe.root_module.addImport(name, mod);
+        self.app.module.addImport(name, mod);
+    }
 };
 
 const ServerOnlyStubMode = enum {

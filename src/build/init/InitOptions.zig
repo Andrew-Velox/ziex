@@ -79,18 +79,6 @@ pub const AppOptions = struct {
     /// If `null`, defaults to root path ("/").
     base_path: ?[]const u8 = null,
 
-    /// Copy embedded `.zx` source files to the transpile output directory.
-    ///
-    /// When enabled, any `.zx` files referenced via `@embedFile` in your templates
-    /// will be copied to the output directory alongside the generated `.zig` files,
-    /// and the `@embedFile` paths will be updated to reference the local copies.
-    ///
-    /// This is useful when you want to display source code examples in your app
-    /// and need the files accessible within the package boundary.
-    ///
-    /// Default: `false`
-    copy_embedded_sources: bool = false,
-
     /// Features that can be optionally enabled
     features: FeatureOptions = .default,
 };
