@@ -30,7 +30,7 @@ RUN cd site && zig build zx -- version
 # App
 RUN cd site && zig build pg
 
-COPY site/app ./site/app
+COPY site/app site/component ./site/
 COPY pkg/ui ./pkg/ui
 RUN cd site && zig build -Doptimize=ReleaseSmall
 RUN cd site && zig build zx -- bundle
