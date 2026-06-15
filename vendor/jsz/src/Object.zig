@@ -82,18 +82,18 @@ pub fn callAlloc(
     // Build our arguments.
     const argsInfo = @typeInfo(@TypeOf(args)).@"struct";
     assert(argsInfo.is_tuple);
-    var js_args: [argsInfo.fields.len]js.Value = undefined;
-    inline for (argsInfo.fields, 0..) |field, i| {
-        js_args[i] = switch (field.type) {
-            js.Object => @field(args, field.name).value,
-            else => js.Value.init(@field(args, field.name)),
+    var js_args: [argsInfo.field_types.len]js.Value = undefined;
+    inline for (argsInfo.field_types, 0..) |field_type, i| {
+        js_args[i] = switch (field_type) {
+            js.Object => @field(args, argsInfo.field_names[i]).value,
+            else => js.Value.init(@field(args, argsInfo.field_names[i])),
         };
     }
 
     // We need to free all the arguments given to use that weren't
     // already js.Objects. If they were, its up to the caller to free.
-    defer inline for (argsInfo.fields, 0..) |field, i| {
-        if (field.type != js.Object) js_args[i].deinit();
+    defer inline for (argsInfo.field_types, 0..) |field_type, i| {
+        if (field_type != js.Object) js_args[i].deinit();
     };
 
     // Invoke
@@ -112,18 +112,18 @@ pub fn new(
     // Build our arguments.
     const argsInfo = @typeInfo(@TypeOf(args)).@"struct";
     assert(argsInfo.is_tuple);
-    var js_args: [argsInfo.fields.len]js.Value = undefined;
-    inline for (argsInfo.fields, 0..) |field, i| {
-        js_args[i] = switch (field.type) {
-            js.Object => @field(args, field.name).value,
-            else => js.Value.init(@field(args, field.name)),
+    var js_args: [argsInfo.field_types.len]js.Value = undefined;
+    inline for (argsInfo.field_types, 0..) |field_type, i| {
+        js_args[i] = switch (field_type) {
+            js.Object => @field(args, argsInfo.field_names[i]).value,
+            else => js.Value.init(@field(args, argsInfo.field_names[i])),
         };
     }
 
     // We need to free all the arguments given to use that weren't
     // already js.Objects. If they were, its up to the caller to free.
-    defer inline for (argsInfo.fields, 0..) |field, i| {
-        if (field.type != js.Object) js_args[i].deinit();
+    defer inline for (argsInfo.field_types, 0..) |field_type, i| {
+        if (field_type != js.Object) js_args[i].deinit();
     };
 
     // Invoke

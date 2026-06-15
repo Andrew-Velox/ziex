@@ -744,13 +744,13 @@ pub const ServerMeta = struct {
         const FnType = @TypeOf(pageFn);
         const fn_info = @typeInfo(FnType).@"fn";
         const R = fn_info.return_type.?;
-        const n_params = fn_info.params.len;
+        const n_params = fn_info.param_types.len;
 
         return struct {
             fn wrapper(ctx: zx.PageContext, app_ptr: ?*const anyopaque, state_ptr: ?*const anyopaque) anyerror!Component {
                 if (is_md) {
                     // TODO: figure out a better design for page.mdzx file, we need a better way to use PageContext in md file without magic
-                    const CtxType = fn_info.params[0].type.?;
+                    const CtxType = fn_info.param_types[0].?;
                     const CCtxType = @typeInfo(CtxType).pointer.child;
                     const allocator = ctx.arena;
                     const cctx = (allocator.create(CCtxType) catch @panic("OOM"));
@@ -763,12 +763,12 @@ pub const ServerMeta = struct {
                     if (R == Component) return pageFn(ctx) else return try pageFn(ctx);
                 }
                 if (n_params == 2) {
-                    const app = injectApp(fn_info.params[1].type.?, app_ptr);
+                    const app = injectApp(fn_info.param_types[1].?, app_ptr);
                     if (R == Component) return pageFn(ctx, app) else return try pageFn(ctx, app);
                 }
                 if (n_params == 3) {
-                    const app = injectApp(fn_info.params[1].type.?, app_ptr);
-                    const state = injectState(fn_info.params[2].type.?, state_ptr);
+                    const app = injectApp(fn_info.param_types[1].?, app_ptr);
+                    const state = injectState(fn_info.param_types[2].?, state_ptr);
                     if (R == Component) return pageFn(ctx, app, state) else return try pageFn(ctx, app, state);
                 }
                 @compileError("Page function must have 1-3 parameters: (ctx, app?, state?)");
@@ -782,7 +782,7 @@ pub const ServerMeta = struct {
         const layoutFn = T.Layout;
         const FnType = @TypeOf(layoutFn);
         const fn_info = @typeInfo(FnType).@"fn";
-        const n_params = fn_info.params.len;
+        const n_params = fn_info.param_types.len;
 
         return struct {
             fn wrapper(ctx: zx.LayoutContext, component: Component, app_ptr: ?*const anyopaque, state_ptr: ?*const anyopaque) Component {
@@ -790,12 +790,12 @@ pub const ServerMeta = struct {
                     return layoutFn(ctx, component);
                 }
                 if (n_params == 3) {
-                    const app = injectApp(fn_info.params[2].type.?, app_ptr);
+                    const app = injectApp(fn_info.param_types[2].?, app_ptr);
                     return layoutFn(ctx, component, app);
                 }
                 if (n_params == 4) {
-                    const app = injectApp(fn_info.params[2].type.?, app_ptr);
-                    const state = injectState(fn_info.params[3].type.?, state_ptr);
+                    const app = injectApp(fn_info.param_types[2].?, app_ptr);
+                    const state = injectState(fn_info.param_types[3].?, state_ptr);
                     return layoutFn(ctx, component, app, state);
                 }
                 @compileError("Layout function must have 2-4 parameters: (ctx, children, app?, state?)");
@@ -834,15 +834,15 @@ pub const ServerMeta = struct {
 pub fn mapStruct(comptime T: type, src: anytype) T {
     var out: T = .{};
     const S = @TypeOf(src);
-    inline for (@typeInfo(T).@"struct".fields) |f| {
-        if (comptime T == httpz.Config and std.mem.eql(u8, f.name, "address")) {
+    inline for (@typeInfo(T).@"struct".field_names, @typeInfo(T).@"struct".field_types) |field_name, field_type| {
+        if (comptime T == httpz.Config and std.mem.eql(u8, field_name, "address")) {
             // handled after the loop because our app config stores host/port
             // separately while httpz expects a tagged union
-        } else if (@hasField(S, f.name)) {
-            const sv = @field(src, f.name);
-            switch (@typeInfo(f.type)) {
-                .@"struct" => @field(out, f.name) = mapStruct(f.type, sv),
-                else => @field(out, f.name) = sv,
+        } else if (@hasField(S, field_name)) {
+            const sv = @field(src, field_name);
+            switch (@typeInfo(field_type)) {
+                .@"struct" => @field(out, field_name) = mapStruct(field_type, sv),
+                else => @field(out, field_name) = sv,
             }
         }
     }

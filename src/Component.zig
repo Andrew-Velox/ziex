@@ -44,14 +44,14 @@ pub const Component = union(enum) {
 
         pub fn init(comptime func: anytype, name: []const u8, allocator: Allocator, props: anytype) ComponentFn {
             const FuncInfo = @typeInfo(@TypeOf(func));
-            const param_count = FuncInfo.@"fn".params.len;
+            const param_count = FuncInfo.@"fn".param_types.len;
             const fn_name = @typeName(@TypeOf(func));
 
             // Validation of parameters
             if (param_count != 1 and param_count != 2)
                 @compileError(std.fmt.comptimePrint("{s} must have 1 or 2 parameters found {d} parameters", .{ fn_name, param_count }));
 
-            const FirstPropType = FuncInfo.@"fn".params[0].type.?;
+            const FirstPropType = FuncInfo.@"fn".param_types[0].?;
             const first_is_allocator = FirstPropType == std.mem.Allocator;
             const first_is_ctx_ptr = @typeInfo(FirstPropType) == .pointer and
                 @hasField(@typeInfo(FirstPropType).pointer.child, "allocator") and
@@ -62,7 +62,7 @@ pub const Component = union(enum) {
 
             // If two parameters are passed with allocator first, the props type must be a struct
             if (first_is_allocator and param_count == 2) {
-                const SecondPropType = FuncInfo.@"fn".params[1].type.?;
+                const SecondPropType = FuncInfo.@"fn".param_types[1].?;
                 if (@typeInfo(SecondPropType) != .@"struct")
                     @compileError("Component" ++ fn_name ++ " must have a struct as the second parameter, found " ++ @typeName(SecondPropType));
             }
@@ -73,7 +73,7 @@ pub const Component = union(enum) {
 
             // Allocate props on heap to persist
             const props_copy = if (first_is_allocator and param_count == 2) blk: {
-                const SecondPropType = FuncInfo.@"fn".params[1].type.?;
+                const SecondPropType = FuncInfo.@"fn".param_types[1].?;
                 const coerced = prp.coerceProps(SecondPropType, props);
                 const p = allocator.create(SecondPropType) catch @panic("OOM");
                 p.* = coerced;
@@ -140,7 +140,7 @@ pub const Component = union(enum) {
                         return normalize(func(alloc));
                     }
                     if (first_is_allocator and param_count == 2) {
-                        const SecondPropType = FuncInfo.@"fn".params[1].type.?;
+                        const SecondPropType = FuncInfo.@"fn".param_types[1].?;
                         const p = propsPtr orelse @panic("propsPtr is null for function with props");
                         const typed_p: *const SecondPropType = @ptrCast(@alignCast(p));
                         return normalize(func(alloc, typed_p.*));
@@ -166,7 +166,7 @@ pub const Component = union(enum) {
                         return;
                     }
                     if (first_is_allocator and param_count == 2) {
-                        const SecondPropType = FuncInfo.@"fn".params[1].type.?;
+                        const SecondPropType = FuncInfo.@"fn".param_types[1].?;
                         const p = propsPtr orelse @panic("propsPtr is null for function with props");
                         const typed_p: *const SecondPropType = @ptrCast(@alignCast(p));
                         alloc.destroy(typed_p);
@@ -235,7 +235,6 @@ pub const Component = union(enum) {
 
     /// Recursively search for an element by tag name
     /// Returns a mutable pointer to the Component if found, null otherwise
-
     pub const SerializeOptions = struct {
         only_components: bool = true,
         include_props: bool = true,

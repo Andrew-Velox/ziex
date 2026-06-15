@@ -11,16 +11,16 @@ pub fn coerceProps(comptime TargetType: type, props: anytype) TargetType {
         @compileError("Target type must be a struct");
     }
 
-    const fields = TargetInfo.@"struct".fields;
+    const target_struct = TargetInfo.@"struct";
     var result: TargetType = undefined;
 
-    inline for (fields) |field| {
-        if (@hasField(@TypeOf(props), field.name)) {
-            @field(result, field.name) = @field(props, field.name);
-        } else if (field.defaultValue()) |default_value| {
-            @field(result, field.name) = default_value;
+    inline for (target_struct.field_names) |field_name| {
+        if (@hasField(@TypeOf(props), field_name)) {
+            @field(result, field_name) = @field(props, field_name);
+        } else if (@field(target_struct, field_name).defaultValue()) |default_value| {
+            @field(result, field_name) = default_value;
         } else {
-            @compileError(std.fmt.comptimePrint("Missing required attribute `{s}` in Component `{s}`", .{ field.name, @typeName(TargetType) }));
+            @compileError(std.fmt.comptimePrint("Missing required attribute `{s}` in Component `{s}`", .{ field_name, @typeName(TargetType) }));
         }
     }
 
@@ -63,7 +63,7 @@ pub fn propsSerializer(comptime Props: type, allocator: std.mem.Allocator, props
     const type_info = @typeInfo(Props);
 
     if (type_info != .@"struct") return .{ .ptr = null, .writeFn = null };
-    if (type_info.@"struct".fields.len == 0) return .{ .ptr = null, .writeFn = null };
+    if (type_info.@"struct".field_types.len == 0) return .{ .ptr = null, .writeFn = null };
     if (!comptime isSerializable(Props)) {
         return .{ .ptr = null, .writeFn = null };
     }
@@ -92,8 +92,8 @@ pub fn MergedPropsType(comptime BaseType: type, comptime OverrideType: type) typ
         @compileError("MergedPropsType expects struct types");
     }
 
-    const base_fields = base_info.@"struct".fields;
-    const override_fields = override_info.@"struct".fields;
+    const base_fields = base_info.@"struct".field_types;
+    const override_fields = override_info.@"struct".field_types;
 
     // Count unique fields (override fields replace base fields with same name)
     comptime var field_count = base_fields.len;
@@ -195,8 +195,8 @@ fn isSerializableImpl(comptime T: type, comptime visited: []const type) bool {
         .array => |arr| isSerializableImpl(arr.child, new_visited),
         .optional => |opt| isSerializableImpl(opt.child, new_visited),
         .@"struct" => |s| blk: {
-            for (s.fields) |field| {
-                if (!isSerializableImpl(field.type, new_visited)) break :blk false;
+            for (s.field_types) |field_type| {
+                if (!isSerializableImpl(field_type, new_visited)) break :blk false;
             }
             break :blk true;
         },

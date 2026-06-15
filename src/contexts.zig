@@ -109,7 +109,7 @@ pub fn ComponentCtx(comptime PropsType: type) type {
                 .pointer => |p| p.child,
                 else => @compileError(BindSignMsg ++ @typeName(HandlerType)),
             };
-            const params = @typeInfo(FnType).@"fn".params;
+            const params = @typeInfo(FnType).@"fn".param_types;
 
             return switch (FnType) {
                 // Client
@@ -126,13 +126,13 @@ pub fn ComponentCtx(comptime PropsType: type) type {
                 fn (*ActionContext) void => actionBind(handler, alloc, self),
 
                 else => blk: {
-                    if (comptime params.len == 1 and params[0].type.? == *ServerEvent) {
+                    if (comptime params.len == 1 and params[0] == *ServerEvent) {
                         break :blk zx.EventHandler.server(handler, alloc, &self._internal.handler_idx);
                     }
                     if (comptime params.len == 2 and
-                        @typeInfo(params[0].type.?) == .@"struct" and
-                        params[0].type.? != ActionContext and
-                        params[1].type.? == *StateContext)
+                        @typeInfo(params[0]) == .@"struct" and
+                        params[0] != ActionContext and
+                        params[1] == *StateContext)
                     {
                         break :blk actionBind(handler, alloc, self);
                     }
@@ -144,10 +144,10 @@ pub fn ComponentCtx(comptime PropsType: type) type {
 }
 
 fn actionBind(comptime handler: anytype, alloc: Allocator, ctx: anytype) zx.EventHandler {
-    const params = @typeInfo(@TypeOf(handler)).@"fn".params;
-    const arg0 = params[0].type.?;
+    const params = @typeInfo(@TypeOf(handler)).@"fn".param_types;
+    const arg0 = params[0];
 
-    if (comptime params.len == 2 and params[1].type.? == *StateContext and
+    if (comptime params.len == 2 and params[1] == *StateContext and
         (arg0 == ActionContext or @typeInfo(arg0) == .@"struct"))
     {
         const FormActionWrapper = struct {

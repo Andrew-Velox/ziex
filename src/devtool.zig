@@ -43,10 +43,11 @@ pub const ComponentSerializable = struct {
         const ti = @typeInfo(T);
         if (ti != .@"struct") return &[_]StateItem{};
 
-        const fields = ti.@"struct".fields;
-        var items = try allocator.alloc(StateItem, fields.len);
-        inline for (fields, 0..) |field, i| {
-            items[i] = try toStateItem(allocator, field.type, field.name, @field(value, field.name), 0);
+        const field_names = ti.@"struct".field_names;
+        const field_types = ti.@"struct".field_types;
+        var items = try allocator.alloc(StateItem, field_names.len);
+        inline for (field_names, 0..) |name, i| {
+            items[i] = try toStateItem(allocator, field_types[i], name, @field(value, name), 0);
         }
         return items;
     }
@@ -55,17 +56,17 @@ pub const ComponentSerializable = struct {
         return struct {
             fn getStateItems(alloc: Allocator, ptr: *const anyopaque) anyerror![]const StateItem {
                 const FuncInfo = @typeInfo(@TypeOf(func));
-                const param_count = FuncInfo.@"fn".params.len;
+                const param_count = FuncInfo.@"fn".param_types.len;
                 if (param_count == 0) return &[_]StateItem{};
 
-                const FirstPropType = FuncInfo.@"fn".params[0].type.?;
+                const FirstPropType = FuncInfo.@"fn".param_types[0].?;
                 const first_is_allocator = FirstPropType == std.mem.Allocator;
                 const first_is_ctx_ptr = @typeInfo(FirstPropType) == .pointer and
                     @hasField(@typeInfo(FirstPropType).pointer.child, "allocator") and
                     @hasField(@typeInfo(FirstPropType).pointer.child, "children");
 
                 if (first_is_allocator and param_count == 2) {
-                    const SecondPropType = FuncInfo.@"fn".params[1].type.?;
+                    const SecondPropType = FuncInfo.@"fn".param_types[1];
                     const typed_p: *const SecondPropType = @ptrCast(@alignCast(ptr));
                     return toStateItems(alloc, SecondPropType, typed_p.*);
                 } else if (first_is_ctx_ptr) {
@@ -121,9 +122,9 @@ pub const ComponentSerializable = struct {
         switch (ti) {
             .@"struct" => |s| {
                 item.value = "Object";
-                var children = try allocator.alloc(StateItem, s.fields.len);
-                inline for (s.fields, 0..) |field, i| {
-                    children[i] = try toStateItem(allocator, field.type, field.name, @field(value, field.name), depth + 1);
+                var children = try allocator.alloc(StateItem, s.field_types.len);
+                inline for (s.field_types, 0..) |field_type, i| {
+                    children[i] = try toStateItem(allocator, field_type, s.field_names[i], @field(value, s.field_names[i]), depth + 1);
                 }
                 item.children = children;
             },

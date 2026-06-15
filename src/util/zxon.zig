@@ -25,9 +25,9 @@ fn writeValue(comptime T: type, value: T, w: *std.Io.Writer) anyerror!void {
     switch (@typeInfo(T)) {
         .@"struct" => |s| {
             try w.writeByte('[');
-            inline for (s.fields, 0..) |field, i| {
+            inline for (s.field_names, s.field_types, 0..) |field_name, field_type, i| {
                 if (i > 0) try w.writeByte(',');
-                try writeValue(field.type, @field(value, field.name), w);
+                try writeValue(field_type, @field(value, field_name), w);
             }
             try w.writeByte(']');
         },
@@ -112,9 +112,9 @@ fn readValue(comptime T: type, allocator: std.mem.Allocator, d: []const u8, p: *
             skip(d, p);
 
             var result: T = undefined;
-            inline for (s.fields, 0..) |field, i| {
+            inline for (s.field_names, s.field_types, 0..) |field_name, field_type, i| {
                 if (i > 0) comma(d, p);
-                @field(result, field.name) = try readValue(field.type, allocator, d, p);
+                @field(result, field_name) = try readValue(field_type, allocator, d, p);
             }
 
             skip(d, p);

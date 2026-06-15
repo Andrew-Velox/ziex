@@ -235,9 +235,9 @@ const Context = struct {
                     }
                     // Function pointer - treat as event handler
                     if (@typeInfo(ptr_info.child) == .@"fn") {
-                        const fn_params = @typeInfo(ptr_info.child).@"fn".params;
+                        const fn_params = @typeInfo(ptr_info.child).@"fn".param_types;
                         const takes_ptr = fn_params.len == 1 and
-                            @typeInfo(fn_params[0].type.?) == .pointer;
+                            @typeInfo(fn_params[0].?) == .pointer;
                         const handler = if (takes_ptr)
                             zx.EventHandler.runtimePtr(val)
                         else
@@ -515,8 +515,8 @@ const Context = struct {
         const allocator = self.getAlloc();
 
         const FuncInfo = @typeInfo(@TypeOf(func));
-        const param_count = FuncInfo.@"fn".params.len;
-        const FirstPropType = FuncInfo.@"fn".params[0].type.?;
+        const param_count = FuncInfo.@"fn".param_types.len;
+        const FirstPropType = FuncInfo.@"fn".param_types[0].?;
         const first_is_ctx_ptr = @typeInfo(FirstPropType) == .pointer and
             @hasField(@typeInfo(FirstPropType).pointer.child, "allocator") and
             @hasField(@typeInfo(FirstPropType).pointer.child, "children");
@@ -524,7 +524,7 @@ const Context = struct {
         const name = options.name orelse "";
         // Context-based component or function with props parameter
         var comp_fn = if (first_is_ctx_ptr or param_count == 2) blk: {
-            const PropsType = if (first_is_ctx_ptr) @TypeOf(props) else FuncInfo.@"fn".params[1].type.?;
+            const PropsType = if (first_is_ctx_ptr) @TypeOf(props) else FuncInfo.@"fn".param_types[1].?;
             const coerced_props = prp.coerceProps(PropsType, props);
             break :blk Component.ComponentFn.init(func, name, allocator, coerced_props);
         } else blk: {
@@ -567,7 +567,7 @@ const Context = struct {
                         }
                     }
                 } else if (param_count == 2) {
-                    const FullPropsType = FuncInfo.@"fn".params[1].type.?;
+                    const FullPropsType = FuncInfo.@"fn".param_types[1].?;
                     if (@typeInfo(FullPropsType) == .@"struct") {
                         const full_props = prp.coerceProps(FullPropsType, props);
                         break :blk prp.propsSerializer(FullPropsType, allocator, full_props);
