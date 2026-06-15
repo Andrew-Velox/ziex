@@ -60,18 +60,37 @@ pub const AppOptions = struct {
     pub const FeatureOptions = struct {
         /// Embedded SQLite database, exposed at runtime as `zx.db`.
         pub const SqliteOptions = struct {
-            pub const enabled: SqliteOptions = .{};
+            pub const SqliteServerOptions = struct {
+                pub const enabled: SqliteServerOptions = .{};
+            };
+            pub const enabled: SqliteOptions = .{ .server = .enabled };
+
+            server: ?SqliteServerOptions = null,
         };
 
         /// Filesystem-backed key/value store, exposed at runtime as `zx.kv`.
         pub const KvOptions = struct {
-            pub const enabled: KvOptions = .{};
+            pub const KvServerOptions = struct {
+                pub const enabled: KvServerOptions = .{};
+            };
+            pub const KvClientOptions = struct {
+                pub const enabled: KvClientOptions = .{};
+            };
+            pub const enabled: KvOptions = .{ .server = .enabled, .client = .enabled };
+
+            server: ?KvServerOptions = null,
+            client: ?KvClientOptions = null,
         };
 
         /// Filesystem-backed cache (used by component-level caching),
         /// exposed at runtime as `zx.cache`.
         pub const CacheOptions = struct {
-            pub const enabled: CacheOptions = .{};
+            pub const CacheServerOptions = struct {
+                pub const enabled: CacheServerOptions = .{};
+            };
+            pub const enabled: CacheOptions = .{ .server = .enabled };
+
+            server: ?CacheServerOptions = null,
         };
 
         pub const default = FeatureOptions{};

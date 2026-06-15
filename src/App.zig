@@ -47,13 +47,14 @@ pub fn io() Io {
     return threaded_instance.io();
 }
 
-// Feature flags resolved at comptime from build options.
-const feature_sqlite = zx_options.feature_sqlite;
-const feature_kv = zx_options.feature_kv;
-const feature_cache = zx_options.feature_cache;
+const feature_sqlite_server = zx_options.feature_sqlite_server;
+const feature_kv_server = zx_options.feature_kv_server;
+const feature_kv_client = zx_options.feature_kv_client;
+const feature_cache_server = zx_options.feature_cache_server;
 
-var kv_fs: zx.Kv.Fs = undefined;
-var cache_fs: zx.Kv.Fs = undefined;
+var kv: zx.Kv = undefined;
+var cache: zx.Cache = undefined;
+var db: zx.Db = undefined;
 
 var g_datadir: ?[]const u8 = null;
 var g_staticdir: ?[]const u8 = null;
@@ -80,13 +81,19 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
 
     switch (platform.os) {
         .freestanding, .wasi => |os| {
-            // Feature ==> zx.db (wasm backend)
-            if (comptime feature_sqlite) {
+            // freestanding => client (browser wasm); wasi => server (server wasm).
+            const wasm_kv_enabled = switch (os) {
+                .wasi => feature_kv_server,
+                else => feature_kv_client,
+            };
+
+            // Feature ==> zx.db (wasm backend, server-side only)
+            if (comptime feature_sqlite_server) {
                 if (os == .wasi) zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
             }
 
             // Feature ==> zx.kv (wasm backend)
-            if (comptime feature_kv) {
+            if (comptime wasm_kv_enabled) {
                 var kv_wasm = zx.Kv.Wasm{};
                 zx.kv = kv_wasm.kv();
             }
@@ -96,26 +103,30 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
         else => {},
     }
 
+    // Native target is always server-side from here on.
+
     // Feature ==> zx.kv (filesystem backend)
-    if (comptime feature_kv) {
+    if (comptime feature_kv_server) {
         const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
-        kv_fs = .{ .io = init.io, .subdir = kv_subdir };
-        zx.kv = kv_fs.kv();
+        var kv_fs: zx.Kv.Fs = .{ .io = init.io, .subdir = kv_subdir };
+        kv = kv_fs.kv();
+        zx.kv = kv;
         g_kv_subdir = kv_subdir;
     }
 
     // Feature ==> zx.cache (filesystem backend)
-    if (comptime feature_cache) {
+    if (comptime feature_cache_server) {
         const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
-        cache_fs = .{ .io = init.io, .subdir = cache_subdir };
-        zx.cache = try zx.Cache.init(init.io, alloc, cache_fs.kv(), .{
+        var cache_fs: zx.Kv.Fs = .{ .io = init.io, .subdir = cache_subdir };
+        const cache_kv: zx.Kv = cache_fs.kv();
+        cache = try zx.Cache.init(init.io, alloc, cache_kv, .{
             .max_size = resolved.cache.max_size,
         });
         g_cache_subdir = cache_subdir;
     }
 
     // Feature ==> zx.db (sqlite backend)
-    if (comptime feature_sqlite) {
+    if (comptime feature_sqlite_server) {
         const db_dir = try std.fs.path.join(alloc, &.{ datadir, "db", "default.db" });
         defer alloc.free(db_dir);
         const db_url = try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir});
@@ -133,7 +144,7 @@ fn cleanupOptions(alloc: std.mem.Allocator) void {
     if (g_datadir == null) return;
 
     // Feature ==> zx.db (sqlite backend)
-    if (comptime feature_sqlite) {
+    if (comptime feature_sqlite_server) {
         if (g_db_url) |s| {
             zx.db.deinit();
             alloc.free(s);
@@ -141,7 +152,7 @@ fn cleanupOptions(alloc: std.mem.Allocator) void {
     }
 
     // Feature ==> zx.cache
-    if (comptime feature_cache) {
+    if (comptime feature_cache_server) {
         if (g_cache_subdir) |s| {
             zx.cache.deinit();
             alloc.free(s);
@@ -149,7 +160,7 @@ fn cleanupOptions(alloc: std.mem.Allocator) void {
     }
 
     // Feature ==> zx.kv
-    if (comptime feature_kv) {
+    if (comptime feature_kv_server) {
         if (g_kv_subdir) |s| alloc.free(s);
     }
 
