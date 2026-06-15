@@ -5,7 +5,7 @@
     .repository = "https://github.com/ziex-dev/ziex",
     .homepage = "https://ziex.dev",
     .fingerprint = 0x249409a7bd1c7667,
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0-dev.813+2153f8143",
     .dependencies = .{
         // Ziex JS - The JavaScript glue code for csr/wasi/cloudflare/aws-lambda/vercel/react
         .ziex_js = .{
@@ -14,14 +14,14 @@
         },
         // httpz - HTTP server for Ziex
         .httpz = .{
-            .url = "git+https://github.com/ziex-dev/httpz.git#5f60277d3b3beffef86321869b13c57f7acc3c5b",
-            .hash = "httpz-0.0.0-PNVzrJrbCACyokt2AARAG7Ul7h7xlZxL7BYAdpsAs1_-",
+            .url = "git+https://github.com/ziex-dev/httpz.git?ref=dev#49684ddd1fb030f72594cce8370b076dfa922ff9",
+            .hash = "httpz-0.0.0-PNVzrATcCADK2AQ3S7KDpH49xF3iMZ6Itih2-uBglAae",
         },
         // Ziex Language Server utilities
-        .zls = .{
-            .url = "git+https://github.com/ziex-dev/zls.git?ref=zx-0.16.0#9dc776aae7db3d522be18a8d20f77f2caa085554",
-            .hash = "zls-0.16.0-rmm5ftHOJgC9W6p-o3hJMFIbjWE4hKV1CIU_tOSjNiSj",
-        },
+        // .zls = .{
+        //     .url = "git+https://github.com/ziex-dev/zls.git?ref=zx-0.16.0#9dc776aae7db3d522be18a8d20f77f2caa085554",
+        //     .hash = "zls-0.16.0-rmm5ftHOJgC9W6p-o3hJMFIbjWE4hKV1CIU_tOSjNiSj",
+        // },
         .adapters = .{ .path = "pkg/adapters" },
         .zli = .{ .path = "vendor/cliz" }, // Get rid of this in favor of copying from Zig's new builtin args parser once 0.16.0 is released
         .zig_js = .{ .path = "vendor/jsz" },

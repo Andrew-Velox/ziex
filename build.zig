@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exclude_lsp = b.option(bool, "exclude-lsp", "Exclude the LSP server to speed up builds") orelse false;
+    const exclude_lsp = b.option(bool, "exclude-lsp", "Exclude the LSP server to speed up builds") orelse true;
     const exclude_core_lang = b.option(bool, "exclude-core-lang", "Exclude core language tools (Ast/Parse/sourcemap) - only needed by CLI") orelse false;
     const version = b.option([]const u8, "version", "Version to embed in the binary") orelse build_zon.version;
 
@@ -102,7 +102,7 @@ pub fn build(b: *std.Build) !void {
         const run_cmd = b.addRunArtifact(exe);
         run_step.dependOn(&run_cmd.step);
         run_cmd.step.dependOn(b.getInstallStep());
-        if (b.args) |args| run_cmd.addArgs(args);
+        run_cmd.addPassthruArgs();
     }
 
     // --- Steps: Test --- //
@@ -156,7 +156,7 @@ pub fn build(b: *std.Build) !void {
         const e2e_cmd = b.addSystemCommand(&.{ "npx", "playwright", "test" });
         e2e_cmd.setCwd(b.path("test/e2e"));
         e2e_step.dependOn(&e2e_cmd.step);
-        if (b.args) |args| e2e_cmd.addArgs(args);
+        e2e_cmd.addPassthruArgs();
     }
 
     // --- Steps: Dev (Runs dev step for site/) --- //
@@ -165,7 +165,7 @@ pub fn build(b: *std.Build) !void {
         const dev_cmd = b.addSystemCommand(&.{ b.graph.zig_exe, "build", "dev" });
         dev_cmd.setCwd(b.path("site"));
         dev_step.dependOn(&dev_cmd.step);
-        if (b.args) |args| dev_cmd.addArgs(args);
+        dev_cmd.addPassthruArgs();
     }
 
     // --- Steps: Site (Runs build step for site/) --- //
@@ -174,7 +174,7 @@ pub fn build(b: *std.Build) !void {
         const site_cmd = b.addSystemCommand(&.{ b.graph.zig_exe, "build" });
         site_cmd.setCwd(b.path("site"));
         site_step.dependOn(&site_cmd.step);
-        if (b.args) |args| site_cmd.addArgs(args);
+        site_cmd.addPassthruArgs();
     }
 
     // --- Steps: CSS Generator --- //
@@ -191,7 +191,7 @@ pub fn build(b: *std.Build) !void {
         });
         const css_gen_run = b.addRunArtifact(css_gen_exe);
 
-        if (b.build_root.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
+        if (b.root.root_dir.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
             const sync_cmd = b.addSystemCommand(&.{ "./tools/syncvendor", "webref" });
             css_gen_run.step.dependOn(&sync_cmd.step);
         }
@@ -213,7 +213,7 @@ pub fn build(b: *std.Build) !void {
         });
         const events_gen_run = b.addRunArtifact(events_gen_exe);
 
-        if (b.build_root.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
+        if (b.root.root_dir.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
             const sync_cmd = b.addSystemCommand(&.{ "./tools/syncvendor", "webref" });
             events_gen_run.step.dependOn(&sync_cmd.step);
         }
