@@ -56,6 +56,9 @@ var kv: zx.Kv = undefined;
 var cache: zx.Cache = undefined;
 var db: zx.Db = undefined;
 
+var kv_fs: if (feature_kv_server) zx.Kv.Fs else void = undefined;
+var cache_fs: if (feature_cache_server) zx.Kv.Fs else void = undefined;
+
 var g_datadir: ?[]const u8 = null;
 var g_staticdir: ?[]const u8 = null;
 var g_db_url: ?[]const u8 = null;
@@ -108,7 +111,7 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
     // Feature ==> zx.kv (filesystem backend)
     if (comptime feature_kv_server) {
         const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
-        var kv_fs: zx.Kv.Fs = .{ .io = init.io, .subdir = kv_subdir };
+        kv_fs = .{ .io = init.io, .subdir = kv_subdir };
         kv = kv_fs.kv();
         zx.kv = kv;
         g_kv_subdir = kv_subdir;
@@ -117,7 +120,7 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
     // Feature ==> zx.cache (filesystem backend)
     if (comptime feature_cache_server) {
         const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
-        var cache_fs: zx.Kv.Fs = .{ .io = init.io, .subdir = cache_subdir };
+        cache_fs = .{ .io = init.io, .subdir = cache_subdir };
         const cache_kv: zx.Kv = cache_fs.kv();
         cache = try zx.Cache.init(init.io, alloc, cache_kv, .{
             .max_size = resolved.cache.max_size,
