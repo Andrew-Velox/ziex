@@ -121,6 +121,8 @@ pub fn build(b: *std.Build) !void {
             // .copy_embedded_sources = true,
             .features = .{
                 .sqlite = .enabled,
+                .kv = .enabled,
+                .cache = .enabled,
             },
         },
         .client = .{

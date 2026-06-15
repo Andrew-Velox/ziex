@@ -58,13 +58,27 @@ pub const CliOptions = struct {
 /// Configuration for the ZX app directory.
 pub const AppOptions = struct {
     pub const FeatureOptions = struct {
+        /// Embedded SQLite database, exposed at runtime as `zx.db`.
         pub const SqliteOptions = struct {
             pub const enabled: SqliteOptions = .{};
+        };
+
+        /// Filesystem-backed key/value store, exposed at runtime as `zx.kv`.
+        pub const KvOptions = struct {
+            pub const enabled: KvOptions = .{};
+        };
+
+        /// Filesystem-backed cache (used by component-level caching),
+        /// exposed at runtime as `zx.cache`.
+        pub const CacheOptions = struct {
+            pub const enabled: CacheOptions = .{};
         };
 
         pub const default = FeatureOptions{};
 
         sqlite: ?SqliteOptions = null,
+        kv: ?KvOptions = null,
+        cache: ?CacheOptions = null,
     };
 
     /// Path to the ZX app source directory.

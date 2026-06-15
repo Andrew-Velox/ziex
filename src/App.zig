@@ -47,12 +47,19 @@ pub fn io() Io {
     return threaded_instance.io();
 }
 
+// Feature flags resolved at comptime from build options.
+const feature_sqlite = zx_options.feature_sqlite;
+const feature_kv = zx_options.feature_kv;
+const feature_cache = zx_options.feature_cache;
+
 var kv_fs: zx.Kv.Fs = undefined;
 var cache_fs: zx.Kv.Fs = undefined;
 
 var g_datadir: ?[]const u8 = null;
 var g_staticdir: ?[]const u8 = null;
 var g_db_url: ?[]const u8 = null;
+var g_kv_subdir: ?[]const u8 = null;
+var g_cache_subdir: ?[]const u8 = null;
 
 fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Config {
     var resolved = config;
@@ -73,29 +80,42 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
 
     switch (platform.os) {
         .freestanding, .wasi => |os| {
-            if (os == .wasi) zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+            // Feature ==> zx.db (wasm backend)
+            if (comptime feature_sqlite) {
+                if (os == .wasi) zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+            }
 
-            var kv_wasm = zx.Kv.Wasm{};
-            zx.kv = kv_wasm.kv();
+            // Feature ==> zx.kv (wasm backend)
+            if (comptime feature_kv) {
+                var kv_wasm = zx.Kv.Wasm{};
+                zx.kv = kv_wasm.kv();
+            }
 
             return resolved;
         },
         else => {},
     }
 
-    const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
-    const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
+    // Feature ==> zx.kv (filesystem backend)
+    if (comptime feature_kv) {
+        const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
+        kv_fs = .{ .io = init.io, .subdir = kv_subdir };
+        zx.kv = kv_fs.kv();
+        g_kv_subdir = kv_subdir;
+    }
 
-    kv_fs = .{ .io = init.io, .subdir = kv_subdir };
-    cache_fs = .{ .io = init.io, .subdir = cache_subdir };
+    // Feature ==> zx.cache (filesystem backend)
+    if (comptime feature_cache) {
+        const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
+        cache_fs = .{ .io = init.io, .subdir = cache_subdir };
+        zx.cache = try zx.Cache.init(init.io, alloc, cache_fs.kv(), .{
+            .max_size = resolved.cache.max_size,
+        });
+        g_cache_subdir = cache_subdir;
+    }
 
-    zx.kv = kv_fs.kv();
-    zx.cache = try zx.Cache.init(init.io, alloc, cache_fs.kv(), .{
-        .max_size = resolved.cache.max_size,
-    });
-
-    // Feature ==> zx.Db.Sqlite
-    if (comptime zx_options.feature_sqlite) {
+    // Feature ==> zx.db (sqlite backend)
+    if (comptime feature_sqlite) {
         const db_dir = try std.fs.path.join(alloc, &.{ datadir, "db", "default.db" });
         defer alloc.free(db_dir);
         const db_url = try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir});
@@ -111,16 +131,35 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
 
 fn cleanupOptions(alloc: std.mem.Allocator) void {
     if (g_datadir == null) return;
-    if (g_db_url != null) zx.db.deinit();
-    zx.cache.deinit();
-    if (g_db_url) |s| alloc.free(s);
-    if (cache_fs.subdir.len > 0) alloc.free(cache_fs.subdir);
-    if (kv_fs.subdir.len > 0) alloc.free(kv_fs.subdir);
+
+    // Feature ==> zx.db (sqlite backend)
+    if (comptime feature_sqlite) {
+        if (g_db_url) |s| {
+            zx.db.deinit();
+            alloc.free(s);
+        }
+    }
+
+    // Feature ==> zx.cache
+    if (comptime feature_cache) {
+        if (g_cache_subdir) |s| {
+            zx.cache.deinit();
+            alloc.free(s);
+        }
+    }
+
+    // Feature ==> zx.kv
+    if (comptime feature_kv) {
+        if (g_kv_subdir) |s| alloc.free(s);
+    }
+
     if (g_staticdir) |s| alloc.free(s);
     if (g_datadir) |s| alloc.free(s);
     g_datadir = null;
     g_staticdir = null;
     g_db_url = null;
+    g_kv_subdir = null;
+    g_cache_subdir = null;
 }
 
 fn envVar(alloc: std.mem.Allocator, init: zx.Init, name: []const u8) ?[]const u8 {

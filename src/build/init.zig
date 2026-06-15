@@ -280,6 +280,8 @@ pub fn initInner(
     zx_options.addOption([]const u8, "cli_command", cli_command_opt orelse "--");
     zx_options.addOption(bool, "introspect", b.option(bool, "introspect", "Print Ziex app metadata and exit") orelse false);
     zx_options.addOption(bool, "feature_sqlite", opts.features.sqlite != null);
+    zx_options.addOption(bool, "feature_kv", opts.features.kv != null);
+    zx_options.addOption(bool, "feature_cache", opts.features.cache != null);
 
     zx_module.addOptions("zx_options", zx_options);
 
