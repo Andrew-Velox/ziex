@@ -60,7 +60,7 @@ pub const RouteOptions = opts.RouteOptions;
 pub const ProxyOptions = opts.ProxyOptions;
 pub const SocketOptions = routing.SocketOptions;
 
-/// --- Contexts --- //
+// --- Contexts --- //
 pub const ProxyContext = ctxs.ProxyContext;
 pub const StaticContext = opts.StaticContext;
 pub const StaticParams = opts.StaticParams;
