@@ -184,3 +184,7 @@ const std = @import("std");
 const zx = @import("zx");
 const AllFileIcons = @import("../components/icons.zx").AllFileIcons;
 const CheckIcon = @import("../components/icons.zx").CheckIcon;
+
+// Importing to have syntax AST Checked
+const main = @import("scripts/template/main.zig");
+const Playground = @import("scripts/template/Playground.zx");

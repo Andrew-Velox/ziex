@@ -7,7 +7,7 @@ pub fn main(init: std.process.Init) !void {
     var aw = std.Io.Writer.Allocating.init(allocator);
 
     const type_info = @typeInfo(pg);
-    const decls = type_info.@"struct".decls;
+    const decls = type_info.@"struct".decl_names;
 
     if (decls.len == 0) {
         try std.Io.File.stdout().writeStreamingAll(init.io,
@@ -24,8 +24,8 @@ pub fn main(init: std.process.Init) !void {
         return;
     }
 
-    inline for (decls) |decl| {
-        const component = resolveComponent(allocator, decl.name);
+    inline for (decls) |decl_name| {
+        const component = resolveComponent(allocator, decl_name);
         try component.render(&aw.writer, .{});
     }
 
@@ -37,8 +37,8 @@ fn resolveComponent(allocator: zx.Allocator, comptime field_name: []const u8) zx
 
     switch (@typeInfo(@TypeOf(Cmp))) {
         .@"fn" => |FnInfo| {
-            const param_count = FnInfo.params.len;
-            const FirstParam = FnInfo.params[0].type.?;
+            const param_count = FnInfo.param_types.len;
+            const FirstParam = FnInfo.param_types[0].?;
 
             // fn(ctx: *zx.ComponentContext) zx.Component
             if ((param_count == 1 and @typeInfo(FirstParam) == .pointer and
@@ -69,7 +69,7 @@ fn resolveComponent(allocator: zx.Allocator, comptime field_name: []const u8) zx
             }
 
             // fn(ctx: zx.LayoutContext, children: zx.Component) zx.Component
-            if (param_count == 2 and FirstParam == zx.LayoutContext and FnInfo.params[1].type == zx.Component) {
+            if (param_count == 2 and FirstParam == zx.LayoutContext and FnInfo.param_types[1].? == zx.Component) {
                 const ctx = zx.LayoutContext{
                     .request = .{
                         .url = "https://ziex.dev/playground",

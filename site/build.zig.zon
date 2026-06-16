@@ -13,6 +13,10 @@
         .esbuild = .{ .path = "../pkg/plugin-esbuild" },
         .tailwindcss = .{ .path = "../pkg/plugin-tailwindcss" },
         .ui = .{ .path = "../pkg/ui" },
+        .zig = .{
+            .url = "git+https://github.com/ziex-dev/zig.git?ref=0.17.0-dev.864+wasi#773511d09080949aa5994cb2964e9ef00a180b83",
+            .hash = "zig-0.0.0-Fp4XJGQU-w2Ob17IW1CJAnK4fK_jWidBBKpfYbiRy0W5",
+        },
     },
     .paths = .{
         "build.zig",
