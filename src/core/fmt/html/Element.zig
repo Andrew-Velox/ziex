@@ -248,12 +248,12 @@ pub inline fn modelRejects(
                 descendant_element.meta.categories_superset,
             );
 
-            inline for (std.meta.fields(Categories)) |f| {
-                if (@field(intersection, f.name) and @hasField(Reasons.Categories, f.name)) {
+            inline for (std.meta.fieldNames(Categories)) |field_name| {
+                if (@field(intersection, field_name) and @hasField(Reasons.Categories, field_name)) {
                     // if this is not a runtime property, report it as the reason
-                    if (!@field(descendant_element.model.categories, f.name)) {
+                    if (!@field(descendant_element.model.categories, field_name)) {
                         return .{
-                            .reason = @field(descendant_element.reasons.categories, f.name).accept,
+                            .reason = @field(descendant_element.reasons.categories, field_name).accept,
                             .span = parent_span,
                         };
                     }
@@ -299,12 +299,12 @@ pub inline fn modelRejects(
             descendant_rt_model.categories,
         );
 
-        inline for (std.meta.fields(Categories)) |f| {
-            if (@field(intersection, f.name) and @hasField(Reasons.Categories, f.name)) {
+        inline for (std.meta.fieldNames(Categories)) |field_name| {
+            if (@field(intersection, field_name) and @hasField(Reasons.Categories, field_name)) {
                 // if this is not a runtime property, report it as the reason
-                if (!@field(descendant_element.model.categories, f.name)) {
+                if (!@field(descendant_element.model.categories, field_name)) {
                     return .{
-                        .reason = @field(descendant_element.reasons.categories, f.name).reject,
+                        .reason = @field(descendant_element.reasons.categories, field_name).reject,
                         .span = parent_span,
                     };
                 }

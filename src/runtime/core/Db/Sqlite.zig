@@ -661,7 +661,7 @@ fn resolveNamedParam(stmt: zqlite.Stmt, name: []const u8) !c_int {
 
     var buf: [256]u8 = undefined;
     for ([_]u8{ ':', '@', '$' }) |sigil| {
-        const candidate = std.fmt.bufPrintZ(&buf, "{c}{s}", .{ sigil, name }) catch
+        const candidate = std.fmt.bufPrintSentinel(&buf, "{c}{s}", .{ sigil, name }, 0) catch
             return Db.DbError.InvalidBindings;
         const index = c.sqlite3_bind_parameter_index(rawStmtPtr(stmt), candidate.ptr);
         if (index != 0) return index;

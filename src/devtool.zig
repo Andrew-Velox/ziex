@@ -66,7 +66,7 @@ pub const ComponentSerializable = struct {
                     @hasField(@typeInfo(FirstPropType).pointer.child, "children");
 
                 if (first_is_allocator and param_count == 2) {
-                    const SecondPropType = FuncInfo.@"fn".param_types[1];
+                    const SecondPropType = FuncInfo.@"fn".param_types[1].?;
                     const typed_p: *const SecondPropType = @ptrCast(@alignCast(ptr));
                     return toStateItems(alloc, SecondPropType, typed_p.*);
                 } else if (first_is_ctx_ptr) {

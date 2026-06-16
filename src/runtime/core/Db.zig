@@ -180,7 +180,7 @@ fn BoundArgs(comptime ArgsT: type) type {
     const info = @typeInfo(ArgsT);
     const is_empty = ArgsT == void or
         info == .enum_literal or
-        (info == .@"struct" and info.@"struct".fields.len == 0);
+        (info == .@"struct" and info.@"struct".field_types.len == 0);
     if (is_empty) return struct {
         fn init(_: ArgsT) @This() {
             return .{};
@@ -193,14 +193,14 @@ fn BoundArgs(comptime ArgsT: type) type {
     if (info != .@"struct") {
         @compileError("Db bindings: expected a tuple or struct literal, got " ++ @typeName(ArgsT));
     }
-    const fields = info.@"struct".fields;
+    const fields = info.@"struct".field_names;
 
     if (info.@"struct".is_tuple) return struct {
         values: [fields.len]Value,
         fn init(value: ArgsT) @This() {
             var self: @This() = undefined;
-            inline for (fields, 0..) |field, i| {
-                self.values[i] = Value.of(@field(value, field.name));
+            inline for (fields, 0..) |field_name, i| {
+                self.values[i] = Value.of(@field(value, field_name));
             }
             return self;
         }
@@ -213,8 +213,8 @@ fn BoundArgs(comptime ArgsT: type) type {
         values: [fields.len]NamedBinding,
         fn init(value: ArgsT) @This() {
             var self: @This() = undefined;
-            inline for (fields, 0..) |field, i| {
-                self.values[i] = .{ .name = field.name, .value = Value.of(@field(value, field.name)) };
+            inline for (fields, 0..) |field_name, i| {
+                self.values[i] = .{ .name = field_name, .value = Value.of(@field(value, field_name)) };
             }
             return self;
         }
@@ -433,8 +433,8 @@ fn rowToType(comptime T: type, source_row: Row) !T {
     }
 
     var value: T = undefined;
-    inline for (info.@"struct".fields) |field| {
-        @field(value, field.name) = try source_row.getTyped(field.type, field.name);
+    inline for (info.@"struct".field_names, info.@"struct".field_types) |field_name, field_type| {
+        @field(value, field_name) = try source_row.getTyped(field_type, field_name);
     }
     return value;
 }

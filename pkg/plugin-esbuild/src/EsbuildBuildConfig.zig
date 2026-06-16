@@ -49,7 +49,12 @@ pub fn toJsonValue(self: EsbuildBuildConfig, b: *std.Build, arena: std.mem.Alloc
     // entrypoints - required array
     var eps = std.json.Array.init(arena);
     for (self.entrypoints) |lp| {
-        try eps.append(.{ .string = lp.getPath(b) });
+        // TODO: LazyPath.getPath is not available anymore in zig 0.17, figure out alternative
+        const input_path = b.pathJoin(&.{
+            b.fmt("{f}", .{b.root.root_dir}),
+            b.fmt("{f}", .{lp}),
+        });
+        try eps.append(.{ .string = input_path });
     }
     try obj.put(arena, "entrypoints", .{ .array = eps });
 

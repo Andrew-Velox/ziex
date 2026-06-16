@@ -98,9 +98,9 @@ inline fn assertType(comptime T: type, event: client.Event) void {
 fn readStruct(comptime T: type, allocator: Allocator, obj: js.Object) T {
     const info = @typeInfo(T).@"struct";
     var result: T = std.mem.zeroInit(T, .{});
-    inline for (info.fields) |field| {
-        if (readField(field.type, allocator, obj, field.name)) |v| {
-            @field(result, field.name) = v;
+    inline for (info.field_types, info.field_names) |field_type, field_name| {
+        if (readField(field_type, allocator, obj, field_name)) |v| {
+            @field(result, field_name) = v;
         }
     }
     return result;

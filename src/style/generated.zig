@@ -37695,8 +37695,8 @@ pub const Style = struct {
     extra: ?[]const u8 = null,
 
     pub fn format(self: Style, w: anytype) std.Io.Writer.Error!void {
-        inline for (std.meta.fields(Style)) |f| {
-            try @import("core.zig").formatProperty(f.name, @field(self, f.name), w);
+        inline for (comptime std.meta.fieldNames(Style)) |field_name| {
+            try @import("core.zig").formatProperty(field_name, @field(self, field_name), w);
         }
     }
 };

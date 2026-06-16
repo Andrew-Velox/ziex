@@ -76,7 +76,11 @@ fn innerInitSingle(b: *std.Build, build_item: Build) !Output {
 
 fn deriveName(b: *std.Build, self: Build, step: *std.Build.Step) []const u8 {
     if (self.name) |n| return n;
-    const input_name = self.config.input.basename(b, step);
+    // TODO: LazyPath.basename has been removed zig 0.17, figoure out alternative
+    // const input_name = self.config.input.basename(b, step);
+    const input_name = self.config.input.src_path.sub_path;
+    _ = step;
+    _ = b;
     return input_name;
 }
 
@@ -98,7 +102,7 @@ pub fn build(b: *std.Build) void {
     // `zig build run`
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| run_cmd.addArgs(args);
+    // if (b.args) |args| run_cmd.addArgs(args);
 
     const run_step = b.step("run", "Run the plugin");
     run_step.dependOn(&run_cmd.step);

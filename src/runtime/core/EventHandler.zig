@@ -53,11 +53,11 @@ const Self = @This();
 pub fn wrap(comptime func: anytype) Self {
     const FnType = @TypeOf(func);
     const fn_info = @typeInfo(FnType);
-    const params = fn_info.@"fn".params;
+    const params = fn_info.@"fn".param_types;
 
     // Server action: fn (zx.server.Action) void
     if (comptime params.len == 1) {
-        const arg_type = params[0].type.?;
+        const arg_type = params[0].?;
         switch (arg_type) {
             zx.server.Action => {
                 const Wrap = struct {
@@ -121,10 +121,10 @@ pub fn wrap(comptime func: anytype) Self {
 pub fn action(comptime func: anytype) Self {
     const FnType = @TypeOf(func);
     const fn_info = @typeInfo(FnType);
-    const params = fn_info.@"fn".params;
+    const params = fn_info.@"fn".param_types;
 
     if (comptime params.len == 1) {
-        const arg_type = params[0].type.?;
+        const arg_type = params[0].?;
         if (comptime @typeInfo(arg_type) == .@"struct" and
             arg_type != zx.server.Action and
             arg_type != zx.client.Event and
@@ -285,10 +285,10 @@ pub fn actionStateful(
 
 /// Build Bound vtable for explicitly listed states.
 pub fn buildStates(alloc: Allocator, states: anytype) []const Bound {
-    const state_fields = @typeInfo(@TypeOf(states)).@"struct".fields;
+    const state_fields = @typeInfo(@TypeOf(states)).@"struct".field_names;
     const arr = alloc.alloc(Bound, state_fields.len) catch @panic("OOM");
-    inline for (state_fields, 0..) |field, i| {
-        const s = @field(states, field.name);
+    inline for (state_fields, 0..) |field_name, i| {
+        const s = @field(states, field_name);
         const T = @typeInfo(@TypeOf(s)).pointer.child.ValueType;
         arr[i] = .{
             .state_ptr = @ptrCast(s),

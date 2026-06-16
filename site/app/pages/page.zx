@@ -32,7 +32,7 @@ const bench_data = @import("bench.zon");
 const benchfig = @import("benchfig.zon");
 const bench_run = bench_data.run;
 const bench_results = bench_data.results;
-const bench_len = @typeInfo(@TypeOf(bench_results)).@"struct".fields.len;
+const bench_len = @typeInfo(@TypeOf(bench_results)).@"struct".field_types.len;
 
 // Helper function to format large numbers (e.g., 25153 -> "25k")
 fn formatLargeNumber(n: f64) []const u8 {
@@ -130,9 +130,9 @@ fn sortRows(rows: []BenchmarkRow, comptime lower_is_better: bool) void {
 fn buildSsrRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
-    inline for (fields, 0..) |field, i| {
-        const d = @field(bench_results, field.name);
+    const field_names = @typeInfo(@TypeOf(bench_results)).@"struct".field_names;
+    inline for (field_names, 0..) |field_name, i| {
+        const d = @field(bench_results, field_name);
         rows[i] = .{
             .label = d.label,
             .value = d.requests_per_sec,
@@ -153,9 +153,9 @@ fn buildSsrRows() [bench_len]BenchmarkRow {
 fn buildMemoryRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
-    inline for (fields, 0..) |field, i| {
-        const d = @field(bench_results, field.name);
+    const field_names = @typeInfo(@TypeOf(bench_results)).@"struct".field_names;
+    inline for (field_names, 0..) |field_name, i| {
+        const d = @field(bench_results, field_name);
         rows[i] = .{
             .label = d.label,
             .value = d.peak_memory_mb,
@@ -175,9 +175,9 @@ fn buildMemoryRows() [bench_len]BenchmarkRow {
 fn buildBuildTimeRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
-    inline for (fields, 0..) |field, i| {
-        const d = @field(bench_results, field.name);
+    const field_names = @typeInfo(@TypeOf(bench_results)).@"struct".field_names;
+    inline for (field_names, 0..) |field_name, i| {
+        const d = @field(bench_results, field_name);
         rows[i] = .{
             .label = d.label,
             .value = d.build_time_s,
@@ -196,9 +196,9 @@ fn buildBuildTimeRows() [bench_len]BenchmarkRow {
 fn buildColdStartRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
-    inline for (fields, 0..) |field, i| {
-        const d = @field(bench_results, field.name);
+    const field_names = @typeInfo(@TypeOf(bench_results)).@"struct".field_names;
+    inline for (field_names, 0..) |field_name, i| {
+        const d = @field(bench_results, field_name);
         rows[i] = .{
             .label = d.label,
             .value = d.cold_start_ms,
@@ -218,9 +218,9 @@ fn buildColdStartRows() [bench_len]BenchmarkRow {
 fn buildImageSizeRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
-    inline for (fields, 0..) |field, i| {
-        const d = @field(bench_results, field.name);
+    const field_names = @typeInfo(@TypeOf(bench_results)).@"struct".field_names;
+    inline for (field_names, 0..) |field_name, i| {
+        const d = @field(bench_results, field_name);
         rows[i] = .{
             .label = d.label,
             .value = d.image_mb,
@@ -240,9 +240,9 @@ fn buildImageSizeRows() [bench_len]BenchmarkRow {
 fn buildCpuUsageRows() [bench_len]BenchmarkRow {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchmarkRow = undefined;
-    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
-    inline for (fields, 0..) |field, i| {
-        const d = @field(bench_results, field.name);
+    const field_names = @typeInfo(@TypeOf(bench_results)).@"struct".field_names;
+    inline for (field_names, 0..) |field_name, i| {
+        const d = @field(bench_results, field_name);
         rows[i] = .{
             .label = d.label,
             .value = d.cpu_avg_pct,

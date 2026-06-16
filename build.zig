@@ -235,6 +235,7 @@ pub fn build(b: *std.Build) !void {
         });
         const syncbench_run = b.addRunArtifact(syncbench_exe);
         syncbench_step.dependOn(&syncbench_run.step);
+        syncbench_run.addPassthruArgs();
     }
 
     // --- ZX Releases (Cross-compilation targets for all platforms) --- //

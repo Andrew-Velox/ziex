@@ -165,7 +165,7 @@ const related_projects = [_]RelatedProject{
 
 const bench_data = @import("../bench.zon");
 const bench_results = bench_data.results;
-const bench_len = @typeInfo(@TypeOf(bench_results)).@"struct".fields.len;
+const bench_len = @typeInfo(@TypeOf(bench_results)).@"struct".field_names.len;
 const BenchEntry = struct {
     id: []const u8,
     label: []const u8,
@@ -183,10 +183,10 @@ const BenchEntry = struct {
 fn normalizedBenchData() [bench_len]BenchEntry {
     @setEvalBranchQuota(10000);
     var rows: [bench_len]BenchEntry = undefined;
-    const fields = @typeInfo(@TypeOf(bench_results)).@"struct".fields;
+    const field_names = @typeInfo(@TypeOf(bench_results)).@"struct".field_names;
 
-    inline for (fields, 0..) |field, i| {
-        const d = @field(bench_results, field.name);
+    inline for (field_names, 0..) |field_name, i| {
+        const d = @field(bench_results, field_name);
         rows[i] = .{
             .id = d.id,
             .label = d.label,

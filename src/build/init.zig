@@ -335,7 +335,6 @@ pub fn initInner(
         // Also install the generated assets into static/assets (only if the directory exists)
         // TODO: LazyPath.getPath(b) alternative for zig 0.17, using relative path for now
         const assets_path = b.fmt("{f}", .{opts.site_path.path(b, "assets")});
-        std.log.info("Assets Path: {s}\n", .{assets_path});
         if (std.Io.Dir.cwd().access(b.graph.io, assets_path, .{})) |_| {
             const install_assets = b.addInstallDirectory(.{
                 .source_dir = opts.site_path.path(b, "assets"),

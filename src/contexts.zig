@@ -90,9 +90,9 @@ pub fn ComponentCtx(comptime PropsType: type) type {
                 .pointer => |p| p.child,
                 else => @compileError("sbind: expected a function"),
             };
-            const params = @typeInfo(HandlerFnType).@"fn".params;
+            const params = @typeInfo(HandlerFnType).@"fn".param_types;
 
-            comptime if (!(params.len == 1 and params[0].type.? == *ServerEvent.Stateful))
+            comptime if (!(params.len == 1 and params[0].? == *ServerEvent.Stateful))
                 @compileError("sbind: handler must be fn(*zx.server.Event.Stateful) void");
 
             const alloc = if (zx.platform.role == .client) zx.allocator else self.allocator;
@@ -130,7 +130,7 @@ pub fn ComponentCtx(comptime PropsType: type) type {
                         break :blk zx.EventHandler.server(handler, alloc, &self._internal.handler_idx);
                     }
                     if (comptime params.len == 2 and
-                        @typeInfo(params[0]) == .@"struct" and
+                        @typeInfo(params[0].?) == .@"struct" and
                         params[0] != ActionContext and
                         params[1] == *StateContext)
                     {
@@ -145,7 +145,7 @@ pub fn ComponentCtx(comptime PropsType: type) type {
 
 fn actionBind(comptime handler: anytype, alloc: Allocator, ctx: anytype) zx.EventHandler {
     const params = @typeInfo(@TypeOf(handler)).@"fn".param_types;
-    const arg0 = params[0];
+    const arg0 = params[0].?;
 
     if (comptime params.len == 2 and params[1] == *StateContext and
         (arg0 == ActionContext or @typeInfo(arg0) == .@"struct"))

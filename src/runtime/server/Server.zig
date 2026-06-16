@@ -489,10 +489,10 @@ pub const ServerMeta = struct {
 
         // Count custom methods first
         comptime var custom_count: usize = 0;
-        const decls = @typeInfo(T).@"struct".decls;
+        const decls = @typeInfo(T).@"struct".decl_names;
         for (decls) |decl| {
-            if (!isStandardMethod(decl.name) and isAllUppercase(decl.name)) {
-                const field = @field(T, decl.name);
+            if (!isStandardMethod(decl) and isAllUppercase(decl)) {
+                const field = @field(T, decl);
                 const FieldType = @TypeOf(field);
                 if (@typeInfo(FieldType) == .@"fn") {
                     custom_count += 1;
@@ -505,12 +505,12 @@ pub const ServerMeta = struct {
             var methods: [custom_count]CustomMethod = undefined;
             var idx: usize = 0;
             for (decls) |decl| {
-                if (!isStandardMethod(decl.name) and isAllUppercase(decl.name)) {
-                    const field = @field(T, decl.name);
+                if (!isStandardMethod(decl) and isAllUppercase(decl)) {
+                    const field = @field(T, decl);
                     const FieldType = @TypeOf(field);
                     if (@typeInfo(FieldType) == .@"fn") {
                         methods[idx] = .{
-                            .method = decl.name,
+                            .method = decl,
                             .handler = wrapRoute(field),
                         };
                         idx += 1;
@@ -541,7 +541,7 @@ pub const ServerMeta = struct {
     fn wrapSocket(comptime socketFn: anytype) SocketHandler {
         const FnInfo = @typeInfo(@TypeOf(socketFn)).@"fn";
         const R = FnInfo.return_type.?;
-        const CtxType = FnInfo.params[0].type.?;
+        const CtxType = FnInfo.param_types[0].?;
         const DataType = @TypeOf(@as(CtxType, undefined).data);
 
         return struct {
@@ -572,7 +572,7 @@ pub const ServerMeta = struct {
     fn wrapSocketOpen(comptime socketOpenFn: anytype) SocketOpenHandler {
         const FnInfo = @typeInfo(@TypeOf(socketOpenFn)).@"fn";
         const R = FnInfo.return_type.?;
-        const CtxType = FnInfo.params[0].type.?;
+        const CtxType = FnInfo.param_types[0].?;
         const DataType = @TypeOf(@as(CtxType, undefined).data);
 
         return struct {
@@ -599,7 +599,7 @@ pub const ServerMeta = struct {
 
     /// Wrapper for SocketClose handlers
     fn wrapSocketClose(comptime socketCloseFn: anytype) SocketCloseHandler {
-        const CtxType = @typeInfo(@TypeOf(socketCloseFn)).@"fn".params[0].type.?;
+        const CtxType = @typeInfo(@TypeOf(socketCloseFn)).@"fn".param_types[0].?;
         const DataType = @TypeOf(@as(CtxType, undefined).data);
 
         return struct {
@@ -664,7 +664,7 @@ pub const ServerMeta = struct {
     fn wrapRoute(comptime routeFn: anytype) RouteHandler {
         const FnInfo = @typeInfo(@TypeOf(routeFn)).@"fn";
         const R = FnInfo.return_type.?;
-        const n_params = FnInfo.params.len;
+        const n_params = FnInfo.param_types.len;
 
         return struct {
             fn wrapper(ctx: zx.RouteContext, app_ptr: ?*const anyopaque, state_ptr: ?*const anyopaque) anyerror!void {
@@ -678,8 +678,8 @@ pub const ServerMeta = struct {
                     return;
                 }
                 if (n_params == 3) {
-                    const app = injectApp(FnInfo.params[1].type.?, app_ptr);
-                    const state = injectState(FnInfo.params[2].type.?, state_ptr);
+                    const app = injectApp(FnInfo.param_types[1].?, app_ptr);
+                    const state = injectState(FnInfo.param_types[2].?, state_ptr);
                     if (R == void) routeFn(ctx, app, state) else try routeFn(ctx, app, state);
                     return;
                 }

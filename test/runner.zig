@@ -99,7 +99,7 @@ pub fn main(init: std.process.Init) !void {
 
         while (attempt < max_attempts) : (attempt += 1) {
             current_test = friendly_name;
-            std.testing.allocator_instance = .{};
+            std.testing.allocator_instance = .init(std.heap.page_allocator, .{});
             std.testing.io_instance = .init(std.testing.allocator, .{
                 .argv0 = .init(init.minimal.args),
                 .environ = init.minimal.environ,
@@ -110,7 +110,7 @@ pub fn main(init: std.process.Init) !void {
 
             final_ns_taken = slowest.endTiming(allocator, scope_name, friendly_name);
 
-            if (std.testing.allocator_instance.deinit() == .leak) {
+            if (std.testing.allocator_instance.deinit() != 0) {
                 leak += 1;
                 Printer.status(.fail, "\n{s}\n\"{s}\" - Memory Leak\n{s}\n", .{ BORDER, friendly_name, BORDER });
             }

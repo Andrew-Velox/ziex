@@ -37,10 +37,10 @@ pub const StaticParams = struct {
     /// ```
     pub fn add(self: *StaticParams, params: anytype) !void {
         const T = @TypeOf(params);
-        const fields = @typeInfo(T).@"struct".fields;
-        const set = try self.allocator.alloc(StaticParam, fields.len);
-        inline for (fields, 0..) |field, i| {
-            set[i] = .{ .key = field.name, .value = @field(params, field.name) };
+        const field_names = @typeInfo(T).@"struct".field_names;
+        const set = try self.allocator.alloc(StaticParam, field_names.len);
+        inline for (field_names, 0..) |field_name, i| {
+            set[i] = .{ .key = field_name, .value = @field(params, field_name) };
         }
         try self.entries.append(self.allocator, set);
     }

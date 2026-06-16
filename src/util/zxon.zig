@@ -318,7 +318,7 @@ fn typeSignature(comptime T: type) []const u8 {
         return switch (@typeInfo(T)) {
             .@"struct" => |s| blk: {
                 var r: []const u8 = "struct{";
-                for (s.fields) |f| r = r ++ f.name ++ ":" ++ typeSignature(f.type) ++ ";";
+                for (s.field_names, s.field_types) |f_name, f_type| r = r ++ f_name ++ ":" ++ typeSignature(f_type) ++ ";";
                 break :blk r ++ "}";
             },
             .optional => |opt| "?" ++ typeSignature(opt.child),

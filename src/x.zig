@@ -377,14 +377,14 @@ const Context = struct {
             @compileError("attrSpr() expects a struct, got " ++ @typeName(T));
         }
 
-        const fields = type_info.@"struct".fields;
-        if (fields.len == 0) return &.{};
+        const field_names = type_info.@"struct".field_names;
+        if (field_names.len == 0) return &.{};
 
-        const result = allocator.alloc(?Element.Attribute, fields.len) catch @panic("OOM");
+        const result = allocator.alloc(?Element.Attribute, field_names.len) catch @panic("OOM");
 
-        inline for (fields, 0..) |field, i| {
-            const val = @field(props, field.name);
-            result[i] = self.attr(field.name, val);
+        inline for (field_names, 0..) |field_name, i| {
+            const val = @field(props, field_name);
+            result[i] = self.attr(field_name, val);
         }
 
         return result;
@@ -402,9 +402,9 @@ const Context = struct {
         // Copy all fields from base
         const base_info = @typeInfo(BaseType);
         if (base_info == .@"struct") {
-            inline for (base_info.@"struct".fields) |field| {
-                if (@hasField(ResultType, field.name)) {
-                    @field(result, field.name) = @field(base, field.name);
+            inline for (base_info.@"struct".field_names) |field_name| {
+                if (@hasField(ResultType, field_name)) {
+                    @field(result, field_name) = @field(base, field_name);
                 }
             }
         }
@@ -412,8 +412,8 @@ const Context = struct {
         // Apply overrides (these take precedence)
         const override_info = @typeInfo(OverrideType);
         if (override_info == .@"struct") {
-            inline for (override_info.@"struct".fields) |field| {
-                @field(result, field.name) = @field(overrides, field.name);
+            inline for (override_info.@"struct".field_names) |field_name| {
+                @field(result, field_name) = @field(overrides, field_name);
             }
         }
 
