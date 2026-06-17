@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -13,7 +13,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .span,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", "spacer"),
+                            _zx.attr(@src(), "class", "spacer"),
                         }),
                     },
                 ),
@@ -21,7 +21,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .section,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("id", "empty-section"),
+                            _zx.attr(@src(), "id", "empty-section"),
                         }),
                     },
                 ),

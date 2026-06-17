@@ -30,18 +30,21 @@ pub fn isActionRequest(request: zx.server.Request) bool {
 }
 
 fn parseActionId(request: zx.server.Request) u32 {
+    const content_type = request.headers.get("content-type") orelse "";
+    if (std.mem.indexOf(u8, content_type, "multipart/form-data") != null) {
+        if (request.multiFormData().getValue("__$action")) |raw| {
+            return std.fmt.parseInt(u32, raw, 10) catch 1;
+        }
+    } else if (request.formData().get("__$action")) |raw| {
+        return std.fmt.parseInt(u32, raw, 10) catch 1;
+    }
+
+    // Fall back to the header (JS fetches with no form body).
     if (request.headers.get("x-zx-action")) |raw| {
         return std.fmt.parseInt(u32, raw, 10) catch 1;
     }
 
-    const content_type = request.headers.get("content-type") orelse "";
-    if (std.mem.indexOf(u8, content_type, "multipart/form-data") != null) {
-        const raw = request.multiFormData().getValue("__$action") orelse return 1;
-        return std.fmt.parseInt(u32, raw, 10) catch 1;
-    }
-
-    const raw = request.formData().get("__$action") orelse return 1;
-    return std.fmt.parseInt(u32, raw, 10) catch 1;
+    return 1;
 }
 
 fn serializeStateOutputs(sc: anytype, allocator: std.mem.Allocator) !?[]u8 {

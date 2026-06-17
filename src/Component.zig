@@ -32,7 +32,7 @@ pub const Component = union(enum) {
     pub const ComponentFn = struct {
         propsPtr: ?*const anyopaque,
         callFn: *const fn (propsPtr: ?*const anyopaque, allocator: Allocator) anyerror!Component,
-        setIdentityFn: ?*const fn (propsPtr: ?*const anyopaque, component_id: []const u8, instance_id: u16) void = null,
+        setComponentIdFn: ?*const fn (propsPtr: ?*const anyopaque, component_id: []const u8) void = null,
         getStateItems: ?*const anyopaque = null,
         allocator: Allocator,
         deinitFn: ?*const fn (propsPtr: ?*const anyopaque, allocator: Allocator) void,
@@ -41,6 +41,7 @@ pub const Component = union(enum) {
         caching: ?BuiltinAttribute.Caching = null,
         name: []const u8,
         key: ?[]const u8 = null,
+        id: zx.x.Id = .undef,
 
         pub fn init(comptime func: anytype, name: []const u8, allocator: Allocator, props: anytype) ComponentFn {
             const FuncInfo = @typeInfo(@TypeOf(func));
@@ -132,7 +133,6 @@ pub const Component = union(enum) {
                         // Reset slot counters on every call so hooks run in stable order.
                         if (@hasField(CtxType, "_internal")) {
                             ctx_ptr._internal.state_idx = 0;
-                            ctx_ptr._internal.handler_idx = 0;
                         }
                         return normalize(func(ctx_ptr));
                     }
@@ -148,13 +148,12 @@ pub const Component = union(enum) {
                     unreachable;
                 }
 
-                fn setIdentity(propsPtr: ?*const anyopaque, component_id: []const u8, instance_id: u16) void {
+                fn setComponentId(propsPtr: ?*const anyopaque, component_id: []const u8) void {
                     if (!first_is_ctx_ptr) return;
                     const CtxType = @typeInfo(FirstPropType).pointer.child;
                     const ctx_ptr: *CtxType = @ptrCast(@alignCast(@constCast(propsPtr orelse return)));
                     if (@hasField(CtxType, "_internal")) {
                         ctx_ptr._internal.component_id = component_id;
-                        ctx_ptr._internal.instance_id = instance_id;
                     }
                 }
 
@@ -177,7 +176,7 @@ pub const Component = union(enum) {
             return .{
                 .propsPtr = props_copy,
                 .callFn = Wrapper.call,
-                .setIdentityFn = if (first_is_ctx_ptr) Wrapper.setIdentity else null,
+                .setComponentIdFn = if (first_is_ctx_ptr) Wrapper.setComponentId else null,
                 .getStateItems = @ptrCast(devtool.ComponentSerializable.createGetStateItemsFn(func)),
                 .allocator = allocator,
                 .deinitFn = Wrapper.deinit,
@@ -197,9 +196,9 @@ pub const Component = union(enum) {
             }
         }
 
-        pub fn setIdentity(self: ComponentFn, component_id: []const u8, instance_id: u16) void {
-            if (self.setIdentityFn) |set_identity_fn| {
-                set_identity_fn(self.propsPtr, component_id, instance_id);
+        pub fn setComponentId(self: ComponentFn, component_id: []const u8) void {
+            if (self.setComponentIdFn) |set_fn| {
+                set_fn(self.propsPtr, component_id);
             }
         }
     };

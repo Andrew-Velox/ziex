@@ -41,15 +41,27 @@ const Options = struct {
     name: ?[]const u8 = null,
 };
 
+pub const ComptimeOptions = struct {
+    src: ?std.builtin.SourceLocation = null,
+};
+
+pub const InitOptions = struct {
+    src: ?std.builtin.SourceLocation = null,
+};
+
+fn componentId(comptime options: InitOptions) Id {
+    return if (options.src) |src| Id.extendId(null, src, 0) else .undef;
+}
+
 /// Initialize a Context without an allocator
 /// The allocator must be provided via @allocator attribute on the parent element
-pub fn init() Context {
-    return .{ .allocator = .failing };
+pub fn init(comptime options: InitOptions) Context {
+    return .{ .allocator = .failing, .component_id = componentId(options) };
 }
 
 /// Initialize a Context with an allocator (for backward compatibility with direct API usage)
-pub fn allocInit(allocator: std.mem.Allocator) Context {
-    return .{ .allocator = allocator };
+pub fn allocInit(allocator: std.mem.Allocator, comptime options: InitOptions) Context {
+    return .{ .allocator = allocator, .component_id = componentId(options) };
 }
 
 /// Create a lazy component from a function
@@ -62,6 +74,7 @@ pub fn lazy(allocator: Allocator, comptime func: anytype, props: anytype) Compon
 /// Context for creating components with allocator support
 const Context = struct {
     allocator: ?std.mem.Allocator = null,
+    component_id: Id = .undef,
 
     pub fn getAlloc(self: *Context) std.mem.Allocator {
         return self.allocator orelse @panic("Allocator not set. Please provide @allocator attribute to the parent element.");
@@ -215,11 +228,13 @@ const Context = struct {
 
     /// Create an attribute with type-aware value handling
     /// Returns null for values that should omit the attribute (false booleans, null optionals)
-    pub fn attr(self: *Context, comptime name: []const u8, val: anytype) ?Element.Attribute {
+    ///
+    /// `src` is the attribute's call-site `@src()` (emitted by the transpiler).
+    pub fn attr(self: *Context, comptime src: ?std.builtin.SourceLocation, comptime name: []const u8, val: anytype) ?Element.Attribute {
         const T = @TypeOf(val);
 
         if (comptime isStatePointer(T)) {
-            return self.attr(name, val.get());
+            return self.attr(src, name, val.get());
         }
 
         return switch (@typeInfo(T)) {
@@ -231,17 +246,20 @@ const Context = struct {
                 if (ptr_info.size == .one) {
                     if (@typeInfo(ptr_info.child) == .array) {
                         const Slice = []const std.meta.Elem(ptr_info.child);
-                        return self.attr(name, @as(Slice, val));
+                        return self.attr(src, name, @as(Slice, val));
                     }
                     // Function pointer - treat as event handler
                     if (@typeInfo(ptr_info.child) == .@"fn") {
                         const fn_params = @typeInfo(ptr_info.child).@"fn".param_types;
                         const takes_ptr = fn_params.len == 1 and
                             @typeInfo(fn_params[0].?) == .pointer;
-                        const handler = if (takes_ptr)
+                        var handler = if (takes_ptr)
                             zx.EventHandler.runtimePtr(val)
                         else
                             zx.EventHandler.runtime(val);
+                        if (src) |s| {
+                            handler.stampId(self.getAlloc(), comptime Id.extendId(null, s, 0));
+                        }
                         break :blk .{ .name = name, .handler = handler };
                     }
                 }
@@ -264,7 +282,7 @@ const Context = struct {
             .bool => if (val) .{ .name = name, .value = null } else null,
 
             // Optionals - recurse if non-null, omit if null
-            .optional => if (val) |inner| self.attr(name, inner) else null,
+            .optional => if (val) |inner| self.attr(src, name, inner) else null,
 
             // Enums - convert tag name to string
             .@"enum", .enum_literal => .{
@@ -273,17 +291,23 @@ const Context = struct {
             },
 
             // Event handlers - store as function pointer
-            .@"fn" => .{
-                .name = name,
-                .handler = if (comptime std.mem.eql(u8, name, "action"))
+            .@"fn" => blk: {
+                var handler = if (comptime std.mem.eql(u8, name, "action"))
                     zx.EventHandler.action(val)
                 else
-                    zx.EventHandler.wrap(val),
+                    zx.EventHandler.wrap(val);
+                if (src) |s| {
+                    handler.stampId(self.getAlloc(), comptime Id.extendId(null, s, 0));
+                }
+                break :blk .{ .name = name, .handler = handler };
             },
-            // Pre-built event handlers
-            .@"struct" => if (T == zx.EventHandler) .{
-                .name = name,
-                .handler = val,
+            // Pre-built event handlers (e.g. from ctx.bind(...))
+            .@"struct" => if (T == zx.EventHandler) blk: {
+                var handler = val;
+                if (src) |s| {
+                    handler.stampId(self.getAlloc(), comptime Id.extendId(null, s, 0));
+                }
+                break :blk .{ .name = name, .handler = handler };
             } else if (comptime @hasDecl(T, "format")) blk: {
                 const allocator = self.getAlloc();
                 const str = std.fmt.allocPrint(allocator, "{f}", .{val}) catch @panic("OOM");
@@ -309,11 +333,11 @@ const Context = struct {
     pub fn attrf(self: *Context, comptime name: []const u8, comptime format: []const u8, args: anytype) ?Element.Attribute {
         const allocator = self.getAlloc();
         const text = std.fmt.allocPrint(allocator, format, args) catch @panic("OOM");
-        return self.attr(name, text);
+        return self.attr(@src(), name, text);
     }
 
     pub fn attrv(self: *Context, val: anytype) []const u8 {
-        const attrkv = self.attr("f", val);
+        const attrkv = self.attr(@src(), "f", val);
         if (attrkv) |a| {
             return a.value orelse "";
         }
@@ -384,7 +408,7 @@ const Context = struct {
 
         inline for (field_names, 0..) |field_name, i| {
             const val = @field(props, field_name);
-            result[i] = self.attr(field_name, val);
+            result[i] = self.attr(@src(), field_name, val);
         }
 
         return result;
@@ -511,7 +535,7 @@ const Context = struct {
         return result;
     }
 
-    pub fn cmp(self: *Context, comptime func: anytype, options: Options, props: anytype) Component {
+    pub fn cmp(self: *Context, comptime func: anytype, comptime copts: ComptimeOptions, options: Options, props: anytype) Component {
         const allocator = self.getAlloc();
 
         const FuncInfo = @typeInfo(@TypeOf(func));
@@ -535,6 +559,13 @@ const Context = struct {
         comp_fn.async_mode = options.async orelse .sync;
         comp_fn.fallback = options.fallback;
         comp_fn.caching = options.caching;
+
+        // Derive a stable, unique instance id entirely at comptime from this
+        // `cmp` call site's source location. `@src()` already encodes file +
+        // line + column, so the id is globally unique per instance site.
+        if (copts.src) |src| {
+            comp_fn.id = comptime Id.extendId(null, src, 0);
+        }
 
         // If client option is set, return a client component (for @rendering={.client})
         // Render the component on the server for SSR, then hydrate on client.
@@ -641,3 +672,104 @@ fn isStatePointer(comptime PT: type) bool {
         @hasDecl(CT, "set") and
         @hasDecl(CT, "update");
 }
+
+pub const fnv = std.hash.Fnv1a_64;
+
+/// This was taken from DVUI and modified to make the ID stable across builds
+/// A generic id created by hashing `std.builting.SourceLocation`'s (from `@src()`)
+pub const Id = enum(u64) {
+    zero = 0,
+    // This may not work in future and is illegal behaviour / arch specific to compare to undefined.
+    undef = 0xAAAAAAAAAAAAAAAA,
+    _,
+
+    /// Make a unique id from `src` and `id_extra`, possibly starting with start
+    /// (usually a parent widget id).  This is how the initial parent widget id is
+    /// created, and also toasts and dialogs from other threads.
+    ///
+    /// See `Widget.extendId` which calls this with the widget id as start.
+    ///
+    /// ```zig
+    /// dvui.parentGet().extendId(@src(), id_extra)
+    /// ```
+    /// is how new widgets get their id, and can be used to make a unique id without
+    /// making a widget.
+    pub fn extendId(start: ?Id, comptime src: std.builtin.SourceLocation, id_extra: usize) Id {
+        const cp = std.fmt.comptimePrint;
+        var hash = fnv.init();
+        if (start) |s| {
+            hash.value = s.asU64();
+        }
+        // NOTE: `src.module` is intentionally excluded from the hash. The same
+        // generated page is compiled into both the server (`app` module) and the
+        // wasm client (`zx_meta` module) — hashing the module name would yield a
+        // different id per build, breaking server-action dispatch (the client and
+        // server would disagree on a handler's id). `file`+`line`+`column` are
+        // stable across both builds and unique within a page.
+        hash.update(cp("{s}", .{src.file}));
+        hash.update(cp("{d}", .{src.line}));
+        hash.update(cp("{d}", .{src.column}));
+        var buf: [40]u8 = undefined;
+        hash.update(std.fmt.bufPrint(&buf, "{d}", .{id_extra}) catch unreachable);
+        return @enumFromInt(hash.final());
+    }
+
+    /// Runtime variant of `extendId` that hashes a runtime `std.builtin.SourceLocation`.
+    /// Produces the same id as `extendId` for an equivalent `src`/`id_extra`, so a
+    /// component-block id (built at comptime) and an instance id derived from a
+    /// runtime `@src()` value hash consistently.
+    pub fn extend(start: ?Id, src: std.builtin.SourceLocation, id_extra: usize) Id {
+        var hash = fnv.init();
+        if (start) |s| {
+            hash.value = s.asU64();
+        }
+        // `src.module` intentionally excluded — see `extendId` for why. Keep these
+        // two functions in sync so a comptime id and its runtime equivalent match.
+        hash.update(src.file);
+        var buf: [40]u8 = undefined;
+        hash.update(std.fmt.bufPrint(&buf, "{d}", .{src.line}) catch unreachable);
+        hash.update(std.fmt.bufPrint(&buf, "{d}", .{src.column}) catch unreachable);
+        hash.update(std.fmt.bufPrint(&buf, "{d}", .{id_extra}) catch unreachable);
+        return @enumFromInt(hash.final());
+    }
+
+    /// Make a new id by combining id with a name, commonly a string key like `"__value"`.
+    /// This is how dvui tracks things in `dataGet`/`dataSet`, `animation`, and `timer`.
+    pub fn update(id: Id, name: []const u8) Id {
+        var h = fnv.init();
+        h.value = id.asU64();
+        h.update(name);
+        return @enumFromInt(h.final());
+    }
+
+    pub fn asU64(self: Id) u64 {
+        return @intFromEnum(self);
+    }
+
+    /// Shortened, stable 32-bit form of the id (the low 32 bits of the hash).
+    /// Used for compact, human-readable string keys (see `fmtShort`). Collision
+    /// risk within a single page is negligible.
+    pub fn short(self: Id) u32 {
+        return @truncate(@intFromEnum(self));
+    }
+
+    /// Format the id as a short, prefixed, stable string (e.g. `c1a2b3c4` for a
+    /// component instance, `a9f8e7d6` for an action handler). The result is
+    /// allocated with `allocator`.
+    pub fn fmtShort(self: Id, allocator: std.mem.Allocator, comptime prefix: []const u8) []const u8 {
+        return std.fmt.allocPrint(allocator, prefix ++ "{x:0>8}", .{self.short()}) catch @panic("OOM");
+    }
+
+    /// ALWAYS prefer using `asU64` unless a `usize` is required as it could
+    /// loose precision and uniqueness on non-64bit platforms (like wasm32).
+    ///
+    /// Using an `Id` as `Options.id_extra` would be a valid use of this function
+    pub fn asUsize(self: Id) usize {
+        // usize might be u32 (like on wasm32)
+        return @truncate(@intFromEnum(self));
+    }
+
+    pub fn format(self: *const Id, writer: *std.Io.Writer) !void {
+        try writer.print("{x}", .{self.asU64()});
+    }
+};

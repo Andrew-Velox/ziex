@@ -3,8 +3,6 @@ pub const Client = @This();
 const window = @import("window.zig");
 const is_wasm = window.is_wasm;
 
-/// Global instance counter for assigning unique IDs to component instances
-var instance_counter: u16 = 0;
 
 /// The component ID that is currently being rendered.
 /// Set by Client.render() so that ComponentCtx and ifpl can register subscriptions.
@@ -87,13 +85,11 @@ pub const ComponentMeta = struct {
                     // Reset slot counters so hooks run in stable order every render.
                     if (@hasField(CtxType, "_internal")) {
                         ctx._internal = .{
-                            .instance_id = instance_counter,
                             .component_id = current_render_id,
                             .state_idx = 0,
-                            .handler_idx = 0,
                         };
                     }
-                    instance_counter +%= 1; // Wrap around on overflow
+
 
                     // Parse props if the context has a props field
                     if (@hasField(CtxType, "props")) {

@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -7,10 +7,12 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
             .children = &.{
                 _zx.cmp(
                     Card,
+                    .{ .src = @src() },
                     .{ .name = "Card" },
                     .{ .title = "Welcome", .children = _zx.ele(.fragment, .{ .children = &.{
                         _zx.cmp(
                             Button,
+                            .{ .src = @src() },
                             .{ .name = "Button" },
                             .{ .label = "Click me" },
                         ),
@@ -23,20 +25,20 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 
 const CardProps = struct { title: []const u8, children: zx.Component };
 fn Card(allocator: zx.Allocator, props: CardProps) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
             .allocator = allocator,
             .attributes = _zx.attrs(.{
-                _zx.attr("class", "card"),
+                _zx.attr(@src(), "class", "card"),
             }),
             .children = &.{
                 _zx.ele(
                     .h2,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", "card-header"),
+                            _zx.attr(@src(), "class", "card-header"),
                         }),
                         .children = &.{
                             _zx.expr(props.title),
@@ -47,7 +49,7 @@ fn Card(allocator: zx.Allocator, props: CardProps) zx.Component {
                     .div,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", "card-body"),
+                            _zx.attr(@src(), "class", "card-body"),
                         }),
                         .children = &.{
                             _zx.expr(props.children),
@@ -61,13 +63,13 @@ fn Card(allocator: zx.Allocator, props: CardProps) zx.Component {
 
 const ButtonProps = struct { label: []const u8 };
 fn Button(allocator: zx.Allocator, props: ButtonProps) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .button,
         .{
             .allocator = allocator,
             .attributes = _zx.attrs(.{
-                _zx.attr("class", "btn"),
+                _zx.attr(@src(), "class", "btn"),
             }),
             .children = &.{
                 _zx.expr(props.label),

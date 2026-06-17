@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .fragment,
         .{
@@ -9,7 +9,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .button,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("onclick", handleClick),
+                            _zx.attr(@src(), "onclick", handleClick),
                         }),
                         .children = &.{
                             _zx.txt(" Click me"),

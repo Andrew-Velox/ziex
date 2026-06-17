@@ -1,6 +1,6 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
     const a = allocator;
-    var _zx = @import("zx").x.allocInit(a);
+    var _zx = @import("zx").x.allocInit(a, .{ .src = @src() });
     return _zx.ele(
         .section,
         .{
@@ -8,11 +8,13 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
             .children = &.{
                 _zx.cmp(
                     ArgToBuiltin,
+                    .{ .src = @src() },
                     .{ .name = "ArgToBuiltin" },
                     .{},
                 ),
                 _zx.cmp(
                     StructToBuiltin,
+                    .{ .src = @src() },
                     .{ .name = "StructToBuiltin" },
                     .{},
                 ),
@@ -22,7 +24,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 }
 
 fn ArgToBuiltin(arena: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(arena);
+    var _zx = @import("zx").x.allocInit(arena, .{ .src = @src() });
     return _zx.ele(
         .section,
         .{
@@ -34,7 +36,7 @@ fn ArgToBuiltin(arena: zx.Allocator) zx.Component {
 const Props = struct { c: zx.Allocator };
 fn StructToBuiltin(a: zx.Allocator) zx.Component {
     const props = Props{ .c = a };
-    var _zx = @import("zx").x.allocInit(props.c);
+    var _zx = @import("zx").x.allocInit(props.c, .{ .src = @src() });
     return _zx.ele(
         .section,
         .{

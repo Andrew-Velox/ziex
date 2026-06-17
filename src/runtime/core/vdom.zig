@@ -365,7 +365,7 @@ pub fn resolveComponent(allocator: zx.Allocator, component: zx.Component, owner_
         switch (curr) {
             .component_fn => |comp_fn| {
                 const component_id = componentOwnerId(allocator, curr, owner_component_id, sibling_index);
-                comp_fn.setIdentity(component_id, @truncate(next_velement_id));
+                comp_fn.setComponentId(component_id);
                 curr = try comp_fn.call();
             },
             else => return curr,
@@ -652,15 +652,9 @@ fn reconcileChildren(
 }
 
 fn componentOwnerId(allocator: zx.Allocator, component: zx.Component, owner_component_id: []const u8, sibling_index: usize) []const u8 {
+    _ = sibling_index;
     return switch (component) {
-        .component_fn => |comp_fn| blk: {
-            const suffix = comp_fn.key orelse std.fmt.allocPrint(allocator, "#{d}", .{sibling_index}) catch break :blk owner_component_id;
-            break :blk std.fmt.allocPrint(allocator, "{s}/{s}:{s}", .{
-                owner_component_id,
-                comp_fn.name,
-                suffix,
-            }) catch owner_component_id;
-        },
+        .component_fn => |comp_fn| comp_fn.id.fmtShort(allocator, "c"),
         else => owner_component_id,
     };
 }

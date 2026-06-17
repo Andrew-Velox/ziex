@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -9,7 +9,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .div,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", "container"),
+                            _zx.attr(@src(), "class", "container"),
                         }),
                         .children = &.{
                             _zx.ele(
@@ -32,7 +32,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                                                                                 .a,
                                                                                 .{
                                                                                     .attributes = _zx.attrs(.{
-                                                                                        _zx.attr("href", "/"),
+                                                                                        _zx.attr(@src(), "href", "/"),
                                                                                     }),
                                                                                     .children = &.{
                                                                                         _zx.txt("Home"),
@@ -50,7 +50,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                                                                                 .a,
                                                                                 .{
                                                                                     .attributes = _zx.attrs(.{
-                                                                                        _zx.attr("href", "/about"),
+                                                                                        _zx.attr(@src(), "href", "/about"),
                                                                                     }),
                                                                                     .children = &.{
                                                                                         _zx.txt("About"),

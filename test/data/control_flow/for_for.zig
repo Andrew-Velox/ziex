@@ -3,7 +3,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
         .{ .name = "Team A", .members = &[_][]const u8{ "John", "Jane" } },
         .{ .name = "Team B", .members = &[_][]const u8{ "Jim", "Jill" } },
     };
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{

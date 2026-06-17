@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -17,8 +17,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "text"),
-                            _zx.attr("name", "username"),
+                            _zx.attr(@src(), "type", "text"),
+                            _zx.attr(@src(), "name", "username"),
                         }),
                     },
                 ),
@@ -26,8 +26,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .img,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("src", "/logo.png"),
-                            _zx.attr("alt", "Logo"),
+                            _zx.attr(@src(), "src", "/logo.png"),
+                            _zx.attr(@src(), "alt", "Logo"),
                         }),
                     },
                 ),
@@ -35,7 +35,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .meta,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("charset", "utf-8"),
+                            _zx.attr(@src(), "charset", "utf-8"),
                         }),
                     },
                 ),

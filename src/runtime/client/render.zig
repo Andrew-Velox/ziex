@@ -139,6 +139,7 @@ pub fn applyPatches(
 /// are serialised, sent as `__$states`, and the response updates those states.
 const FormActionCtx = struct {
     vnode_id: u64,
+    action_id: u32 = 1,
     bound_states: []const zx.EventHandler.Bound = &.{},
 };
 
@@ -175,7 +176,7 @@ fn formActionCallback(ctx: *anyopaque, event: zx.client.Event) void {
     event.preventDefault();
 
     if (form_ctx.bound_states.len == 0) {
-        ext._submitFormAction(form_ctx.vnode_id);
+        ext._submitFormAction(form_ctx.vnode_id, form_ctx.action_id);
         return;
     }
 
@@ -197,7 +198,7 @@ fn formActionCallback(ctx: *anyopaque, event: zx.client.Event) void {
         alloc.destroy(cb_ctx);
         return;
     };
-    ext._submitFormActionAsync(form_ctx.vnode_id, states_json.ptr, states_json.len, fetch_id);
+    ext._submitFormActionAsync(form_ctx.vnode_id, form_ctx.action_id, states_json.ptr, states_json.len, fetch_id);
 }
 
 /// Build DOM nodes for a VNode subtree and register every node in the JS
@@ -222,6 +223,7 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
                 var has_action_handler = false;
                 var has_method = false;
                 var form_bound_states: []const zx.EventHandler.Bound = &.{};
+                var form_action_id: u32 = 1;
 
                 for (attrs) |attr| {
                     if (std.mem.eql(u8, attr.name, "key")) continue;
@@ -229,6 +231,7 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
                         if (handler.action_fn != null) {
                             has_action_handler = true;
                             form_bound_states = handler.bound_states;
+                            form_action_id = handler.handler_id;
                         }
                         continue;
                     }
@@ -272,7 +275,7 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
                 if (elem.tag == .form and has_action_handler) {
                     const Client = @import("Client.zig");
                     if (allocator.create(FormActionCtx) catch null) |form_ctx| {
-                        form_ctx.* = .{ .vnode_id = vnode.id, .bound_states = form_bound_states };
+                        form_ctx.* = .{ .vnode_id = vnode.id, .action_id = form_action_id, .bound_states = form_bound_states };
                         client.registerHandler(vnode.id, Client.EventType.submit, zx.EventHandler{
                             .callback = &formActionCallback,
                             .context = @ptrCast(form_ctx),

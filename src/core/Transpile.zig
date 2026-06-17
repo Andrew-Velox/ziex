@@ -502,12 +502,22 @@ pub fn transpileReturn(self: *Ast, node: ts.Node, ctx: *TranspileContext) !void 
 
                     // Synthesized _zx init - no source mapping (it's boilerplate)
                     try ctx.write("var _zx = @import(\"zx\").x.");
+                    // `@src()` is only valid inside a function scope. Module-scope
+                    // block level component (e.g. `const x = zx { ... }`) can't use @src so skipping.
                     if (allocator_value) |alloc| {
                         try ctx.write("allocInit(");
                         try ctx.write(alloc);
-                        try ctx.write(")");
+                        if (isInFunction(child)) {
+                            try ctx.write(", .{ .src = @src() })");
+                        } else {
+                            try ctx.write(", .{})");
+                        }
                     } else {
-                        try ctx.write("init()");
+                        if (isInFunction(child)) {
+                            try ctx.write("init(.{ .src = @src() })");
+                        } else {
+                            try ctx.write("init(.{})");
+                        }
                     }
                     try ctx.write(";\n");
                     // Mark that _zx is now initialized for nested ZX blocks
@@ -584,9 +594,17 @@ pub fn transpileBlock(self: *Ast, node: ts.Node, ctx: *TranspileContext) !void {
                 if (allocator_value) |alloc| {
                     try ctx.write("allocInit(");
                     try ctx.write(alloc);
-                    try ctx.write(")");
+                    if (isInFunction(child)) {
+                        try ctx.write(", .{ .src = @src() })");
+                    } else {
+                        try ctx.write(", .{})");
+                    }
                 } else {
-                    try ctx.write("init()");
+                    if (isInFunction(child)) {
+                        try ctx.write("init(.{ .src = @src() })");
+                    } else {
+                        try ctx.write("init(.{})");
+                    }
                 }
                 try ctx.write(";\n");
 
@@ -1073,6 +1091,9 @@ fn writeCustomComponent(self: *Ast, _: ts.Node, tag: []const u8, tag_name_byte: 
         try ctx.writeM(",\n", end_tag_start_byte, self);
 
         try ctx.writeIndent();
+        try ctx.write(".{ .src = @src() },\n");
+
+        try ctx.writeIndent();
         try ctx.write(".{ .name = \"");
         try ctx.write(componentDisplayName(tag));
         try ctx.write("\", .client = .{ .name = \"");
@@ -1139,6 +1160,9 @@ fn writeCustomComponent(self: *Ast, _: ts.Node, tag: []const u8, tag_name_byte: 
         try ctx.writeM(tag, tag_name_byte, self);
         try ctx.writeM(",\n", end_tag_start_byte, self);
 
+        try ctx.writeIndent();
+        try ctx.write(".{ .src = @src() },\n");
+
         var spreads = std.ArrayList(ZxAttribute).empty;
         defer spreads.deinit(ctx.output.allocator);
         var regular_props = std.ArrayList(ZxAttribute).empty;
@@ -1163,7 +1187,7 @@ fn writeCustomComponent(self: *Ast, _: ts.Node, tag: []const u8, tag_name_byte: 
         const has_regular_props = regular_props.items.len > 0;
         const has_children = children.len > 0;
 
-        // Write options parameter first (name + builtin attributes)
+        // Write options parameter (name + builtin attributes)
         try ctx.writeIndent();
         try ctx.write(".{ .name = \"");
         try ctx.write(componentDisplayName(tag));
@@ -1360,7 +1384,7 @@ fn writeChildrenValue(self: *Ast, children: []const ts.Node, ctx: *TranspileCont
 /// Write a regular HTML element: _zx.ele(.tag, .{ ... })
 /// When preserve_whitespace is true (e.g. for <pre>), text nodes won't be trimmed
 fn writeHtmlElement(self: *Ast, node: ts.Node, tag: []const u8, tag_name_byte: u32, end_tag_start_byte: u32, end_tag_end_byte: u32, attributes: []const ZxAttribute, children: []const ts.Node, ctx: *TranspileContext, preserve_whitespace: bool) !void {
-    _ = node;
+    const in_function = isInFunction(node);
     // _zx.ele( is synthesized - no source mapping
     try ctx.write("_zx.ele");
     if (ctx.paren_byte) |p| {
@@ -1385,7 +1409,7 @@ fn writeHtmlElement(self: *Ast, node: ts.Node, tag: []const u8, tag_name_byte: u
     try ctx.write(".{\n");
     ctx.indent_level += 1;
 
-    try writeAttributes(self, attributes, ctx);
+    try writeAttributes(self, attributes, ctx, in_function);
 
     // Write children
     if (children.len > 0) {
@@ -2127,7 +2151,9 @@ pub const ZxAttribute = struct {
 };
 
 /// Write builtin and regular attributes to the transpile context
-fn writeAttributes(self: *Ast, attributes: []const ZxAttribute, ctx: *TranspileContext) error{OutOfMemory}!void {
+fn writeAttributes(self: *Ast, attributes: []const ZxAttribute, ctx: *TranspileContext, in_function: bool) error{OutOfMemory}!void {
+    // `@src()` is only valid inside a function scope.
+    const src_arg = if (in_function) "@src()" else "null";
     // Write builtin attributes first (like @allocator), but skip transpiler directives
     for (attributes) |attr| {
         if (!attr.is_builtin) continue;
@@ -2193,13 +2219,17 @@ fn writeAttributes(self: *Ast, attributes: []const ZxAttribute, ctx: *TranspileC
             try transpileTemplateStringAttr(self, attr, template_node, ctx);
         } else if (attr.zx_block_node) |zx_node| {
             // If value contains a zx_block, transpile it instead of writing raw text
-            try ctx.write("_zx.attr(\"");
+            try ctx.write("_zx.attr(");
+            try ctx.write(src_arg);
+            try ctx.write(", \"");
             try ctx.writeM(attr.name, attr.name_byte_offset, self);
             try ctx.write("\", ");
             try transpileBlock(self, zx_node, ctx);
             try ctx.write("),\n");
         } else {
-            try ctx.write("_zx.attr(\"");
+            try ctx.write("_zx.attr(");
+            try ctx.write(src_arg);
+            try ctx.write(", \"");
             try ctx.writeM(attr.name, attr.name_byte_offset, self);
             try ctx.write("\", ");
             try ctx.writeM(attr.value, attr.value_byte_offset, self);
@@ -2580,4 +2610,16 @@ pub fn getAttributeValue(self: *Ast, node: ts.Node) ![]const u8 {
     }
 
     return try self.getNodeText(node);
+}
+
+fn isInFunction(node: ts.Node) bool {
+    var current: ?ts.Node = node.parent();
+    while (current) |n| {
+        const k = n.kind();
+        if (std.mem.startsWith(u8, k, "fn_") or std.mem.indexOf(u8, k, "function") != null) {
+            return true;
+        }
+        current = n.parent();
+    }
+    return false;
 }

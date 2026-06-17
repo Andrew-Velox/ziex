@@ -10,7 +10,7 @@ pub const meta = .{
 pub const options: zx.PageOptions = .{};
 
 pub fn _zx_md(ctx: *@import("zx").ComponentCtx(struct { children: @import("zx").Component })) @import("zx").Component {
-    var _zx = @import("zx").x.allocInit(ctx.allocator);
+    var _zx = @import("zx").x.allocInit(ctx.allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
@@ -18,6 +18,7 @@ pub fn _zx_md(ctx: *@import("zx").ComponentCtx(struct { children: @import("zx").
             .children = &.{
                 _zx.cmp(
                     Lightning,
+                    .{ .src = @src() },
                     .{ .name = "Lightning" },
                     .{ .class = "w-6 h-6 text-yellow-500" },
                 ),

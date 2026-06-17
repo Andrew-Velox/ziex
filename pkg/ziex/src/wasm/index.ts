@@ -77,12 +77,13 @@ export class ZxBridge extends ZxBridgeCore {
     }
 
     /** Submit a form action with bound-state round-trip. */
-    submitFormActionAsync(form: HTMLFormElement, statesJson: string, fetchId: bigint): void {
+    submitFormActionAsync(form: HTMLFormElement, actionId: number, statesJson: string, fetchId: bigint): void {
         const formData = new FormData(form);
         formData.append('__$states', statesJson);
         fetch(window.location.href, {
             method: 'POST',
-            headers: { 'X-ZX-Action': '1' },
+            // `>>> 0` reinterprets the i32 from wasm as u32 (ids can exceed 2^31).
+            headers: { 'X-ZX-Action': String(actionId >>> 0) },
             body: formData,
         })
         .then(async (response) => {
@@ -358,21 +359,22 @@ export class ZxBridge extends ZxBridgeCore {
                     writeBytes(bufPtr, bytes.subarray(0, len));
                     return len;
                 },
-                _submitFormAction: (vnodeId: bigint): void => {
+                _submitFormAction: (vnodeId: bigint, actionId: number): void => {
                     const form = domNodes.get(vnodeId) as HTMLFormElement | undefined;
                     if (!form || !(form instanceof HTMLFormElement)) return;
                     const formData = new FormData(form);
                     fetch(window.location.href, {
                         method: 'POST',
-                        headers: { 'X-ZX-Action': '1' },
+                        // `>>> 0` reinterprets the i32 from wasm as u32 (ids can exceed 2^31).
+                        headers: { 'X-ZX-Action': String(actionId >>> 0) },
                         body: formData,
                     }).catch(() => {});
                 },
-                _submitFormActionAsync: (vnodeId: bigint, statesPtr: number, statesLen: number, fetchId: bigint): void => {
+                _submitFormActionAsync: (vnodeId: bigint, actionId: number, statesPtr: number, statesLen: number, fetchId: bigint): void => {
                     const form = domNodes.get(vnodeId) as HTMLFormElement | undefined;
                     if (!form || !(form instanceof HTMLFormElement)) return;
                     const statesJson = statesLen > 0 ? readString(statesPtr, statesLen) : '[]';
-                    bridgeRef.current?.submitFormActionAsync(form, statesJson, fetchId);
+                    bridgeRef.current?.submitFormActionAsync(form, actionId, statesJson, fetchId);
                 },
             },
         };

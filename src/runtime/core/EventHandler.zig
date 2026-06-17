@@ -46,6 +46,10 @@ bound_states: []const Bound = &.{},
 /// True when the handler may reach suspending browser imports and must be
 /// invoked through the async/JSPI event path.
 may_suspend: bool = false,
+/// Stable, unique id for this handler/action instance, derived from the parent
+/// component block's id and the handler's attribute name. `.undef` until set
+/// by the creating `Context` (see `x.Context.attr`).
+id: zx.x.Id = .undef,
 
 const Self = @This();
 
@@ -211,13 +215,13 @@ pub fn clientS(comptime handler: anytype, alloc: Allocator, component_id: []cons
 }
 
 /// Stateless server handler: fn(*zx.server.Event) void
-pub fn server(comptime handler: anytype, alloc: Allocator, handler_index: *u32) Self {
+pub fn server(comptime handler: anytype, alloc: Allocator) Self {
     const Wrap = struct {
         fn wrap(ctx: *zx.server.Event) void {
             handler(ctx);
         }
     };
-    return finalizeServer(alloc, handler_index, &Wrap.wrap, &.{});
+    return finalizeServer(alloc, &Wrap.wrap, &.{});
 }
 
 /// Stateful server handler: fn(*zx.server.Event.Stateful) void (auto-binds states)
@@ -226,7 +230,6 @@ pub fn serverS(
     alloc: Allocator,
     component_id: []const u8,
     state_index: u32,
-    handler_index: *u32,
 ) Self {
     const wrap_fn = makeServerWrap(handler, struct {
         fn call(ctx: *zx.server.Event, _: *zx.StateContext, h: anytype) void {
@@ -234,14 +237,13 @@ pub fn serverS(
             h(&sf);
         }
     }.call);
-    return finalizeServer(alloc, handler_index, &wrap_fn, reactivity.collectStateBoundEntries(alloc, component_id, state_index));
+    return finalizeServer(alloc, &wrap_fn, reactivity.collectStateBoundEntries(alloc, component_id, state_index));
 }
 
 /// Stateful server handler with explicitly listed states (user-provided)
 pub fn serverSS(
     comptime handler: anytype,
     alloc: Allocator,
-    handler_index: *u32,
     bound_states: []const Bound,
 ) Self {
     const wrap_fn = makeServerWrap(handler, struct {
@@ -250,7 +252,7 @@ pub fn serverSS(
             h(&sf);
         }
     }.call);
-    return finalizeServer(alloc, handler_index, &wrap_fn, bound_states);
+    return finalizeServer(alloc, &wrap_fn, bound_states);
 }
 
 /// Stateful action handler: fn(*zx.server.Action.Stateful) void (auto-binds states from component)
@@ -259,7 +261,6 @@ pub fn actionStateful(
     alloc: Allocator,
     component_id: []const u8,
     state_index: u32,
-    handler_index: *u32,
 ) Self {
     const ActionWrap = struct {
         fn wrap(ctx: *zx.server.Action) void {
@@ -270,15 +271,13 @@ pub fn actionStateful(
         }
     };
     const bound = reactivity.collectStateBoundEntries(alloc, component_id, state_index);
-    handler_index.* += 1;
-    const h_id = handler_index.*;
     const ec = alloc.create(Context) catch @panic("OOM");
-    ec.* = .{ .handler_id = h_id, .bound_states = bound };
+    // handler_id is stamped later in `x.Context.attr` from the attribute @src().
+    ec.* = .{ .handler_id = 0, .bound_states = bound };
     return .{
         .callback = &actionHandler,
         .context = @ptrCast(ec),
         .action_fn = &ActionWrap.wrap,
-        .handler_id = h_id,
         .bound_states = bound,
     };
 }
@@ -319,6 +318,26 @@ pub fn actionS() Self {
     };
 }
 
+/// Stamp a stable, comptime-derived id onto a handler created in `x.Context.attr`.
+pub fn stampId(self: *Self, alloc: Allocator, id: zx.x.Id) void {
+    self.id = id;
+    const hid = id.short();
+    self.handler_id = hid;
+
+    const sends_to_server = self.action_fn != null or self.server_event_fn != null;
+    if (!sends_to_server) return;
+
+    if (@intFromPtr(self.context) == 1) {
+        // Stateless action/event handler: allocate a Context to carry the id.
+        const ec = alloc.create(Context) catch return;
+        ec.* = .{ .handler_id = hid, .bound_states = self.bound_states };
+        self.context = @ptrCast(ec);
+    } else {
+        const ec: *Context = @ptrCast(@alignCast(self.context));
+        ec.handler_id = hid;
+    }
+}
+
 fn makeServerWrap(
     comptime handler: anytype,
     comptime call: fn (*zx.server.Event, *zx.StateContext, anytype) void,
@@ -334,25 +353,21 @@ fn makeServerWrap(
 
 fn finalizeServer(
     alloc: Allocator,
-    handler_index: *u32,
     comptime wrap_fn: *const fn (*zx.server.Event) void,
     bound_states: []const Bound,
 ) Self {
-    handler_index.* += 1;
-    const h_id = handler_index.*;
     const ctx = alloc.create(Context) catch @panic("OOM");
-    ctx.* = .{ .handler_id = h_id, .bound_states = bound_states };
-    return init(h_id, wrap_fn, @ptrCast(ctx), bound_states);
+    // handler_id is stamped later in `x.Context.attr` from the attribute @src().
+    ctx.* = .{ .handler_id = 0, .bound_states = bound_states };
+    return init(wrap_fn, @ptrCast(ctx), bound_states);
 }
 
 pub fn init(
-    handler_id: u32,
     comptime server_fn: *const fn (*zx.server.Event) void,
     context: *anyopaque,
     bound_states: []const Bound,
 ) Self {
     return .{
-        .handler_id = handler_id,
         .callback = &eventHandler,
         .context = context,
         .server_event_fn = server_fn,
@@ -366,16 +381,20 @@ pub fn actionHandler(ctx: *anyopaque, event: zx.client.Event) void {
     const client_fetch = @import("../client/fetch.zig");
     const CoreFetch = @import("Fetch.zig");
 
+    var handler_id: u32 = 0;
     const bound_states: []const Bound = if (@intFromPtr(ctx) == 1)
         &.{}
     else blk: {
         const ec: *Context = @ptrCast(@alignCast(ctx));
+        handler_id = ec.handler_id;
         break :blk ec.bound_states;
     };
 
+    var id_buf: [16]u8 = undefined;
+    const id_str = std.fmt.bufPrint(&id_buf, "{d}", .{handler_id}) catch "0";
     const headers = [_]CoreFetch.RequestInit.Header{
         .{ .name = "Content-Type", .value = "application/json" },
-        .{ .name = "X-ZX-Action", .value = "1" },
+        .{ .name = "X-ZX-Action", .value = id_str },
     };
 
     if (bound_states.len > 0) {

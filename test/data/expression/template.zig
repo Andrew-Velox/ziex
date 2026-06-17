@@ -2,7 +2,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
     const count = 42;
     const name = "John";
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .section,
         .{
@@ -16,9 +16,9 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     _zx.attrv(name),
                 }),
                 _zx.attrf("id", "test", .{}),
-                _zx.attr("data-normal", name),
-                _zx.attr("data-text", "{text}"),
-                _zx.attr("data-t", "`{text}`"),
+                _zx.attr(@src(), "data-normal", name),
+                _zx.attr(@src(), "data-text", "{text}"),
+                _zx.attr(@src(), "data-t", "`{text}`"),
             }),
             .children = &.{
                 _zx.ele(
@@ -32,6 +32,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                 ),
                 _zx.cmp(
                     Component,
+                    .{ .src = @src() },
                     .{ .name = "Component" },
                     .{ .text = _zx.propf("hello {s}", .{_zx.propv(count)}), .name = _zx.propf("test {s} {s} more-text", .{ _zx.propv(name), _zx.propv(getThemeClass(.dark)) }) },
                 ),
@@ -44,7 +45,7 @@ fn Component(ctx: *zx.ComponentCtx(struct {
     text: []const u8,
     name: []const u8,
 })) zx.Component {
-    var _zx = @import("zx").x.allocInit(ctx.allocator);
+    var _zx = @import("zx").x.allocInit(ctx.allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{

@@ -1,7 +1,7 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
     const show_users = true;
     const user_names = [_][]const u8{ "John", "Jane", "Jim", "Jill" };
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{

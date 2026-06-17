@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -7,6 +7,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
             .children = &.{
                 _zx.cmp(
                     Wrapper,
+                    .{ .src = @src() },
                     .{ .name = "Wrapper" },
                     .{ .children = _zx.ele(.fragment, .{ .children = &.{
                         _zx.ele(
@@ -21,6 +22,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                 ),
                 _zx.cmp(
                     Container,
+                    .{ .src = @src() },
                     .{ .name = "Container" },
                     .{ .children = _zx.ele(.fragment, .{ .children = &.{
                         _zx.ele(
@@ -48,13 +50,13 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 
 const WrapperProps = struct { children: zx.Component };
 fn Wrapper(allocator: zx.Allocator, props: WrapperProps) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
             .allocator = allocator,
             .attributes = _zx.attrs(.{
-                _zx.attr("class", "wrapper"),
+                _zx.attr(@src(), "class", "wrapper"),
             }),
             .children = &.{
                 _zx.expr(props.children),
@@ -65,13 +67,13 @@ fn Wrapper(allocator: zx.Allocator, props: WrapperProps) zx.Component {
 
 const ContainerProps = struct { children: zx.Component };
 fn Container(allocator: zx.Allocator, props: ContainerProps) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .section,
         .{
             .allocator = allocator,
             .attributes = _zx.attrs(.{
-                _zx.attr("class", "container"),
+                _zx.attr(@src(), "class", "container"),
             }),
             .children = &.{
                 _zx.expr(props.children),

@@ -1,6 +1,6 @@
 pub fn Collection(allocator: zx.Allocator, props: anytype) zx.Component {
     const cards = props.cards;
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
@@ -22,7 +22,7 @@ pub fn Collection(allocator: zx.Allocator, props: anytype) zx.Component {
                                 .a,
                                 .{
                                     .attributes = _zx.attrs(.{
-                                        _zx.attr("href", "/fetch/{props.name}"),
+                                        _zx.attr(@src(), "href", "/fetch/{props.name}"),
                                     }),
                                     .children = &.{
                                         _zx.txt("fetching them"),
@@ -47,7 +47,7 @@ pub fn Collection(allocator: zx.Allocator, props: anytype) zx.Component {
                                 .a,
                                 .{
                                     .attributes = _zx.attrs(.{
-                                        _zx.attr("href", "/fetch/{props.name}"),
+                                        _zx.attr(@src(), "href", "/fetch/{props.name}"),
                                     }),
                                     .children = &.{
                                         _zx.txt("fetching them"),

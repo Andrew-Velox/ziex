@@ -2,7 +2,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
     const is_logged_in = false;
     const user_name = if (is_logged_in) "zx" else null;
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{

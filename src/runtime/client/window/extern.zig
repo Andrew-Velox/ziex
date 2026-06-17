@@ -63,16 +63,17 @@ pub extern "__zx" fn _getLocationHref(buf: [*]u8, buf_len: usize) usize;
 pub extern "__zx" fn _getFormData(vnode_id: u64, buf_ptr: [*]u8, buf_len: usize) usize;
 
 /// Submit a form action: reads the DOM form identified by vnode_id, builds a
-/// multipart/form-data request with the X-ZX-Action header, and fires it via
-/// the JS fetch API.  The browser handles multipart serialization (including
-/// file inputs) so no WASM-side encoding is required.
-pub extern "__zx" fn _submitFormAction(vnode_id: u64) void;
+/// multipart/form-data request with the X-ZX-Action header set to action_id,
+/// and fires it via the JS fetch API.  The browser handles multipart
+/// serialization (including file inputs) so no WASM-side encoding is required.
+pub extern "__zx" fn _submitFormAction(vnode_id: u64, action_id: u32) void;
 
 /// Like _submitFormAction but stateful: injects the serialised bound-state JSON
 /// as a `__$states` multipart field and calls __zx_fetch_complete(fetch_id,…)
 /// when the response arrives so WASM can apply the returned state updates.
 pub extern "__zx" fn _submitFormActionAsync(
     vnode_id: u64,
+    action_id: u32,
     states_ptr: [*]const u8,
     states_len: usize,
     fetch_id: u64,
