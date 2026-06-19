@@ -11,7 +11,7 @@ test "valid element" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expectEqual(0, diags.items.len);
@@ -31,7 +31,7 @@ test "valid fragment" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expectEqual(0, diags.items.len);
@@ -52,7 +52,7 @@ test "valid expression block" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expectEqual(0, diags.items.len);
@@ -69,12 +69,12 @@ test "unclosed tag" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expect(diags.hasErrors());
     try testing.expect(diags.items.len > 0);
-    try testing.expectEqual(Validate.Severity.err, diags.items[0].severity);
+    try testing.expectEqual(check.Severity.err, diags.items[0].severity);
 }
 
 test "mismatched tags" {
@@ -87,7 +87,7 @@ test "mismatched tags" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expect(diags.hasErrors());
@@ -108,7 +108,7 @@ test "diagnostic position" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expect(diags.hasErrors());
@@ -127,7 +127,7 @@ test "diagnostic message" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expect(diags.items.len > 0);
@@ -148,7 +148,7 @@ test "broken line scope" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expect(diags.hasErrors());
@@ -235,14 +235,206 @@ test "hasErrors empty" {
     var parse_result = try Parser.parse(allocator, source, .zx);
     defer parse_result.deinit(allocator);
 
-    var diags = try Validate.validate(allocator, &parse_result);
+    var diags = try check.validate(allocator, &parse_result);
     defer diags.deinit();
 
     try testing.expect(!diags.hasErrors());
+}
+
+fn validateSource(allocator: std.mem.Allocator, source: [:0]const u8) !check.DiagnosticList {
+    var parse_result = try Parser.parse(allocator, source, .zx);
+    defer parse_result.deinit(allocator);
+    return check.validate(allocator, &parse_result);
+}
+
+fn countWithMessage(diags: check.DiagnosticList, needle: []const u8) usize {
+    var n: usize = 0;
+    for (diags.items) |d| {
+        if (std.mem.indexOf(u8, d.message, needle) != null) n += 1;
+    }
+    return n;
+}
+
+fn hasMessage(diags: check.DiagnosticList, needle: []const u8) bool {
+    return countWithMessage(diags, needle) > 0;
+}
+
+test "semantic: invalid html tag name" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<blah>hi</blah>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(diags.hasErrors());
+    try testing.expect(hasMessage(diags, "not a valid HTML element"));
+}
+
+test "semantic: known elements are valid" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div><p>ok</p><span>x</span></div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expectEqual(@as(usize, 0), diags.items.len);
+}
+
+test "semantic: components are not html-validated" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div><Foo /><ns.Bar /></div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(!diags.hasErrors());
+    try testing.expect(!hasMessage(diags, "not a valid HTML element"));
+}
+
+test "semantic: custom-element and component classification" {
+    // Hyphenated custom elements and namespaced/uppercase components are not
+    // subject to HTML element-name validation. (Tested directly because the
+    // ZX grammar does not yet parse hyphenated tag names inline.)
+    try testing.expect(check.elements.isCustomOrComponent("my-widget"));
+    try testing.expect(check.elements.isCustomOrComponent("Foo"));
+    try testing.expect(check.elements.isCustomOrComponent("ns.Bar"));
+    try testing.expect(check.elements.isCustomOrComponent("fragment"));
+    try testing.expect(!check.elements.isCustomOrComponent("div"));
+    try testing.expect(!check.elements.isCustomOrComponent("blah"));
+}
+
+test "semantic: fragment is not html-validated" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<fragment><p>a</p></fragment>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(!diags.hasErrors());
+}
+
+test "semantic: deprecated element" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<center>old</center>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(diags.hasErrors());
+    try testing.expect(hasMessage(diags, "deprecated and unsupported"));
+}
+
+test "semantic: html element cannot self-close" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div><span /></div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(diags.hasErrors());
+    try testing.expect(hasMessage(diags, "can't self-close"));
+}
+
+test "semantic: void element self-close is allowed" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div><br /><img src="x.png" /><hr /></div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(!diags.hasErrors());
+    try testing.expect(!hasMessage(diags, "can't self-close"));
+}
+
+test "semantic: void element with end tag" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div><br>x</br></div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(hasMessage(diags, "void elements have no end tag"));
+}
+
+test "semantic: duplicate attribute is a warning" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div class="a" class="b">x</div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(hasMessage(diags, "duplicate attribute"));
+    // Warnings must not block formatting/compilation.
+    try testing.expect(!diags.hasErrors());
+}
+
+test "semantic: duplicate id is a warning" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div id="x"><span id="x">y</span></div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(hasMessage(diags, "duplicate id"));
+    try testing.expect(!diags.hasErrors());
+}
+
+test "semantic: distinct ids are fine" {
+    const allocator = std.testing.allocator;
+    var diags = try validateSource(allocator,
+        \\pub fn Page(a: zx.Allocator) zx.Component {
+        \\    return (<div id="x"><span id="y">z</span></div>);
+        \\}
+        \\const zx = @import("zx");
+    );
+    defer diags.deinit();
+
+    try testing.expect(!hasMessage(diags, "duplicate id"));
+}
+
+test "semantic: skipped when syntax errors present" {
+    const allocator = std.testing.allocator;
+    // Unknown tag <blah> would normally be flagged, but the unclosed tag is a
+    // syntax error, so the semantic pass is skipped to avoid cascading noise.
+    var diags = try validateSource(allocator, "(<blah>)");
+    defer diags.deinit();
+
+    try testing.expect(diags.hasErrors());
+    try testing.expect(!hasMessage(diags, "not a valid HTML element"));
 }
 
 const std = @import("std");
 const testing = std.testing;
 const zx = @import("zx");
 const Parser = zx.Parse;
-const Validate = zx.Validate;
+const check = zx.Ast.check;

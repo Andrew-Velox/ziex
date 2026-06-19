@@ -18,80 +18,125 @@ pub const DecodedMap = struct {
     }
 
     /// Map a source (original .zx) position to the generated (.zig) position.
-    /// Returns the closest mapping at or before the given source position.
+    ///
+    /// Finds the mapping that owns the source position — the one with the
+    /// greatest `(source_line, source_column)` that is still `<= (line,
+    /// column)`. Within the owning segment the generated column is
+    /// extrapolated by the in-segment offset, but never past the start of the
+    /// next mapping that shares the same source line (so a query never bleeds
+    /// into an unrelated segment).
+    ///
+    /// When several mappings share the exact source position (e.g. an open and
+    /// close tag both pointing at one source token), the one with the smallest
+    /// generated position is returned for determinism.
     pub fn sourceToGenerated(self: DecodedMap, line: i32, column: i32) ?Mapping {
         var best: ?Mapping = null;
-        var is_exact = false;
 
         for (self.entries) |m| {
-            if (m.source_line == line and m.source_column == column) {
-                if (!is_exact or m.generated_line < best.?.generated_line or
-                    (m.generated_line == best.?.generated_line and m.generated_column < best.?.generated_column))
-                {
-                    best = m;
-                    is_exact = true;
-                }
-                continue;
-            }
-
-            if (is_exact) continue; // Exact matches are always better than "at or before"
-
+            // Skip mappings after the queried position.
             if (m.source_line > line) continue;
             if (m.source_line == line and m.source_column > column) continue;
 
             if (best) |b| {
-                if (m.source_line > b.source_line or
-                    (m.source_line == b.source_line and m.source_column > b.source_column))
-                {
+                const better = m.source_line > b.source_line or
+                    (m.source_line == b.source_line and m.source_column > b.source_column);
+                const tie = m.source_line == b.source_line and m.source_column == b.source_column;
+                if (better) {
                     best = m;
+                } else if (tie) {
+                    // Prefer the earliest generated position for stability.
+                    if (m.generated_line < b.generated_line or
+                        (m.generated_line == b.generated_line and m.generated_column < b.generated_column))
+                    {
+                        best = m;
+                    }
                 }
             } else {
                 best = m;
             }
         }
 
-        if (best) |b| {
-            // Adjust the generated column by the offset from the exact mapping point
-            const col_offset = if (b.source_line == line) column - b.source_column else 0;
-            return .{
-                .generated_line = b.generated_line,
-                .generated_column = b.generated_column + col_offset,
-                .source_line = line,
-                .source_column = column,
-            };
+        const b = best orelse return null;
+
+        // Clamp extrapolation: find the closest mapping that starts after `b`
+        // on the same source line; we must not extrapolate beyond it.
+        var boundary: ?i32 = null;
+        for (self.entries) |m| {
+            if (m.source_line != line) continue;
+            if (m.source_column <= b.source_column) continue;
+            if (boundary == null or m.source_column < boundary.?) boundary = m.source_column;
         }
-        return null;
+
+        var clamped_col = column;
+        if (b.source_line == line) {
+            if (boundary) |bnd| {
+                if (clamped_col >= bnd) clamped_col = bnd - 1;
+            }
+        }
+
+        const col_offset = if (b.source_line == line) clamped_col - b.source_column else 0;
+        return .{
+            .generated_line = b.generated_line,
+            .generated_column = b.generated_column + col_offset,
+            .source_line = line,
+            .source_column = column,
+        };
     }
 
-    /// Map a generated (.zig) position back to the source (original .zx) position.
-    /// Returns the closest mapping at or before the given generated position.
+    /// Map a generated (.zig) position back to the source (original .zx)
+    /// position.
+    ///
+    /// Returns the mapping that owns the generated position — the one with the
+    /// greatest `(generated_line, generated_column)` that is still `<= (line,
+    /// column)`. The source column is extrapolated by the in-segment offset but
+    /// clamped so it never runs past the start of the next mapping sharing the
+    /// same generated line, which keeps an error position from leaking into a
+    /// neighbouring (often injected) generated token.
     pub fn generatedToSource(self: DecodedMap, line: i32, column: i32) ?Mapping {
-        var low: usize = 0;
-        var high: usize = self.entries.len;
-        var best: ?Mapping = null;
+        const entries = self.entries;
+        if (entries.len == 0) return null;
 
+        // Find the index of the last entry with (gen_line, gen_col) <= (line,
+        // column). `low` ends as the count of entries <= the query, so the
+        // owning entry is at `low - 1`.
+        var low: usize = 0;
+        var high: usize = entries.len;
         while (low < high) {
             const mid = low + (high - low) / 2;
-            const m = self.entries[mid];
-
+            const m = entries[mid];
             if (m.generated_line < line or (m.generated_line == line and m.generated_column <= column)) {
-                best = m;
                 low = mid + 1;
             } else {
                 high = mid;
             }
         }
+        if (low == 0) return null;
+        const idx = low - 1;
+        const b = entries[idx];
 
-        if (best) |b| {
-            const col_offset = if (b.generated_line == line) column - b.generated_column else 0;
-            return .{
-                .generated_line = line,
-                .generated_column = column,
-                .source_line = b.source_line,
-                .source_column = b.source_column + col_offset,
-            };
+        // Clamp extrapolation at the next mapping on the same generated line.
+        // Skip over duplicate entries that share `b`'s generated column (e.g.
+        // open/close tags pointing at the same generated token) so we clamp at
+        // the genuinely following segment.
+        var clamped_col = column;
+        if (b.generated_line == line) {
+            var j = idx + 1;
+            while (j < entries.len and
+                entries[j].generated_line == line and
+                entries[j].generated_column == b.generated_column) : (j += 1)
+            {}
+            if (j < entries.len and entries[j].generated_line == line and column >= entries[j].generated_column) {
+                clamped_col = entries[j].generated_column - 1;
+            }
         }
-        return null;
+
+        const col_offset = if (b.generated_line == line) clamped_col - b.generated_column else 0;
+        return .{
+            .generated_line = line,
+            .generated_column = column,
+            .source_line = b.source_line,
+            .source_column = b.source_column + col_offset,
+        };
     }
 };
 

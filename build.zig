@@ -129,10 +129,24 @@ pub fn build(b: *std.Build) !void {
         const test_run = b.addRunArtifact(testing_mod_tests);
         test_run.step.dependOn(b.getInstallStep());
 
+        // LSP HTML hover docs: tested standalone since the LSP server itself
+        // depends on ZLS (excluded by default / not yet available for 0.17).
+        const html_hover_mod = b.createModule(.{
+            .root_source_file = b.path("src/lsp/html_hover.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "core_lang", .module = zx_core_lang_mod },
+            },
+        });
+        const html_hover_tests = b.addTest(.{ .root_module = html_hover_mod });
+        const run_html_hover_tests = b.addRunArtifact(html_hover_tests);
+
         const test_step = b.step("test", "Run tests");
         test_step.dependOn(&run_mod_tests.step);
         test_step.dependOn(&run_exe_tests.step);
         test_step.dependOn(&test_run.step);
+        test_step.dependOn(&run_html_hover_tests.step);
 
         const transpile_only = b.addExecutable(.{
             .name = "transpile-only",
@@ -219,6 +233,28 @@ pub fn build(b: *std.Build) !void {
         }
 
         events_gen_step.dependOn(&events_gen_run.step);
+    }
+
+    // --- Steps: HTML Docs Generator --- //
+    {
+        const html_docs_gen_step = b.step("htmldocsgen", "Generate HTML element/attribute docs from webref");
+
+        const html_docs_gen_exe = b.addExecutable(.{
+            .name = "htmldocsgen",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("tools/codegen/html_docs.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        const html_docs_gen_run = b.addRunArtifact(html_docs_gen_exe);
+
+        if (b.root.root_dir.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
+            const sync_cmd = b.addSystemCommand(&.{ "./tools/syncvendor", "webref" });
+            html_docs_gen_run.step.dependOn(&sync_cmd.step);
+        }
+
+        html_docs_gen_step.dependOn(&html_docs_gen_run.step);
     }
 
     // --- Steps: Sync Benchmark --- //
