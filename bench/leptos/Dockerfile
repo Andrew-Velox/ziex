@@ -16,8 +16,6 @@ RUN cargo leptos build --release -vv
 FROM alpine:3.22.2 AS runner
 WORKDIR /app
 
-RUN apk add --no-cache curl
-
 COPY --from=builder /work/target/release/leptos-ssr /app/
 COPY --from=builder /work/target/site /app/site
 COPY --from=builder /work/Cargo.toml /app/

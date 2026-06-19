@@ -2,11 +2,11 @@ FROM alpine:3.22.2 AS build
 
 # Install Zig
 ARG ZIG_VER=0.16.0
-RUN apk add --no-cache curl xz
-RUN curl https://ziglang.org/download/${ZIG_VER}/zig-$(uname -m)-linux-${ZIG_VER}.tar.xz -o zig.tar.xz && \
-tar xf zig.tar.xz && \
-mv zig-$(uname -m)-linux-${ZIG_VER}/ /opt/zig
-ENV PATH="/opt/zig:$PATH"
+RUN wget https://ziglang.org/download/${ZIG_VER}/zig-$(uname -m)-linux-${ZIG_VER}.tar.xz && \
+    tar -xf zig-*.tar.xz && \
+    rm zig-*.tar.xz && \
+    mv zig-*/ /opt/zig && \
+    ln -s /opt/zig/zig /usr/local/bin/zig
 
 # Build App
 WORKDIR /build

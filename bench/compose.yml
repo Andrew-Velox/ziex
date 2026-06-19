@@ -60,7 +60,7 @@ services:
       cache_to:
         - type=gha,mode=max,scope=leptos
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/ssr"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/ssr"]
       interval: 1s
       timeout: 2s
       retries: 15
@@ -107,7 +107,7 @@ services:
       cache_to:
         - type=gha,mode=max,scope=ziex
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/ssr"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/ssr"]
       interval: 1s
       timeout: 2s
       retries: 15
@@ -130,7 +130,7 @@ services:
       cache_to:
         - type=gha,mode=max,scope=jetzig
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/ssr"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/ssr"]
       interval: 1s
       timeout: 2s
       retries: 15
