@@ -30,6 +30,4 @@ RUN zig build zx -- bundle
 FROM alpine:3.22.2
 WORKDIR /app
 COPY --from=build /build/bundle/ /app/
-ENV PORT=3000
-EXPOSE 3000
-ENTRYPOINT ["/app/ziex_app"]
+ENTRYPOINT ["/app/$BIN_NAME"]
