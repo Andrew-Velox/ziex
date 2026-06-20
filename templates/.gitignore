@@ -59,3 +59,7 @@ node_modules/
 !node/.gitignore
 !node/package.json
 !node/README.md
+
+# render template
+!render/render.yaml
+!render/README.md
