@@ -102,20 +102,6 @@ populate_template() {
             cp "$base_file" "$target_file"
         fi
     done
-
-    # Copy _docker files (Dockerfile, compose.yml, .dockerignore)
-    # These are needed by templates that deploy via Docker (e.g. railway, render)
-    if [ -d "templates/_docker" ]; then
-        find "templates/_docker" -type f | while read -r docker_file; do
-            rel_path="${docker_file#templates/_docker/}"
-            target_file="templates/$template/$rel_path"
-
-            if [ ! -f "$target_file" ] || git check-ignore -q "$target_file"; then
-                mkdir -p "$(dirname "$target_file")"
-                cp "$docker_file" "$target_file"
-            fi
-        done
-    fi
 }
 
 clean_template() {
