@@ -141,16 +141,21 @@ fn resolveOptions(alloc: std.mem.Allocator, inita: zx.Init, config: Config) !Con
     const rootdir_env = envVar(alloc, inita, "ZIEX_ROOT_DIR");
     const datadir_env = envVar(alloc, inita, "ZIEX_DATA_DIR");
     const staticdir_env = envVar(alloc, inita, "ZIEX_STATIC_DIR");
-    const rootdir = rootdir_env orelse Constant.default_rootdir;
+    const port_env = envVar(alloc, inita, "PORT");
+
     defer if (rootdir_env) |s| alloc.free(s);
     defer if (datadir_env) |s| alloc.free(s);
     defer if (staticdir_env) |s| alloc.free(s);
+    defer if (port_env) |s| alloc.free(s);
 
+    const rootdir = rootdir_env orelse Constant.default_rootdir;
     const datadir = try std.fs.path.join(alloc, &.{ rootdir, datadir_env orelse Constant.default_datadir });
     const staticdir = try std.fs.path.join(alloc, &.{ rootdir, staticdir_env orelse Constant.default_staticdir });
+    const port = if (port_env) |pe| std.fmt.parseInt(u16, pe, 10) catch return error.InvalidPort else cfg.server.port;
 
     cfg.datadir = datadir;
     cfg.staticdir = staticdir;
+    cfg.server.port = port;
 
     switch (platform.os) {
         .freestanding, .wasi => |os| {
