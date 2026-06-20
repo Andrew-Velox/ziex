@@ -1,0 +1,7 @@
+const zx = @import("zx");
+
+pub const GET = feature_examples.GET;
+pub const LEARNGET = feature_examples.Learn__GET;
+pub const POST = feature_examples.POST;
+
+const feature_examples = @import("../../feature_examples.zx");
