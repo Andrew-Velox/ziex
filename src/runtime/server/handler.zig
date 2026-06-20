@@ -439,6 +439,8 @@ pub fn Handler(comptime AppCtxType: type) type {
         }
 
         pub fn api(self: *Self, req: *httpz.Request, res: *httpz.Response) !void {
+            const is_export_mode = self.meta.cli_command == .@"export";
+
             const allocator = self.allocator;
             var hctx = httpz_backend.HttpzCtx{ .req = req, .res = res };
             const abstract_req = httpz_backend.createRequest(&hctx);
@@ -449,6 +451,20 @@ pub fn Handler(comptime AppCtxType: type) type {
                 @ptrCast(@alignCast(rd))
             else
                 return self.notFound(req, res);
+
+            // Static export
+            if (is_export_mode) {
+                if (req.header("x-zx-static-data")) |_| {
+                    if (route_data.route_opts) |page_opts| {
+                        if (page_opts.static) |static_opts| {
+                            const params = try self.resolveStaticParams(req.arena, static_opts);
+                            try std.zon.stringify.serialize(params, .{ .whitespace = true }, res.writer());
+                        }
+                    }
+
+                    return;
+                }
+            }
 
             // Execute proxy via core handler
             const proxy_result = core_handler.executeRouteProxy(route_data, abstract_req, abstract_res, req.arena);

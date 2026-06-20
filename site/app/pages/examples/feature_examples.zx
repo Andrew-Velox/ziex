@@ -308,7 +308,7 @@ fn Card(allocator: zx.Allocator, props: CardChildrenProps) zx.Component {
 
 // --- API Route ---
 pub fn PUT(ctx: zx.RouteContext) !void {
-    try ctx.response.json(.{ .status = "ok" });
+    try ctx.response.json(.{ .status = "ok" }, .{});
 }
 
 pub fn POST(ctx: zx.RouteContext) !void {
@@ -319,7 +319,7 @@ pub fn POST(ctx: zx.RouteContext) !void {
     try ctx.response.json(.{
         .id = data.?.id,
         .created = true,
-    });
+    }, .{});
 }
 
 // --- WebSocket ---
