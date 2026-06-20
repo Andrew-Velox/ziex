@@ -104,12 +104,6 @@ fn init(ctx: zli.CommandContext) !void {
             else => return err,
         };
 
-        if (std.mem.eql(u8, t_val, "railway")) {
-            const name = try detectExeName(io, ctx.allocator, init_path);
-            defer ctx.allocator.free(name);
-            try writeDockerFiles(io, ctx.allocator, init_path, name, existing_init, &printer);
-        }
-
         try printInitFooter(&printer, ctx.allocator, init_path, has_init_path_arg);
         return;
     };
@@ -230,46 +224,6 @@ fn renderDockerTemplate(allocator: std.mem.Allocator, content: []const u8, bin_n
     var port_buf: [16]u8 = undefined;
     const port_str = std.fmt.bufPrint(&port_buf, "{d}", .{default_port}) catch unreachable;
     return std.mem.replaceOwned(u8, allocator, with_bin, "$PORT", port_str);
-}
-
-fn writeDockerFiles(
-    io: std.Io,
-    allocator: std.mem.Allocator,
-    init_path: []const u8,
-    bin_name: []const u8,
-    existing_init: bool,
-    printer: *tui.Printer,
-) !void {
-    for (templates) |template| {
-        if (template.name != .docker) continue;
-
-        const output_path = try std.fs.path.join(allocator, &.{ init_path, template.path });
-        defer allocator.free(output_path);
-
-        if (existing_init) {
-            const file_exists = blk: {
-                std.Io.Dir.cwd().access(io, output_path, .{}) catch |err| switch (err) {
-                    error.FileNotFound => break :blk false,
-                    else => continue,
-                };
-                break :blk true;
-            };
-            if (file_exists) continue;
-        }
-
-        if (std.fs.path.dirname(output_path)) |parent_dir| {
-            try std.Io.Dir.cwd().createDirPath(io, parent_dir);
-        }
-
-        var file = try std.Io.Dir.cwd().createFile(io, output_path, .{ .truncate = true });
-        printer.filepath(template.path);
-        defer file.close(io);
-
-        const content = try renderDockerTemplate(allocator, template.content, bin_name);
-        defer allocator.free(content);
-
-        try file.writeStreamingAll(io, content);
-    }
 }
 
 pub fn isDirEmpty(io: std.Io, path: []const u8) !bool {

@@ -61,10 +61,5 @@ node_modules/
 !node/README.md
 
 # railway template
-!railway/.gitignore
-!railway/README.md
 !railway/railway.json
-!railway/Dockerfile
-!railway/compose.yml
-!railway/.dockerignore
-!railway/app/main.zig
+!railway/README.md
