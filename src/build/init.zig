@@ -474,9 +474,8 @@ pub fn initInner(
         break :blk resolved.result.cpu.arch == host.cpu.arch and
             resolved.result.os.tag == host.os.tag;
     } else true;
-    const is_official_build_runner = @hasDecl(@import("root"), "printErrorMessages");
 
-    if (is_official_build_runner and can_introspect_exe and !is_dev_build) {
+    if (can_introspect_exe and !is_dev_build) {
         const introspect_src = try genIntrospectRoot(b, zx_module.owner, exe.root_module, target);
 
         const introspect_root = b.createModule(.{
