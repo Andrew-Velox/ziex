@@ -10,7 +10,9 @@ pub const CacheConfig = struct {
 };
 
 pub const ServerConfig = struct {
+    /// Deprecated: This needs to be configured via `PORT` env variable or -Dport build arg. Will be removed in a future release.
     port: ?u16 = null,
+    /// Deprecated: This needs to be configured via `ADDRESS` env variable or -Daddress build arg. Will be removed in a future release.
     address: ?[]const u8 = null,
     unix_path: ?[]const u8 = null,
     workers: Worker = .{},

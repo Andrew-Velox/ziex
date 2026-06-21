@@ -32,13 +32,6 @@ const map_flag = zli.Flag{
     .default_value = .{ .String = "none" },
 };
 
-const copy_embedded_sources_flag = zli.Flag{
-    .name = "copy-embedded-sources",
-    .description = "Copy embedded .zx source files to output directory and rewrite paths",
-    .type = .Bool,
-    .default_value = .{ .Bool = false },
-};
-
 const rootdir_flag = zli.Flag{
     .name = "rootdir",
     .description = "Root directory for the generated meta file (e.g., static dir)",
@@ -77,7 +70,6 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
     try cmd.addFlag(copy_only_flag);
     try cmd.addFlag(flags.verbose_flag);
     try cmd.addFlag(map_flag);
-    try cmd.addFlag(copy_embedded_sources_flag);
     try cmd.addFlag(rootdir_flag);
     try cmd.addFlag(depfile_flag);
     try cmd.addFlag(cachedir_flag);
@@ -96,7 +88,6 @@ fn transpile(ctx: zli.CommandContext) !void {
     const copy_only = ctx.flag("copy-only", bool);
     const verbose = ctx.flag("verbose", bool);
     const sourcemap_str = ctx.flag("map", []const u8);
-    const copy_embedded_sources = ctx.flag("copy-embedded-sources", bool);
     const rootdir_str = ctx.flag("rootdir", []const u8);
     const rootdir: ?[]const u8 = if (rootdir_str.len > 0) rootdir_str else null;
     const depfile_str = ctx.flag("dep-file", []const u8);
@@ -145,7 +136,6 @@ fn transpile(ctx: zli.CommandContext) !void {
                 .outdir = outdir,
                 .verbose = verbose,
                 .map = map,
-                .copy_embedded_sources = copy_embedded_sources,
                 .rootdir = rootdir,
                 .dep_file = dep_file,
                 .cache_dir = cache_dir,
@@ -230,7 +220,6 @@ fn transpile(ctx: zli.CommandContext) !void {
         .outdir = outdir,
         .verbose = verbose,
         .map = map,
-        .copy_embedded_sources = copy_embedded_sources,
         .rootdir = rootdir,
         .dep_file = dep_file,
         .cache_dir = cache_dir,
@@ -269,43 +258,181 @@ fn writeDepFile(allocator: std.mem.Allocator, path: []const u8, target: []const 
     try f.writePositionalAll(io, buf.items, 0);
 }
 
-/// Scan source for `@embedFile("...")` references and add resolved paths as dependencies.
-// TODO: collect @import(...), only add .zig files to deps that are actually imported
-// TODO: also we should be able to collect the .zx dependancy tree and transpile the ones that is only used,
-// however that will make multi threading hard but we may do this in the future just to save transpilation time
-// currently transpilation takes ms for files in hundreds, but for larger project we may need to optimize this by only transpiling the used files
-fn collectEmbedFileDeps(
+/// Walk the transpiled Zig AST and, for each `@embedFile("...")` whose target
+/// exists on disk (relative to `source_dir`), copy it into the output dir at the
+/// same relative spelling (so the emitted `@embedFile` resolves at compile time)
+/// and record its absolute source path in `input_files` for the dep file.
+fn collectEmbedFiles(
     allocator: std.mem.Allocator,
     input_files: *std.array_list.Managed([]const u8),
-    source: []const u8,
+    ast: *const std.zig.Ast,
+    source_dir: []const u8,
+    out_dir: []const u8,
+) !void {
+    const io = std.Io.Threaded.global_single_threaded.io();
+
+    for (0..ast.nodes.len) |i| {
+        const node: std.zig.Ast.Node.Index = @enumFromInt(i);
+        switch (ast.nodeTag(node)) {
+            .builtin_call_two, .builtin_call_two_comma => {},
+            else => continue,
+        }
+        if (!std.mem.eql(u8, ast.tokenSlice(ast.nodeMainToken(node)), "@embedFile")) continue;
+
+        const arg = ast.nodeData(node).opt_node_and_opt_node[0].unwrap() orelse continue;
+        if (ast.nodeTag(arg) != .string_literal) continue;
+        const raw = ast.tokenSlice(ast.nodeMainToken(arg));
+        const embed_path = std.zig.string_literal.parseAlloc(allocator, raw) catch continue;
+        defer allocator.free(embed_path);
+
+        const src = std.fs.path.join(allocator, &.{ source_dir, embed_path }) catch continue;
+        defer allocator.free(src);
+
+        // Only act on embeds that exist as real source files on disk.
+        if (std.Io.Dir.cwd().statFile(io, src, .{})) |_| {} else |_| continue;
+
+        // Copy into the output dir at the embed's relative spelling.
+        const dst = std.fs.path.join(allocator, &.{ out_dir, embed_path }) catch continue;
+        defer allocator.free(dst);
+        if (std.fs.path.dirname(dst)) |parent| {
+            std.Io.Dir.cwd().createDirPath(io, parent) catch {};
+        }
+        std.Io.Dir.cwd().copyFile(src, std.Io.Dir.cwd(), dst, io, .{}) catch |err| {
+            std.debug.print("Warning: Could not copy embedded file {s}: {}\n", .{ src, err });
+        };
+
+        const abs = std.fs.path.resolve(allocator, &.{src}) catch continue;
+        input_files.append(abs) catch allocator.free(abs);
+    }
+}
+
+/// Re-run the `@embedFile` copy for a cached `.zx`/`.mdzx` whose transpilation was
+/// skipped. On a cache hit `transpileFile` (and thus `collectEmbedFiles`) never runs
+fn copyEmbedsForCached(
+    allocator: std.mem.Allocator,
+    input_files: *std.array_list.Managed([]const u8),
+    zig_path: []const u8,
+    source_dir: []const u8,
+    out_dir: []const u8,
+) !void {
+    const io = std.Io.Threaded.global_single_threaded.io();
+    const zig_src = try std.Io.Dir.cwd().readFileAlloc(
+        io,
+        zig_path,
+        allocator,
+        std.Io.Limit.limited(std.math.maxInt(usize)),
+    );
+    defer allocator.free(zig_src);
+
+    const zig_src_z = try allocator.dupeSentinel(u8, zig_src, 0);
+    defer allocator.free(zig_src_z);
+
+    var ast = try std.zig.Ast.parse(allocator, zig_src_z, .zig);
+    defer ast.deinit(allocator);
+
+    try collectEmbedFiles(allocator, input_files, &ast, source_dir, out_dir);
+}
+
+/// Walk the transpiled Zig AST (`ast`, already produced by `core_lang.Ast.parse`)
+/// and append each `@import("...")` target that resolves to an existing
+/// `.zx`/`.mdzx` source (relative to `source_dir`) to `out`.
+fn collectZxImports(
+    allocator: std.mem.Allocator,
+    out: *std.array_list.Managed([]const u8),
+    ast: *const std.zig.Ast,
     source_dir: []const u8,
 ) !void {
-    const needle = "@embedFile(\"";
-    var pos: usize = 0;
-    while (std.mem.indexOfPos(u8, source, pos, needle)) |start| {
-        const path_start = start + needle.len;
-        const path_end = std.mem.indexOfPos(u8, source, path_start, "\"") orelse break;
-        const embed_path = source[path_start..path_end];
-        pos = path_end + 1;
+    const io = std.Io.Threaded.global_single_threaded.io();
 
-        const resolved = std.fs.path.join(allocator, &.{ source_dir, embed_path }) catch continue;
-        defer allocator.free(resolved);
+    for (0..ast.nodes.len) |i| {
+        const node: std.zig.Ast.Node.Index = @enumFromInt(i);
+        switch (ast.nodeTag(node)) {
+            .builtin_call_two, .builtin_call_two_comma => {},
+            else => continue,
+        }
 
-        const abs_path = std.fs.path.resolve(allocator, &.{resolved}) catch continue;
+        const main_tok = ast.nodeMainToken(node);
+        if (!std.mem.eql(u8, ast.tokenSlice(main_tok), "@import")) continue;
 
-        // Only record embeds that actually exist on disk. .zx files often
-        // @embedFile() the transpiled .zig output of a sibling .zx — that
-        // file doesn't exist as a source and listing it in the dep file
-        // makes the build harness fail with FileNotFound.
-        const io_local = std.Io.Threaded.global_single_threaded.io();
-        if (std.Io.Dir.cwd().statFile(io_local, abs_path, .{})) |_| {
-            input_files.append(abs_path) catch {
-                allocator.free(abs_path);
+        // First argument: the import path string literal.
+        const arg = ast.nodeData(node).opt_node_and_opt_node[0].unwrap() orelse continue;
+        if (ast.nodeTag(arg) != .string_literal) continue;
+        const raw = ast.tokenSlice(ast.nodeMainToken(arg));
+        const import_path = std.zig.string_literal.parseAlloc(allocator, raw) catch continue;
+        defer allocator.free(import_path);
+
+        // Map the rewritten `.zig` target back to its `.zx`/`.mdzx` source. Plain
+        // `@import("std")` / module imports have no extension and are skipped.
+        const stem = if (std.mem.endsWith(u8, import_path, ".zig"))
+            import_path[0 .. import_path.len - ".zig".len]
+        else if (std.mem.endsWith(u8, import_path, ".zx"))
+            import_path[0 .. import_path.len - ".zx".len]
+        else if (std.mem.endsWith(u8, import_path, ".mdzx"))
+            import_path[0 .. import_path.len - ".mdzx".len]
+        else
+            continue;
+
+        for ([_][]const u8{ ".zx", ".mdzx" }) |ext| {
+            const cand = std.fmt.allocPrint(allocator, "{s}{s}", .{ stem, ext }) catch continue;
+            const resolved = std.fs.path.join(allocator, &.{ source_dir, cand }) catch {
+                allocator.free(cand);
                 continue;
             };
-        } else |_| {
-            allocator.free(abs_path);
+            defer allocator.free(resolved);
+            if (std.Io.Dir.cwd().statFile(io, resolved, .{})) |_| {
+                // Return the import spelling relative to source_dir (e.g. `icon.zx`).
+                out.append(cand) catch allocator.free(cand);
+                break;
+            } else |_| allocator.free(cand);
         }
+    }
+}
+
+/// Transpile `source_path` into `output_path`, then recursively transpile every
+/// `.zx`/`.mdzx` file it `@import`s (resolved relative to the importing file)
+/// into the same `outdir`.
+fn transpileFileRecursive(
+    allocator: std.mem.Allocator,
+    global_components: *std.array_list.Managed(ClientComponentSerializable),
+    opts: TranspileOptions,
+    source_path: []const u8,
+    output_path: []const u8,
+    visited: *std.StringHashMap(void),
+    input_files: *std.array_list.Managed([]const u8),
+) !void {
+    const abs_source = std.fs.path.resolve(allocator, &.{source_path}) catch
+        try allocator.dupe(u8, source_path);
+    if (visited.contains(abs_source)) {
+        allocator.free(abs_source);
+        return;
+    }
+    // `visited` owns abs_source; also record it as a dep file input.
+    try visited.put(abs_source, {});
+    try input_files.append(try allocator.dupe(u8, abs_source));
+
+    // Transpile this file, collecting its `.zx` imports from the parsed AST.
+    var imports = std.array_list.Managed([]const u8).init(allocator);
+    defer {
+        for (imports.items) |p| allocator.free(p);
+        imports.deinit();
+    }
+    try transpileFile(allocator, global_components, opts, source_path, output_path, &imports, input_files);
+
+    const source_dir = std.fs.path.dirname(source_path) orelse ".";
+    const out_dir = std.fs.path.dirname(output_path) orelse opts.outdir;
+
+    for (imports.items) |rel| {
+        const dep_source = try std.fs.path.join(allocator, &.{ source_dir, rel });
+        defer allocator.free(dep_source);
+
+        const ext_len: usize = if (std.mem.endsWith(u8, rel, ".mdzx")) ".mdzx".len else ".zx".len;
+        const out_rel = try std.mem.concat(allocator, u8, &.{ rel[0 .. rel.len - ext_len], ".zig" });
+        defer allocator.free(out_rel);
+
+        const dep_output = try std.fs.path.join(allocator, &.{ out_dir, out_rel });
+        defer allocator.free(dep_output);
+
+        try transpileFileRecursive(allocator, global_components, opts, dep_source, dep_output, visited, input_files);
     }
 }
 
@@ -1292,6 +1419,8 @@ fn transpileFile(
     opts: TranspileOptions,
     source_path: []const u8,
     output_path: []const u8,
+    imports_out: ?*std.array_list.Managed([]const u8),
+    input_files: *std.array_list.Managed([]const u8),
 ) !void {
     const io = std.Io.Threaded.global_single_threaded.io();
     const source = try std.Io.Dir.cwd().readFileAlloc(
@@ -1325,6 +1454,16 @@ fn transpileFile(
         .lang = if (std.mem.endsWith(u8, source_path, ".mdzx")) .mdzx else .zx,
     });
     defer result.deinit(allocator);
+
+    const ast_source_dir = std.fs.path.dirname(source_path) orelse ".";
+    if (imports_out) |out| {
+        try collectZxImports(allocator, out, &result.zig_ast, ast_source_dir);
+    }
+    // Auto-copy any files this component `@embedFile`s into the output dir.
+    {
+        const ast_out_dir = std.fs.path.dirname(output_path) orelse opts.outdir;
+        try collectEmbedFiles(allocator, input_files, &result.zig_ast, ast_source_dir, ast_out_dir);
+    }
 
     // Extract route from source path
     const component_route = try extractRouteFromPath(allocator, relative_source_path);
@@ -1525,17 +1664,11 @@ fn transpileDirectory(
             const output_path = try std.fs.path.join(allocator, &.{ opts.outdir, output_rel_path });
             defer allocator.free(output_path);
 
-            // Track this input for the dep file (absolute path for Make format)
+            // Track this input for the dep file (absolute path for Make format).
+            // Embedded-file deps are collected by `transpileFile` via the AST.
             const abs_input = std.fs.path.resolve(allocator, &.{input_path}) catch
                 try allocator.dupe(u8, input_path);
             try input_files.append(abs_input);
-
-            // Scan for @embedFile references and track them as dependencies
-            const source_dir = std.fs.path.dirname(input_path) orelse ".";
-            if (std.Io.Dir.cwd().readFileAlloc(io, input_path, allocator, std.Io.Limit.limited(4 * 1024 * 1024))) |source| {
-                defer allocator.free(source);
-                try collectEmbedFileDeps(allocator, input_files, source, source_dir);
-            } else |_| {}
 
             const cache_base = opts.cache_dir orelse opts.outdir;
             const cache_out_path = try std.fs.path.join(allocator, &.{ cache_base, output_rel_path });
@@ -1565,10 +1698,19 @@ fn transpileDirectory(
                         std.debug.print("Warning: Failed to copy cached file {s} to {s}: {}\n", .{ cache_out_path, output_path, err });
                     };
                 }
+                // Transpilation was skipped, so `collectEmbedFiles` never ran for
+                // this file. Replay the `@embedFile` copy from the cached `.zig`
+                {
+                    const embed_src_dir = std.fs.path.dirname(input_path) orelse ".";
+                    const embed_out_dir = std.fs.path.dirname(output_path) orelse opts.outdir;
+                    copyEmbedsForCached(allocator, input_files, cache_out_path, embed_src_dir, embed_out_dir) catch |err| {
+                        std.debug.print("Warning: Failed to copy embedded files for cached {s}: {}\n", .{ input_path, err });
+                    };
+                }
                 if (opts.verbose) std.debug.print("Skipped (up-to-date): {s}\n", .{input_path});
             } else {
                 const components_before = global_components.items.len;
-                transpileFile(allocator, global_components, opts, input_path, output_path) catch |err| {
+                transpileFile(allocator, global_components, opts, input_path, output_path, null, input_files) catch |err| {
                     global_components.items.len = components_before;
                     std.debug.print("Error transpiling {s}: {}\n", .{ input_path, err });
                     continue;
@@ -1586,28 +1728,6 @@ fn transpileDirectory(
                 writeComponentCache(allocator, cache_path, global_components.items[components_before..]) catch |err| {
                     std.debug.print("Warning: Failed to write component cache for {s}: {}\n", .{ input_path, err });
                 };
-            }
-
-            // Also copy the original .zx file if copy_embedded_sources is enabled
-            if (opts.copy_embedded_sources) {
-                const zx_output_path = try std.fs.path.join(allocator, &.{ opts.outdir, entry.path });
-                defer allocator.free(zx_output_path);
-
-                if (std.fs.path.dirname(zx_output_path)) |parent| {
-                    std.Io.Dir.cwd().createDirPath(io, parent) catch |err| switch (err) {
-                        error.PathAlreadyExists => {},
-                        else => {
-                            std.debug.print("Error creating directory {s}: {}\n", .{ parent, err });
-                            continue;
-                        },
-                    };
-                }
-
-                std.Io.Dir.cwd().copyFile(input_path, std.Io.Dir.cwd(), zx_output_path, io, .{}) catch |err| {
-                    std.debug.print("Warning: Could not copy .zx source {s}: {}\n", .{ input_path, err });
-                    continue;
-                };
-                if (opts.verbose) std.debug.print("Copied source: {s} -> {s}\n", .{ input_path, zx_output_path });
             }
         } else {
             // Copy all non-.zx files from the site directory, excluding reserved files
@@ -1666,7 +1786,6 @@ const TranspileOptions = struct {
     outdir: []const u8,
     verbose: bool,
     map: core_lang.Ast.ParseOptions.MapMode = .none,
-    copy_embedded_sources: bool = false,
     rootdir: ?[]const u8 = null,
     dep_file: ?[]const u8 = null,
     cache_dir: ?[]const u8 = null,
@@ -1738,7 +1857,13 @@ fn transpileCommand(allocator: std.mem.Allocator, opts: TranspileOptions) !void 
             const outpath = try std.fs.path.join(allocator, &.{ opts.outdir, output_rel_path });
             defer allocator.free(outpath);
 
-            try transpileFile(allocator, &all_client_cmps, opts, opts.path, outpath);
+            var visited = std.StringHashMap(void).init(allocator);
+            defer {
+                var it = visited.keyIterator();
+                while (it.next()) |k| allocator.free(k.*);
+                visited.deinit();
+            }
+            try transpileFileRecursive(allocator, &all_client_cmps, opts, opts.path, outpath, &visited, &input_files);
             task.completeOne();
         },
         else => {
@@ -1755,8 +1880,9 @@ fn transpileCommand(allocator: std.mem.Allocator, opts: TranspileOptions) !void 
     }
 
     // Generate routes
-    genRoutes(allocator, opts.outdir, opts.rootdir, opts.base_path, opts.verbose) catch |err| {
-        std.debug.print("Warning: Failed to generate meta.zig: {}\n", .{err});
+    genRoutes(allocator, opts.outdir, opts.rootdir, opts.base_path, opts.verbose) catch |err| switch (err) {
+        error.NoPagesOrRoutes => {}, // No routes to generate is not an error
+        else => std.debug.print("Warning: Failed to generate meta.zig: {}\n", .{err}),
     };
 
     // --- @rendering -> Client Side Rendering Related Files Generation --- //

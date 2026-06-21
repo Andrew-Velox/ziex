@@ -13,8 +13,6 @@
 const Kv = @This();
 
 const std = @import("std");
-const builtin = @import("builtin");
-
 const zx = @import("../../root.zig");
 
 userdata: ?*anyopaque = null,
@@ -22,7 +20,7 @@ vtable: *const VTable,
 namespace: []const u8 = "default",
 
 pub const Fs = @import("Kv/Fs.zig");
-pub const Wasm = @import("../server/wasm/kv.zig");
+pub const Wasm = @import("Kv/Wasm.zig");
 
 pub const VTable = struct {
     get: *const fn (userdata: ?*anyopaque, ns: []const u8, allocator: std.mem.Allocator, key: []const u8) anyerror!?[]u8,

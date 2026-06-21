@@ -3,7 +3,7 @@ const std = @import("std");
 const pltfm = @import("platform.zig");
 const platform = pltfm.platform;
 const Client = @import("runtime/client/Client.zig");
-const Edge = @import("runtime/server/wasm/entrypoint.zig");
+const Edge = @import("runtime/core/App/Wasm.zig");
 
 pub const BuiltinAttribute = @import("attributes.zig").builtin;
 

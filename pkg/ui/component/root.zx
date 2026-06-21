@@ -1,0 +1,1 @@
+pub const icon = @import("icon.zx");

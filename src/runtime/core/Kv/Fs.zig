@@ -1,10 +1,7 @@
-pub const Fs = @This();
+const Fs = @This();
 
 const std = @import("std");
-const builtin = @import("builtin");
-const zx = @import("../../../root.zig");
-
-const Kv = zx.Kv;
+const Kv = @import("../Kv.zig");
 
 io: std.Io,
 namespace: []const u8 = "default",

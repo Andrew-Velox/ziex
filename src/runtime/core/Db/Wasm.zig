@@ -1,11 +1,7 @@
 const Wasm = @This();
 
 const std = @import("std");
-
-const zx = @import("../../../root.zig");
-const ext = @import("extern.zig");
-
-const Db = zx.Db;
+const Db = @import("../Db.zig");
 
 binding_name: []u8,
 allocator: std.mem.Allocator,
@@ -360,6 +356,57 @@ fn writeValueJson(writer: *std.Io.Writer, value: Db.Value) !void {
     }
     try writer.writeByte('}');
 }
+
+const ext = struct {
+    pub extern "__zx_db" fn db_open(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+    ) i32;
+
+    pub extern "__zx_db" fn db_run(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        sql_ptr: [*]const u8,
+        sql_len: usize,
+        bindings_ptr: [*]const u8,
+        bindings_len: usize,
+        buf_ptr: [*]u8,
+        buf_max: usize,
+    ) i32;
+
+    pub extern "__zx_db" fn db_get(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        sql_ptr: [*]const u8,
+        sql_len: usize,
+        bindings_ptr: [*]const u8,
+        bindings_len: usize,
+        buf_ptr: [*]u8,
+        buf_max: usize,
+    ) i32;
+
+    pub extern "__zx_db" fn db_all(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        sql_ptr: [*]const u8,
+        sql_len: usize,
+        bindings_ptr: [*]const u8,
+        bindings_len: usize,
+        buf_ptr: [*]u8,
+        buf_max: usize,
+    ) i32;
+
+    pub extern "__zx_db" fn db_values(
+        ns_ptr: [*]const u8,
+        ns_len: usize,
+        sql_ptr: [*]const u8,
+        sql_len: usize,
+        bindings_ptr: [*]const u8,
+        bindings_len: usize,
+        buf_ptr: [*]u8,
+        buf_max: usize,
+    ) i32;
+};
 
 const database_vtable = Db.VTable{
     .prepare = &prepare,

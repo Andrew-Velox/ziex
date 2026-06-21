@@ -114,13 +114,15 @@ pub fn build(b: *std.Build) !void {
     app_exe.step.dependOn(&install_pg.step); // Playground disabled
 
     // --- ZX setup: wires dependencies and adds `zx`/`dev` build steps --- //
-    _ = try ziex.init(b, app_exe, .{
+    var zx = try ziex.init(b, app_exe, .{
         .app = .{
             // .path = b.path("app"),
             // .base_path = "/test",
-            .copy_embedded_sources = true,
+            // .copy_embedded_sources = true,
             .features = .{
                 .sqlite = .enabled,
+                .kv = .enabled,
+                .cache = .enabled,
             },
         },
         .client = .{
@@ -129,6 +131,56 @@ pub fn build(b: *std.Build) !void {
         },
         .cli = .{ .optimize = optimize },
     });
+
+    // --- ZX Components --- //
+    {
+        // Single File
+        const icons_mod = zx.addComponent(.{ .root_source_file = b.path("component/icon.zx") });
+        zx.app.module.addImport("icon", icons_mod);
+        // multifile
+        zx.addComponentImport("component", .{ .root_source_file = b.path("component/main.zx") });
+        // from deps
+        const ui_dep = b.dependency("ui", .{});
+        const ui_mod = ui_dep.module("ui");
+        ui_mod.addImport("zx", zx.zx_module);
+        zx.addImport("ui", ui_mod);
+
+        const template_path = b.path("../templates/_base/app");
+        // Layout
+        const template_layout_mod = zx.addComponent(.{
+            .root_source_file = template_path.path(b, "pages/layout.zx"),
+        });
+        zx.addImport("tmpl_layout", template_layout_mod);
+        // Home page
+        const template_ui_root_mod = zx.addComponent(.{
+            .root_source_file = template_path.path(b, "pages/page.zx"),
+        });
+        zx.addImport("tmpl_home", template_ui_root_mod);
+
+        // /form page
+        const template_form_root_mod = zx.addComponent(.{
+            .root_source_file = template_path.path(b, "pages/form/page.zx"),
+        });
+        zx.addImport("tmpl_form", template_form_root_mod);
+
+        // /actions
+        const template_actions_root_mod = zx.addComponent(.{
+            .root_source_file = template_path.path(b, "pages/actions/page.zx"),
+        });
+        zx.addImport("tmpl_actions", template_actions_root_mod);
+
+        // /actions/client
+        const template_actions_client_mod = zx.addComponent(.{
+            .root_source_file = template_path.path(b, "pages/actions/client/page.zx"),
+        });
+        zx.addImport("tmpl_actions_client", template_actions_client_mod);
+
+        // /actions/server
+        const template_actions_server_mod = zx.addComponent(.{
+            .root_source_file = template_path.path(b, "pages/actions/server/page.zx"),
+        });
+        zx.addImport("tmpl_actions_server", template_actions_server_mod);
+    }
 
     const tailwindcss_b = tailwindcss.addBuild(b, .{
         .config = .{

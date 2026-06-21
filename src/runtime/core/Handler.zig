@@ -9,8 +9,7 @@ const Request = @import("Request.zig");
 const Response = @import("Response.zig");
 const server_dispatch = @import("../server/dispatch.zig");
 const render = @import("../server/render.zig");
-const zx_injections = @import("zx_injections");
-const tree = @import("tree.zig");
+const injections = @import("injections.zig");
 
 pub const ServerMeta = zx.server.ServerMeta;
 pub const Route = ServerMeta.Route;
@@ -183,26 +182,10 @@ pub fn renderError(
     return Router.renderErrorComponent(allocator, request, response, pathname, err);
 }
 
-// TODO: move to injecting structured elmeents from build system and render in here
 /// Inject build-time HTML (scripts, styles, etc.) into head/body elements.
-/// This handles zx_injections (head_starting, head_ending, body_starting, body_ending).
+/// See `injections.zig` for the comptime rendering of structured injections.
 pub fn injectZxInjections(allocator: Allocator, page: *Component) void {
-    if (zx_injections.head_starting.len > 0) {
-        if (tree.getElementByName(page, allocator, .head)) |el|
-            tree.prependChild(el, allocator, .{ .text = zx_injections.head_starting }) catch {};
-    }
-    if (zx_injections.head_ending.len > 0) {
-        if (tree.getElementByName(page, allocator, .head)) |el|
-            tree.appendChild(el, allocator, .{ .text = zx_injections.head_ending }) catch {};
-    }
-    if (zx_injections.body_starting.len > 0) {
-        if (tree.getElementByName(page, allocator, .body)) |el|
-            tree.prependChild(el, allocator, .{ .text = zx_injections.body_starting }) catch {};
-    }
-    if (zx_injections.body_ending.len > 0) {
-        if (tree.getElementByName(page, allocator, .body)) |el|
-            tree.appendChild(el, allocator, .{ .text = zx_injections.body_ending }) catch {};
-    }
+    injections.inject(allocator, page);
 }
 
 /// Check if streaming is enabled for a route.

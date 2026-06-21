@@ -1,5 +1,6 @@
 const std = @import("std");
 const common = @import("common.zig");
+const Http = @import("Http.zig");
 
 pub const Response = @This();
 
@@ -83,48 +84,19 @@ url: []const u8 = "",
 /// Arena allocator for response-scoped allocations.
 arena: std.mem.Allocator,
 
-_internal: Internal = .{},
-
-const Internal = struct {
-    userdata: ?*anyopaque = null,
-    vtable: ?*const VTable = null,
-};
-
-pub const VTable = struct {
-    /// Sets the response status code.
-    setStatus: *const fn (ctx: *anyopaque, code: u16) void,
-    /// Sets the response body.
-    setBody: *const fn (ctx: *anyopaque, content: []const u8) void,
-    /// Sets a header.
-    setHeader: *const fn (ctx: *anyopaque, name: []const u8, value: []const u8) void,
-    /// Gets a writer for streaming.
-    getWriter: *const fn (ctx: *anyopaque) *std.Io.Writer,
-    /// Writes a chunk for chunked transfer.
-    writeChunk: *const fn (ctx: *anyopaque, data: []const u8) anyerror!void,
-    /// Clears the response writer/buffer.
-    clearWriter: *const fn (ctx: *anyopaque) void,
-    /// Sets a cookie on the response.
-    setCookie: *const fn (ctx: *anyopaque, name: []const u8, value: []const u8, opts: CookieOptions) anyerror!void,
-};
+/// Internal backend transport carrier. All response writes delegate here.
+_internal: Http.Facade = .{},
 
 // --- Methods --- //
 
 /// Sets the HTTP status code using an HttpStatus enum.
 pub fn setStatus(self: *const Response, stat: HttpStatus) void {
-    if (self._internal.vtable) |vt| {
-        if (self._internal.userdata) |ctx| {
-            vt.setStatus(ctx, @intFromEnum(stat));
-        }
-    }
+    self._internal.http.resSetStatus(@intFromEnum(stat));
 }
 
 /// Sets the response body directly.
 pub fn text(self: *const Response, content: []const u8) void {
-    if (self._internal.vtable) |vt| {
-        if (self._internal.userdata) |ctx| {
-            vt.setBody(ctx, content);
-        }
-    }
+    self._internal.http.resSetBody(content);
 }
 
 /// Sets the response body to a JSON string.
@@ -145,11 +117,7 @@ pub fn json(self: *const Response, value: anytype, options: std.json.Stringify.O
 ///
 /// MDN: [Response.headers](https://developer.mozilla.org/en-US/docs/Web/API/Response/headers)
 pub fn setHeader(self: *const Response, name: []const u8, value: []const u8) void {
-    if (self._internal.vtable) |vt| {
-        if (self._internal.userdata) |ctx| {
-            vt.setHeader(ctx, name, value);
-        }
-    }
+    self._internal.http.resHeaderSet(name, value);
 }
 
 /// Sets the Content-Type header.
@@ -172,30 +140,17 @@ pub fn redirect(self: *const Response, location: []const u8, redirect_status: ?u
 
 /// Gets the response writer for streaming content.
 pub fn writer(self: *const Response) ?*std.Io.Writer {
-    if (self._internal.vtable) |vt| {
-        if (self._internal.userdata) |ctx| {
-            return vt.getWriter(ctx);
-        }
-    }
-    return null;
+    return self._internal.http.resWriter();
 }
 
 /// Writes a chunk for chunked transfer encoding.
 pub fn chunk(self: *const Response, data: []const u8) !void {
-    if (self._internal.vtable) |vt| {
-        if (self._internal.userdata) |ctx| {
-            try vt.writeChunk(ctx, data);
-        }
-    }
+    try self._internal.http.resWriteChunk(data);
 }
 
 /// Clears the response writer/buffer.
 pub fn clearWriter(self: *const Response) void {
-    if (self._internal.vtable) |vt| {
-        if (self._internal.userdata) |ctx| {
-            vt.clearWriter(ctx);
-        }
-    }
+    self._internal.http.resClearWriter();
 }
 
 // --- Headers --- //
@@ -205,29 +160,13 @@ pub fn clearWriter(self: *const Response) void {
 ///
 /// MDN: [Headers](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
 pub const Headers = struct {
-    _internal: State = .{},
-
-    const State = struct {
-        userdata: ?*anyopaque = null,
-        vtable: ?*const HeadersVTable = null,
-    };
-
-    pub const HeadersVTable = struct {
-        get: *const fn (ctx: *anyopaque, name: []const u8) ?[]const u8,
-        set: *const fn (ctx: *anyopaque, name: []const u8, value: []const u8) void,
-        add: *const fn (ctx: *anyopaque, name: []const u8, value: []const u8) void,
-    };
+    _internal: Http.Facade = .{},
 
     /// Returns the values of a header with the given name.
     ///
     /// MDN: [Headers.get](https://developer.mozilla.org/en-US/docs/Web/API/Headers/get)
     pub fn get(self: *const Headers, name: []const u8) ?[]const u8 {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                return vt.get(ctx, name);
-            }
-        }
-        return null;
+        return self._internal.http.resHeaderGet(name);
     }
 
     /// Sets a new value for an existing header inside a Headers object,
@@ -235,11 +174,7 @@ pub const Headers = struct {
     ///
     /// MDN: [Headers.set](https://developer.mozilla.org/en-US/docs/Web/API/Headers/set)
     pub fn set(self: *const Headers, name: []const u8, value: []const u8) void {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                vt.set(ctx, name, value);
-            }
-        }
+        self._internal.http.resHeaderSet(name, value);
     }
 
     /// Appends a new value onto an existing header inside a Headers object,
@@ -247,11 +182,7 @@ pub const Headers = struct {
     ///
     /// MDN: [Headers.append](https://developer.mozilla.org/en-US/docs/Web/API/Headers/append)
     pub fn add(self: *const Headers, name: []const u8, value: []const u8) void {
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                vt.add(ctx, name, value);
-            }
-        }
+        self._internal.http.resHeaderAdd(name, value);
     }
 };
 
@@ -259,23 +190,14 @@ pub const Headers = struct {
 
 /// The ResponseCookies interface provides utility methods to work with cookies on the response.
 pub const ResponseCookies = struct {
-    _internal: State = .{},
-
-    const State = struct {
-        userdata: ?*anyopaque = null,
-        vtable: ?*const VTable = null,
-    };
+    _internal: Http.Facade = .{},
 
     /// Sets a cookie on the response.
     ///
     /// MDN: [Cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies)
     pub fn set(self: *const ResponseCookies, name: []const u8, value: []const u8, options: ?CookieOptions) void {
         const opts = options orelse CookieOptions{};
-        if (self._internal.vtable) |vt| {
-            if (self._internal.userdata) |ctx| {
-                vt.setCookie(ctx, name, value, opts) catch {};
-            }
-        }
+        self._internal.http.resSetCookie(name, value, opts) catch {};
     }
 
     /// Deletes a cookie by setting it with an expired max-age.
@@ -293,10 +215,8 @@ pub const Builder = struct {
     url: []const u8 = "",
     response_type: ResponseType = .default,
     arena: std.mem.Allocator,
-    userdata: ?*anyopaque = null,
-    vtable: ?*const VTable = null,
-    headers_userdata: ?*anyopaque = null,
-    headers_vtable: ?*const Headers.HeadersVTable = null,
+    /// The unified backend transport for this request/response pair.
+    http: Http = .{},
 
     /// Builds the Response object with all configured values.
     pub fn build(self: Builder) Response {
@@ -309,23 +229,10 @@ pub const Builder = struct {
             .statusText = common.statusCodeToText(self.status),
             .type = self.response_type,
             .url = self.url,
-            ._internal = .{
-                .userdata = self.userdata,
-                .vtable = self.vtable,
-            },
             .arena = self.arena,
-            .headers = .{
-                ._internal = .{
-                    .userdata = self.headers_userdata,
-                    .vtable = self.headers_vtable,
-                },
-            },
-            .cookies = .{
-                ._internal = .{
-                    .userdata = self.userdata,
-                    .vtable = self.vtable,
-                },
-            },
+            ._internal = .{ .http = self.http },
+            .headers = .{ ._internal = .{ .http = self.http } },
+            .cookies = .{ ._internal = .{ .http = self.http } },
         };
     }
 };

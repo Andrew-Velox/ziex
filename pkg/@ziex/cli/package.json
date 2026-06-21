@@ -1,7 +1,7 @@
 {
   "name": "@ziex/cli",
   "version": "0.1.0-dev.928",
-  "description": "ZX is a framework for building web applications with Zig.",
+  "description": "Ziex is a framework for building web applications with Zig.",
   "type": "module",
   "bin": {
     "zx": "bin/zx",

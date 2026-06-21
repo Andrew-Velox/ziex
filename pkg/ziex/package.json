@@ -2,7 +2,7 @@
   "name": "ziex",
   "version": "0.1.0-dev",
   "private": true,
-  "description": "ZX is a framework for building web applications with Zig.",
+  "description": "Ziex is a framework for building web applications with Zig.",
   "main": "src/index.ts",
   "type": "module",
   "bin": {
@@ -44,12 +44,11 @@
     "check": "tsc"
   },
   "dependencies": {
-    "@ziex/cli": "0.1.0-dev.1138"
+    "@ziex/cli": "0.1.0-dev.1252"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "zzon": "^1.7.1",
-    "jsz": "github:nurulhudaapon/jsz",
     "@types/react": "latest",
     "@types/react-dom": "latest"
   },

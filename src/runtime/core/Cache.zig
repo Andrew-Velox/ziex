@@ -2,16 +2,12 @@ pub const Cache = @This();
 
 const std = @import("std");
 const builtin = @import("builtin");
-const cachez = if (builtin.cpu.arch.isWasm())
-    // This is for satisfying Playground in which we don't have 'cachez' dep available.
-    cachez_failing
-else
-    @import("cachez");
-
 const zx = @import("../../root.zig");
+const Kv = @import("Kv.zig");
 
 const Allocator = std.mem.Allocator;
-const Kv = zx.Kv;
+
+pub const cachez = @import("Cache/Mem/cache.zig");
 
 const entry_version: u8 = 1;
 const header_len = 9;
@@ -354,121 +350,4 @@ pub const failing: Cache = .{
     .allocator = .failing,
     .io = .failing,
     .backend = .failing,
-};
-
-const cachez_failing = struct {
-    pub const PutConfig = struct {
-        ttl: u32 = 300,
-        size: u32 = 1,
-    };
-
-    pub fn Cache(comptime T: type) type {
-        return struct {
-            allocator: Allocator,
-
-            const Self = @This();
-
-            pub fn init(io: std.Io, allocator: Allocator, _: Config) !Self {
-                _ = io;
-                return .{
-                    .allocator = allocator,
-                };
-            }
-
-            pub fn deinit(_: *Self) void {}
-
-            pub fn contains(self: *const Self, key: []const u8) bool {
-                _ = key;
-                _ = self;
-                return false;
-            }
-
-            pub fn get(self: *Self, key: []const u8) ?*Entry(T) {
-                _ = key;
-                _ = self;
-                return null;
-            }
-
-            pub fn getEntry(self: *const Self, key: []const u8) ?*Entry(T) {
-                _ = key;
-                _ = self;
-                return null;
-            }
-
-            pub fn put(self: *Self, key: []const u8, value: T, config: PutConfig) !void {
-                _ = key;
-                _ = value;
-                _ = config;
-                _ = self;
-            }
-
-            pub fn del(self: *Self, key: []const u8) bool {
-                _ = key;
-                _ = self;
-                return false;
-            }
-
-            pub fn delPrefix(self: *Self, prefix: []const u8) !usize {
-                _ = prefix;
-                _ = self;
-                return 0;
-            }
-
-            pub fn fetch(self: *Self, comptime S: type, key: []const u8, loader: *const fn (loader_state: S, key: []const u8) anyerror!?T, loader_state: S, config: PutConfig) !?*Entry(T) {
-                _ = key;
-                _ = loader;
-                _ = loader_state;
-                _ = config;
-                _ = self;
-                return null;
-            }
-
-            pub fn maxSize(self: Self) usize {
-                _ = self;
-                return 0;
-            }
-        };
-    }
-
-    pub fn Entry(comptime T: type) type {
-        return struct {
-            key: []const u8,
-            value: T,
-            expires: u32,
-
-            const Self = @This();
-
-            pub fn init(allocator: Allocator, key: []const u8, value: T, size: u32, expires: u32) Self {
-                _ = allocator;
-                _ = size;
-                return .{
-                    .key = key,
-                    .value = value,
-                    .expires = expires,
-                };
-            }
-
-            pub fn expired(self: *Self) bool {
-                return self.ttl() <= 0;
-            }
-
-            pub fn ttl(self: *Self) i64 {
-                _ = self;
-                return 0;
-            }
-
-            pub fn hit(self: *Self) u8 {
-                _ = self;
-                return 0;
-            }
-
-            pub fn borrow(self: *Self) void {
-                _ = self;
-            }
-
-            pub fn release(self: *Self) void {
-                _ = self;
-            }
-        };
-    }
 };

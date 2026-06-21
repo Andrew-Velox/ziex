@@ -24,3 +24,4 @@ test/data/**/*.zxcache
 
 # vendor
 vendor/webref
+.tool-versions
