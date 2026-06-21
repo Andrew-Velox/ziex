@@ -1,17 +1,14 @@
 const std = @import("std");
-const injection = @import("init/injection.zig");
 const html_util = @import("../util/html.zig");
+const build_zig = @import("../../build.zig");
+pub const InitOptions = @import("init/InitOptions.zig");
 
 const LazyPath = std.Build.LazyPath;
-const AddElementOptions = injection.AddElementOptions;
-const InjectionsGenStep = injection.InjectionsGenStep;
-
-pub const InitOptions = @import("init/InitOptions.zig");
+const AddElementOptions = @import("../Build.zig").AddElementOptions;
 
 pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !Build {
     const target = exe.root_module.resolved_target;
     const optimize = exe.root_module.optimize;
-    const build_zig = @import("../../build.zig");
     const wasm_target = b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .freestanding, .abi = .none });
 
     const zx_dep = b.dependencyFromBuildZig(build_zig, .{
@@ -50,7 +47,6 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
         .cli_path = null,
         .site_outdir = null,
         .steps = .default,
-        .copy_embedded_sources = false,
         .client = options.client,
         .static_path = options.static_path,
         .ziex_js_dep = ziex_js_dep,
@@ -60,7 +56,6 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
 
     if (options.app) |site_opts| {
         opts.site_path = site_opts.path orelse opts.site_path;
-        opts.copy_embedded_sources = site_opts.copy_embedded_sources;
         opts.base_path = site_opts.base_path;
         opts.features = site_opts.features;
     }
@@ -90,7 +85,6 @@ const InitInnerOptions = struct {
     cli_path: ?LazyPath,
     site_outdir: ?LazyPath,
     steps: InitOptions.CliOptions.Steps,
-    copy_embedded_sources: bool,
     features: InitOptions.AppOptions.FeatureOptions = .default,
     client: InitOptions.ClientOptions,
     static_path: ?LazyPath,
@@ -100,7 +94,7 @@ const InitInnerOptions = struct {
     server_only_stub_mode: ServerOnlyStubMode = .strict,
 };
 
-fn getZxRun(b: *std.Build, zx_exe: *std.Build.Step.Compile, opts: InitInnerOptions) *std.Build.Step.Run {
+pub fn getZxRun(b: *std.Build, zx_exe: *std.Build.Step.Compile, opts: InitInnerOptions) *std.Build.Step.Run {
     if (opts.cli_path) |cli_path| {
         const run = std.Build.Step.Run.create(b, "run zx");
         run.addFileArg(cli_path);
@@ -285,7 +279,10 @@ pub fn initInner(
     zx_options.addOption(?[]const u8, "server_rootdir", rootdir_opt);
     zx_options.addOption([]const u8, "cli_command", cli_command_opt orelse "--");
     zx_options.addOption(bool, "introspect", b.option(bool, "introspect", "Print Ziex app metadata and exit") orelse false);
-    zx_options.addOption(bool, "feature_sqlite", opts.features.sqlite != null);
+    zx_options.addOption(bool, "feat_sqlite_server", if (opts.features.sqlite) |s| s.server != null else false);
+    zx_options.addOption(bool, "feat_kv_server", if (opts.features.kv) |k| k.server != null else false);
+    zx_options.addOption(bool, "feat_kv_client", if (opts.features.kv) |k| k.client != null else false);
+    zx_options.addOption(bool, "feat_cache_server", if (opts.features.cache) |c| c.server != null else false);
 
     zx_module.addOptions("zx_options", zx_options);
 
@@ -305,9 +302,6 @@ pub fn initInner(
     transpile_cmd.addDirectoryArg(static_lazypath);
     transpile_cmd.addArg("--dep-file");
     _ = transpile_cmd.addDepFileOutputArg("transpile.d");
-    if (opts.copy_embedded_sources) {
-        transpile_cmd.addArg("--copy-embedded-sources");
-    }
     if (opts.base_path) |bp| {
         transpile_cmd.addArgs(&.{ "--base-path", bp });
     }
@@ -380,33 +374,41 @@ pub fn initInner(
 
     // --- ZX Injections --- //
     const version = opts.version orelse build_zon.version;
-    const injections_step = try InjectionsGenStep.create(b);
+    const injections = try b.allocator.create(Injections);
+    injections.* = .{};
     for (opts.element_injections) |inj| {
-        injections_step.add(inj);
+        injections.add(b, inj);
     }
     // Inject wasm preload link tag into head
-    injections_step.add(.{
+    injections.add(b, .{
         .parent = .head,
         .position = .ending,
         .element = .{
-            .tag = "link",
-            .attributes = b.fmt(
-                "id=\"__$wasmlink\" rel=\"preload\" as=\"fetch\" href=\"{s}?{s}\" crossorigin",
-                .{ wasm_href, version },
-            ),
+            .tag = .link,
+            .attributes = &.{
+                .{ .name = "id", .value = "__$wasmlink" },
+                .{ .name = "rel", .value = "preload" },
+                .{ .name = "as", .value = "fetch" },
+                .{ .name = "href", .value = b.fmt("{s}?{s}", .{ wasm_href, version }) },
+                .{ .name = "crossorigin" },
+            },
         },
     });
     // Inject jsglue script tag via the build system
-    injections_step.add(.{ .parent = .head, .position = .ending, .element = .{
-        .tag = "script",
-        .attributes = b.fmt("defer src=\"{s}?{s}\"", .{ zxjs_href, version }),
-    } });
-    zx_module.addAnonymousImport("zx_injections", .{
-        .root_source_file = injections_step.getOutput(),
+    injections.add(b, .{
+        .parent = .head,
+        .position = .ending,
+        .element = .{
+            .tag = .script,
+            .attributes = &.{
+                .{ .name = "defer" },
+                .{ .name = "src", .value = b.fmt("{s}?{s}", .{ zxjs_href, version }) },
+            },
+        },
     });
-    zx_wasm_module.addAnonymousImport("zx_injections", .{
-        .root_source_file = injections_step.getOutput(),
-    });
+    const injection_mod = b.createModule(try injections.getModOpts(b));
+    zx_module.addImport("injections", injection_mod);
+    zx_wasm_module.addImport("injections", injection_mod);
 
     // --- ZX Watch Invalidator ---
     // Use directory-level watch input so `zig build --watch` picks up changes.
@@ -433,20 +435,12 @@ pub fn initInner(
         }
     }
 
-    // Create a site-specific zx module with the generated meta
-    const site_zx_module = b.createModule(.{
-        .root_source_file = zx_module.root_source_file,
-        .target = zx_module.resolved_target,
-        .optimize = zx_module.optimize,
-        .imports = imports.items,
-    });
-
     // Build imports for the "app" module (meta.zig needs access to zx and all other imports)
     var meta_imports = std.array_list.Managed(std.Build.Module.Import).init(b.allocator);
     for (imports.items) |import| {
         try meta_imports.append(import);
     }
-    try meta_imports.append(.{ .name = "zx", .module = site_zx_module });
+    try meta_imports.append(.{ .name = "zx", .module = zx_module });
 
     // Inject the real generated app module into zx and directly into the user's root module
     const app_module = b.createModule(.{
@@ -454,10 +448,9 @@ pub fn initInner(
         .imports = meta_imports.items,
     });
     app_module.addImport("app", app_module);
-    site_zx_module.addImport("app", app_module);
+    zx_module.addImport("app", app_module);
     exe.root_module.addImport("app", app_module);
-
-    exe.root_module.addImport("zx", site_zx_module);
+    exe.root_module.addImport("zx", zx_module);
 
     exe.step.dependOn(&transpile_cmd.step);
     exe.step.name = b.fmt("install {s}server{s} {s}", .{ colors.dim, colors.reset, exe.name });
@@ -483,7 +476,7 @@ pub fn initInner(
             .target = target,
             .optimize = optimize,
         });
-        introspect_root.addImport("zx", site_zx_module);
+        introspect_root.addImport("zx", zx_module);
         introspect_root.addImport("app", app_module);
         introspect_root.addImport("zx_app_root", exe.root_module);
 
@@ -626,6 +619,8 @@ pub fn initInner(
 
     return .{
         .build = b,
+        .zx_module = zx_module,
+        .app = .{ .exe = exe, .module = app_module },
         .cmd = .{
             .transpile = transpile_cmd,
         },
@@ -634,10 +629,27 @@ pub fn initInner(
         .cli = .{
             .exe = zx_exe,
         },
-        .transformer = .{ .userdata = injections_step },
+        .transformer = .{ .b = b, .userdata = injections },
     };
 }
 
+const Injections = struct {
+    items: std.ArrayListUnmanaged(AddElementOptions) = .empty,
+
+    pub fn add(self: *Injections, b: *std.Build, options: AddElementOptions) void {
+        self.items.append(b.allocator, options) catch @panic("OOM");
+    }
+
+    pub fn getModOpts(self: *Injections, b: *std.Build) !std.Build.Module.CreateOptions {
+        var aw = std.Io.Writer.Allocating.init(b.allocator);
+        defer aw.deinit();
+        try std.zon.stringify.serializeArbitraryDepth(self.items.items, .{}, &aw.writer);
+        const file = b.addWriteFile("injections.zon", aw.written());
+        return .{ .root_source_file = file.getDirectory().path(b, "injections.zon") };
+    }
+};
+
+// TODO: move to src/Build.zig
 pub const Build = struct {
     pub const BuildZiex = struct {
         exe: *std.Build.Step.Compile,
@@ -647,17 +659,30 @@ pub const Build = struct {
         transpile: *std.Build.Step.Run,
     };
 
+    pub const App = struct {
+        exe: *std.Build.Step.Compile,
+        module: *std.Build.Module,
+    };
+
     /// Output transformer: injects elements into the generated output
     pub const Transformer = struct {
+        b: *std.Build,
         userdata: *anyopaque,
 
         pub fn addElement(self: Transformer, options: AddElementOptions) void {
-            const injections_step: *InjectionsGenStep = @ptrCast(@alignCast(self.userdata));
-            injections_step.add(options);
+            const injections: *Injections = @ptrCast(@alignCast(self.userdata));
+            injections.add(self.b, options);
         }
     };
 
     build: *std.Build,
+
+    /// The app's canonical `zx` module. Component modules created via
+    /// `addComponent` are bound to this so the whole app shares one zx graph.
+    zx_module: *std.Build.Module,
+
+    /// The app's root executable and generated `app` module.
+    app: App,
 
     cmd: BuildCommand,
 
@@ -667,6 +692,32 @@ pub const Build = struct {
     cli: BuildZiex,
 
     transformer: Transformer,
+
+    /// Transpile a `.zx` component file and return a Zig module wired to this
+    /// app's canonical `zx` module.
+    pub fn addComponent(self: Build, opts: build_zig.TranslatedZx.Options) *std.Build.Module {
+        var component_opts = opts;
+        // Inherit the app's target/optimize unless the caller overrode them.
+        if (component_opts.target == null) component_opts.target = self.zx_module.resolved_target;
+        if (component_opts.optimize == null) component_opts.optimize = self.zx_module.optimize;
+
+        const mod = build_zig.addTranslateZx(self.build, component_opts).createModule();
+        mod.addImport("zx", self.zx_module);
+        return mod;
+    }
+
+    /// Like `addComponent`, but also imports the resulting module onto the app's
+    /// root module and generated `app` module under `name`.
+    pub fn addComponentImport(self: Build, name: []const u8, opts: build_zig.TranslatedZx.Options) void {
+        const mod = self.addComponent(opts);
+        self.addImport(name, mod);
+    }
+
+    /// Add an import to app's root module and generated `app` module under `name`.
+    pub fn addImport(self: Build, name: []const u8, mod: *std.Build.Module) void {
+        self.app.exe.root_module.addImport(name, mod);
+        self.app.module.addImport(name, mod);
+    }
 };
 
 const ServerOnlyStubMode = enum {

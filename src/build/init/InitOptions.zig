@@ -58,13 +58,46 @@ pub const CliOptions = struct {
 /// Configuration for the ZX app directory.
 pub const AppOptions = struct {
     pub const FeatureOptions = struct {
+        /// Embedded SQLite database, exposed at runtime as `zx.db`.
         pub const SqliteOptions = struct {
-            pub const enabled: SqliteOptions = .{};
+            pub const SqliteServerOptions = struct {
+                pub const enabled: SqliteServerOptions = .{};
+            };
+            pub const enabled: SqliteOptions = .{ .server = .enabled };
+
+            server: ?SqliteServerOptions = null,
+        };
+
+        /// Filesystem-backed key/value store, exposed at runtime as `zx.kv`.
+        pub const KvOptions = struct {
+            pub const KvServerOptions = struct {
+                pub const enabled: KvServerOptions = .{};
+            };
+            pub const KvClientOptions = struct {
+                pub const enabled: KvClientOptions = .{};
+            };
+            pub const enabled: KvOptions = .{ .server = .enabled, .client = .enabled };
+
+            server: ?KvServerOptions = null,
+            client: ?KvClientOptions = null,
+        };
+
+        /// Filesystem-backed cache (used by component-level caching),
+        /// exposed at runtime as `zx.cache`.
+        pub const CacheOptions = struct {
+            pub const CacheServerOptions = struct {
+                pub const enabled: CacheServerOptions = .{};
+            };
+            pub const enabled: CacheOptions = .{ .server = .enabled };
+
+            server: ?CacheServerOptions = null,
         };
 
         pub const default = FeatureOptions{};
 
         sqlite: ?SqliteOptions = null,
+        kv: ?KvOptions = null,
+        cache: ?CacheOptions = null,
     };
 
     /// Path to the ZX app source directory.
@@ -78,18 +111,6 @@ pub const AppOptions = struct {
     /// This will be used to prefix all route URLs and asset paths in your app.
     /// If `null`, defaults to root path ("/").
     base_path: ?[]const u8 = null,
-
-    /// Copy embedded `.zx` source files to the transpile output directory.
-    ///
-    /// When enabled, any `.zx` files referenced via `@embedFile` in your templates
-    /// will be copied to the output directory alongside the generated `.zig` files,
-    /// and the `@embedFile` paths will be updated to reference the local copies.
-    ///
-    /// This is useful when you want to display source code examples in your app
-    /// and need the files accessible within the package boundary.
-    ///
-    /// Default: `false`
-    copy_embedded_sources: bool = false,
 
     /// Features that can be optionally enabled
     features: FeatureOptions = .default,

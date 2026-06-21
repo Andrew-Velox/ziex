@@ -1,37 +1,47 @@
 <p align="center">
-    <img src="https://raw.githubusercontent.com/ziex-dev/branding/main/banner.svg" alt="Ziex banner" width="100%" />
+    <img src="https://raw.githubusercontent.com/ziex-dev/branding/main/banner-animated.svg" alt="Ziex banner" width="100%" />
 </p>
 
-A full-stack web framework for Zig. Write declarative UI components using familiar JSX patterns, transpiled to efficient Zig code.
+A full-stack web framework for Zig. Declarative UI components using familiar patterns, with full access to Zig's control flow.
 
-Ziex combines the power and performance of Zig with the expressiveness of JSX, enabling you to build fast, type-safe web applications.
+Ziex combines the power and performance of Zig with the expressiveness and simplicity of declarative UI, enabling you to build fast, type-safe web applications.
 
 **[Documentation →](https://ziex.dev/learn)**
 
 
+> **Note:** Most of the API and syntax are finalized and stable, and server-side rendering (SSR) features are production-ready, Ziex continues to evolve with ongoing improvements to client-side rendering and state management, see the [roadmap](#roadmap). You can start using the documented features today, as they are stable and unlikely to change. Areas still under development are not yet documented and will be added as they mature. See [versions](#versions) for Zig and Ziex versions compatibility.
 
-> **Note:** Most of the API and syntax are finalized and stable, and server-side rendering (SSR) features are production-ready, Ziex continues to evolve with ongoing improvements to client-side rendering and state management. You can start using the documented features today, as they are stable and unlikely to change. Areas still under development are not yet documented and will be added as they mature.
 
+## Getting Started
 
-## Installation
+### 1. Installing CLI (optional)
 
-##### Linux/macOS
+macOS/Linux
 ```bash
 curl -fsSL https://ziex.dev/install | bash
 ```
-
-##### Windows
-```powershell
+Windows
+```
 powershell -c "irm ziex.dev/install.ps1 | iex"
-
 ```
-##### Installing Zig
-```bash
-brew install zig # macOS
-winget install -e --id zig.zig # Windows
-```
-[_See for other platforms →_](https://ziglang.org/learn/getting-started/)
 
+### 2. Initializing Project
+```powershell
+zx init
+# or
+npm init ziex
+```
+
+### 3. Running Project
+```powershell
+zx dev
+# or
+npm run dev
+```
+
+You will need [compatible](#versions) Zig version when using zx CLI or you can use the `Node` template from `npm init ziex`
+
+Read [Getting Started →](https://ziex.dev/learn) for more details.
 
 ## At a Glance
 
@@ -149,35 +159,32 @@ const zx = @import("zx");
 </details>
 
 ## Features
-- **JSX-like Syntax**: Write declarative UI components using familiar JSX patterns, transpiled to efficient Zig code.
-- **Full-Stack Capabilities**: Build both frontend and backend of your web application using
-- **It's Fast**: Significantly faster at SSR than many other frameworks.
-- **Compile-time Safety**: Zig's type system catches bugs at compile time. No runtime surprises, no GC.
+- **Declarative UI**: Declarative UI components using with full access to Zig's control flow.
+- **Full-Stack Capabilities**: Build both frontend and backend of web application.
+- **Fast**: Significantly faster at SSR than many other frameworks.
 - **Familiar Syntax**: Familiar JSX-like syntax, or plain HTML-style markup, with full access to Zig's control flow.
 - **Server-side Rendering**: Render per request on the server for dynamic data, auth, and personalized pages for best performance and SEO.
 - **Static Site Generation**: Pre-render pages at build/export time into static HTML for fast CDN delivery.
-- **File System Routing**: Folder structure defines routes. No configs, no magic strings, just files in folders.
-- **Client-side Rendering**: Optional client-side rendering for interactive experiences when you need it.
-- **Control Flow in Zig's Syntax**: if/else, for/while, and switch all work as expected. It's just Zig.
+- **File System Routing**: Folder structure defines routes.
+- **Client-side Rendering**: Client-side rendering with Zig for building interactive experiences.
 - **Developer Tooling**: CLI, hot reload, and editor extensions for the best DX.
-
-## Roadmap
-
-We track our feature roadmap and bugs using GitHub Issues. 
-You can view our current progress and planned features here:
-
-**[Check out the Ziex Issue Tracker →](https://github.com/ziex-dev/ziex/issues)**
 
 ## Versions
 | Zig         | Ziex                | Branch            | Status         |
 |-------------|---------------------|-------------------|----------------|
-| `0.16.0`    | `0.1.0-dev.1068`-*  | `main`            | Stable (dev)   |
-| `0.15.2`    | `0.1.0-dev-1050`    | `zig-0.15`        | Stable (dev)   |
+| `0.17.x`    |                     | `zig-0.17`        | Development    |
+| `0.16.x`    | `0.1.0-dev.1068`-*  | `main`            | **Latest**     |
+| `0.15.x`    | `0.1.0-dev-1050`    | `zig-0.15`        | Latest (`Zig 0.15.x`)        |
 
+
+## Roadmap
+[Ziex 0.1.0](https://github.com/ziex-dev/ziex/milestone/2) is targeted after `Zig 0.17.0` release. You can see the [roadmap](https://github.com/ziex-dev/ziex/milestone) to learn more.
+
+`0.1.0` release will indicate that Ziex is production ready with all majore features fully baked and will receive patch releases for bug fixes.
 
 ## Editor Support
 
-* [VSCode](https://marketplace.visualstudio.com/items?itemName=ziex.ziex)/[VSCode Forks](https://open-vsx.org/extension/ziex/ziex) Extension
+* [VSCode](https://marketplace.visualstudio.com/items?itemName=ziex.ziex)/[VSCode Forks](https://open-vsx.org/extension/ziex/ziex)
 * [Neovim](/ide/neovim/)
 * [Helix](/ide/helix/)
 * [Zed](/ide/zed/)
@@ -187,16 +194,9 @@ You can view our current progress and planned features here:
 - [Discord](https://ziex.dev/r/discord)
 - [Topic on Ziggit](https://ziex.dev/r/ziggit)
 - [Project on Zig Discord Community](https://ziex.dev/r/zig-discord) (Join Zig Discord first: https://discord.gg/zig)
-
-
-## Links
-
-* [Codeberg Mirror](https://codeberg.org/ziex/ziex) - ZX repository mirror on Codeberg
-* [ziex.dev](https://github.com/ziex-dev/ziex/tree/main/site) - Official documentation site of ZX made using ZX.
-* [example-blog](https://github.com/ziex-dev/example-blog) - Demo blog web application built with ZX
-* [zx-numbers-game](https://github.com/Andrew-Velox/zx-numbers-game) - ZX numbers game
-* [Comparision with other frameworks](https://ziex.dev/vs)
+- [Codeberg Mirror](https://codeberg.org/ziex/ziex) - Ziex repository mirror on Codeberg
+- [ziex.dev](https://github.com/ziex-dev/ziex/tree/main/site) - Official documentation site of Ziex made using Ziex.
 
 ## Contributing
 
-Contributions are welcome! Currently trying out ZX and reporting issues for edge cases and providing feedback are greatly appreciated.
+Contributions are welcome! Currently trying out Ziex and reporting issues for edge cases and providing feedback are greatly appreciated.

@@ -118,6 +118,7 @@ pub const PatchType = enum {
     REPLACE,
     MOVE,
     TEXT,
+    RAW_HTML,
 };
 
 pub const PatchData = union(PatchType) {
@@ -150,6 +151,10 @@ pub const PatchData = union(PatchType) {
     TEXT: struct {
         vnode_id: u64,
         new_text: []const u8,
+    },
+    RAW_HTML: struct {
+        vnode_id: u64,
+        html: []const u8,
     },
 };
 
@@ -270,6 +275,23 @@ pub fn diff(
                         });
                     }
 
+                    if (new_element.escaping == .none) {
+                        const old_html = try concatRawText(allocator, old_element.children);
+                        const new_html = try concatRawText(allocator, new_element.children orelse &.{});
+                        old_vnode.component = resolved_component;
+                        old_vnode.key = VNode.extractKey(resolved_component);
+                        if (!std.mem.eql(u8, old_html, new_html)) {
+                            try patches.append(allocator, Patch{
+                                .type = .RAW_HTML,
+                                .data = .{ .RAW_HTML = .{
+                                    .vnode_id = old_vnode.id,
+                                    .html = new_html,
+                                } },
+                            });
+                        }
+                        return;
+                    }
+
                     old_vnode.component = resolved_component;
                     old_vnode.key = VNode.extractKey(resolved_component);
 
@@ -353,6 +375,18 @@ pub fn resolveComponent(allocator: zx.Allocator, component: zx.Component, owner_
 
 fn createVNodeFromComponent(allocator: zx.Allocator, component: zx.Component, owner_component_id: []const u8) anyerror!*VNode {
     return try VNode.createFromComponent(allocator, component, owner_component_id, 0);
+}
+
+fn concatRawText(allocator: zx.Allocator, children: ?[]const zx.Component) ![]const u8 {
+    const list = children orelse return "";
+    var aw = std.Io.Writer.Allocating.init(allocator);
+    for (list) |child| {
+        switch (child) {
+            .text => |t| try aw.writer.writeAll(t),
+            else => {},
+        }
+    }
+    return aw.written();
 }
 
 fn flattenComponents(allocator: zx.Allocator, children: []const zx.Component) ![]const zx.Component {

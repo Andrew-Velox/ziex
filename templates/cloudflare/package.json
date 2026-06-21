@@ -7,10 +7,10 @@
     "dev": "wrangler dev"
   },
   "dependencies": {
-    "ziex": "0.1.0-dev.1103"
+    "ziex": "0.1.0-dev.1227"
   },
   "devDependencies": {
-    "wrangler": "4.95.0",
+    "wrangler": "4.100.0",
     "@zigc/cli": "0.16.0"
   }
 }

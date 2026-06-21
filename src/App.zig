@@ -2,9 +2,10 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const zx = @import("root.zig");
-const server = @import("runtime/server/Server.zig");
-const server_wasi = @import("runtime/server/wasm/entrypoint.zig");
-const client = @import("runtime/client/Client.zig").Client;
+const entry = @import("runtime/core/App.zig");
+const server = entry.Server; // exposes Server(H)
+const server_wasi = entry.Wasm; // exposes run(Init)
+const client = entry.Client.Client;
 const Constant = @import("constant.zig");
 const platform = @import("platform.zig").platform;
 const sig = @import("util/sig.zig");
@@ -47,12 +48,23 @@ pub fn io() Io {
     return threaded_instance.io();
 }
 
-var kv_fs: zx.Kv.Fs = undefined;
-var cache_fs: zx.Kv.Fs = undefined;
+const feat_sqlite_server = zx_options.feat_sqlite_server;
+const feat_kv_server = zx_options.feat_kv_server;
+const feat_kv_client = zx_options.feat_kv_client;
+const feat_cache_server = zx_options.feat_cache_server;
+
+var kv: zx.Kv = undefined;
+var cache: zx.Cache = undefined;
+var db: zx.Db = undefined;
+
+var kv_fs: if (feat_kv_server) zx.Kv.Fs else void = undefined;
+var cache_fs: if (feat_cache_server) zx.Kv.Fs else void = undefined;
 
 var g_datadir: ?[]const u8 = null;
 var g_staticdir: ?[]const u8 = null;
 var g_db_url: ?[]const u8 = null;
+var g_kv_subdir: ?[]const u8 = null;
+var g_cache_subdir: ?[]const u8 = null;
 
 fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Config {
     var resolved = config;
@@ -73,29 +85,52 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
 
     switch (platform.os) {
         .freestanding, .wasi => |os| {
-            if (os == .wasi) zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+            // freestanding => client (browser wasm); wasi => server (server wasm).
+            const wasm_kv_enabled = switch (os) {
+                .wasi => feat_kv_server,
+                else => feat_kv_client,
+            };
 
-            var kv_wasm = zx.Kv.Wasm{};
-            zx.kv = kv_wasm.kv();
+            // Feature ==> zx.db (wasm backend, server-side only)
+            if (comptime feat_sqlite_server) {
+                if (os == .wasi) zx.db = try zx.Db.Wasm.open(null, null, "default", .{});
+            }
+
+            // Feature ==> zx.kv (wasm backend)
+            if (comptime wasm_kv_enabled) {
+                var kv_wasm = zx.Kv.Wasm{};
+                zx.kv = kv_wasm.kv();
+            }
 
             return resolved;
         },
         else => {},
     }
 
-    const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
-    const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
+    // Native target is always server-side from here on.
 
-    kv_fs = .{ .io = init.io, .subdir = kv_subdir };
-    cache_fs = .{ .io = init.io, .subdir = cache_subdir };
+    // Feature ==> zx.kv (filesystem backend)
+    if (comptime feat_kv_server) {
+        const kv_subdir = try std.fs.path.join(alloc, &.{ datadir, "kv" });
+        kv_fs = .{ .io = init.io, .subdir = kv_subdir };
+        kv = kv_fs.kv();
+        zx.kv = kv;
+        g_kv_subdir = kv_subdir;
+    }
 
-    zx.kv = kv_fs.kv();
-    zx.cache = try zx.Cache.init(init.io, alloc, cache_fs.kv(), .{
-        .max_size = resolved.cache.max_size,
-    });
+    // Feature ==> zx.cache (filesystem backend)
+    if (comptime feat_cache_server) {
+        const cache_subdir = try std.fs.path.join(alloc, &.{ datadir, "cache" });
+        cache_fs = .{ .io = init.io, .subdir = cache_subdir };
+        const cache_kv: zx.Kv = cache_fs.kv();
+        cache = try zx.Cache.init(init.io, alloc, cache_kv, .{
+            .max_size = resolved.cache.max_size,
+        });
+        g_cache_subdir = cache_subdir;
+    }
 
-    // Feature ==> zx.Db.Sqlite
-    if (comptime zx_options.feature_sqlite) {
+    // Feature ==> zx.db (sqlite backend)
+    if (comptime feat_sqlite_server) {
         const db_dir = try std.fs.path.join(alloc, &.{ datadir, "db", "default.db" });
         defer alloc.free(db_dir);
         const db_url = try std.fmt.allocPrint(alloc, "file:{s}", .{db_dir});
@@ -111,16 +146,35 @@ fn resolveOptions(alloc: std.mem.Allocator, init: zx.Init, config: Config) !Conf
 
 fn cleanupOptions(alloc: std.mem.Allocator) void {
     if (g_datadir == null) return;
-    if (g_db_url != null) zx.db.deinit();
-    zx.cache.deinit();
-    if (g_db_url) |s| alloc.free(s);
-    if (cache_fs.subdir.len > 0) alloc.free(cache_fs.subdir);
-    if (kv_fs.subdir.len > 0) alloc.free(kv_fs.subdir);
+
+    // Feature ==> zx.db (sqlite backend)
+    if (comptime feat_sqlite_server) {
+        if (g_db_url) |s| {
+            zx.db.deinit();
+            alloc.free(s);
+        }
+    }
+
+    // Feature ==> zx.cache
+    if (comptime feat_cache_server) {
+        if (g_cache_subdir) |s| {
+            zx.cache.deinit();
+            alloc.free(s);
+        }
+    }
+
+    // Feature ==> zx.kv
+    if (comptime feat_kv_server) {
+        if (g_kv_subdir) |s| alloc.free(s);
+    }
+
     if (g_staticdir) |s| alloc.free(s);
     if (g_datadir) |s| alloc.free(s);
     g_datadir = null;
     g_staticdir = null;
     g_db_url = null;
+    g_kv_subdir = null;
+    g_cache_subdir = null;
 }
 
 fn envVar(alloc: std.mem.Allocator, init: zx.Init, name: []const u8) ?[]const u8 {

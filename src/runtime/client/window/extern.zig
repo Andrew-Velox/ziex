@@ -23,6 +23,10 @@ pub extern "__zx" fn _ra(vnode_id: u64, name_ptr: [*]const u8, name_len: usize) 
 /// Set nodeValue on the text node identified by vnode_id.
 pub extern "__zx" fn _snv(vnode_id: u64, ptr: [*]const u8, len: usize) void;
 
+/// Set innerHTML (raw, unescaped HTML) on the element identified by vnode_id.
+/// Used for elements with @escaping={.none}.
+pub extern "__zx" fn _srh(vnode_id: u64, ptr: [*]const u8, len: usize) void;
+
 // DOM tree mutation
 
 /// parent.appendChild(child) - both nodes looked up by vnode_id.

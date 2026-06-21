@@ -1,10 +1,4 @@
 {
-  "cachez": {
-    "repo": "git@github.com:nurulhudaapon/cachez.git",
-    "https": "https://github.com/nurulhudaapon/cachez",
-    "branch": "master",
-    "commit": "51b9d77bec8d9f3717349e9a007ff689959f3479"
-  },
   "cliz": {
     "repo": "git@github.com:nurulhudaapon/cliz.git",
     "https": "https://github.com/nurulhudaapon/cliz",

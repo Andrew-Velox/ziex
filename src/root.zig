@@ -14,7 +14,7 @@ const event = @import("runtime/core/Event.zig");
 const opts = @import("options.zig");
 const ctxs = @import("contexts.zig");
 const reactivity = @import("runtime/client/reactivity.zig");
-const app_mod = @import("App.zig");
+const app_mod = @import("runtime/core/App.zig");
 
 // -- Core Language --//
 pub const Ast = if (!module_options.exclude_core_lang) @import("zx_core_lang").Ast else @compileError("core_lang is excluded. Set exclude-core-lang=false to enable.");
@@ -39,7 +39,7 @@ pub const Init = switch (builtin.os.tag) {
     else => std.process.Init,
 };
 
-pub const App = app_mod.App;
+pub const App = app_mod;
 pub const AppConfig = app_mod.Config;
 
 // --- Namespaces --- //
@@ -60,7 +60,7 @@ pub const RouteOptions = opts.RouteOptions;
 pub const ProxyOptions = opts.ProxyOptions;
 pub const SocketOptions = routing.SocketOptions;
 
-/// --- Contexts --- //
+// --- Contexts --- //
 pub const ProxyContext = ctxs.ProxyContext;
 pub const StaticContext = opts.StaticContext;
 pub const StaticParams = opts.StaticParams;
@@ -99,6 +99,7 @@ pub var kv: Kv = .failing;
 pub var cache: Cache = .failing;
 
 // --- Net --- //
+pub const Http = @import("runtime/core/Http.zig");
 pub const Headers = @import("runtime/core/Headers.zig");
 pub const Fetch = @import("runtime/core/Fetch.zig");
 pub const WebSocket = @import("runtime/core/WebSocket.zig");

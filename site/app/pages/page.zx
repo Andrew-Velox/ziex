@@ -1,21 +1,21 @@
 const features = [_]Feature{
     .{ .icon_fn = icons.Lightning, .title = "Fast Performance", .description = "Significantly faster at SSR than many other frameworks. Optimized for speed and low latency." },
     // .{ .icon_fn = icons.Shield, .title = "Deterministic Safety", .description = "Built on Zig's safety features. Zero undefined behavior at runtime. Predictable and reliable." },
-    .{ .icon_fn = icons.Code, .title = "Familiar Syntax", .description = "Familiar JSX-like syntax, or plain HTML-style markup, with full access to Zig's control flow." },
+    .{ .icon_fn = icons.Code, .title = "Familiar Syntax", .description = "Familiar plain HTML-style markup, with full access to Zig's control flow." },
     // .{ .icon_fn = icons.Globe, .title = "Edge First", .description = "Native support for WASI and Edge runtimes. Deploy to Cloudflare Workers or Vercel Edge with zero config." },
     // .{ .icon_fn = icons.Package, .title = "Zero Dependencies", .description = "Self-contained framework. No node_modules, no external runtimes. Just one small binary." },
-    .{ .icon_fn = icons.Folder, .title = "File System Routing", .description = "Just put files in folders to create routes. Simple and intuitive structure for any scale." },
-    .{ .icon_fn = icons.Server, .title = "API Routes", .description = "Create API endpoints by adding route.zig files to your project. Native Zig performance." },
-    .{ .icon_fn = icons.Monitor, .title = "Hybrid Rendering", .description = "Optional client-side rendering for interactive experiences when you need it. SSR by default." },
+    .{ .icon_fn = icons.Folder, .title = "File System Routing", .description = "Just files in folders to create routes." },
+    .{ .icon_fn = icons.Server, .title = "API Routes", .description = "Create API endpoints by adding route.zig files to your project." },
+    .{ .icon_fn = icons.Monitor, .title = "Hybrid Rendering", .description = "Client-side rendering for interactive experiences when you need it." },
     .{ .icon_fn = icons.Flow, .title = "Control Flow", .description = "if/else, for/while, and switch all work as expected. It's just Zig syntax." },
     .{ .icon_fn = icons.Wrench, .title = "Developer Tooling", .description = "CLI, hot reload, and editor extensions for the best development experience." },
     .{ .icon_fn = icons.Rocket, .title = "Deploy Anywhere", .description = "Standalone binaries, Cloudflare, Vercel, or any edge runtime host. Build once, run anywhere." },
-    .{ .icon_fn = icons.Layers, .title = "Predictable Memory", .description = "Explicit memory management. No GC pauses, no hidden allocations. Total control over your app's footprint." },
+    .{ .icon_fn = icons.Layers, .title = "Predictable Memory", .description = "Explicit memory management of Zig, no hidden allocations." },
 };
 
 const deployments = [_]Deployment{
-    .{ .icon_fn = icons.Terminal, .title = "Standalone", .description = "Deploy as a self-contained binary on Linux, macOS, or Windows. Statically linked with zero runtime dependencies." },
-    .{ .icon_fn = icons.Globe, .title = "Edge Anywhere", .description = "Deploy to the edge via WASI. Native support for Cloudflare and Vercel." },
+    .{ .icon_fn = icons.Terminal, .title = "Standalone", .description = "Deploy as a self-contained binary on Linux, macOS, Windows andy many more platforms that Zig supports." },
+    .{ .icon_fn = icons.Globe, .title = "Edge Anywhere", .description = "Deploy to the edge via WASI. Native bindings for Cloudflare and Vercel." },
     .{ .icon_fn = icons.Layers, .title = "Static", .description = "Generate a statically pre-rendered site at build time. Deploy to GitHub Pages, Netlify, S3, or any CDN." },
     .{ .icon_fn = icons.Package, .title = "Cross-Platform", .description = "Build for any target from any host. Easily cross-compile optimized binaries for x86_64, aarch64, and more." },
 };

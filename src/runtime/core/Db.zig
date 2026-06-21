@@ -6,8 +6,8 @@ userdata: ?*anyopaque = null,
 vtable: *const VTable,
 
 pub const Sqlite = @import("Db/Sqlite.zig");
+pub const Wasm = @import("Db/Wasm.zig");
 pub const Postgres = @import("Db/Postgres.zig");
-pub const Wasm = @import("../server/wasm/db.zig");
 
 pub const DbError = error{
     Unimplemented,

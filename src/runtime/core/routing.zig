@@ -1,6 +1,7 @@
 const std = @import("std");
 const Request = @import("Request.zig");
 const Response = @import("Response.zig");
+const Http = @import("Http.zig");
 
 pub const BaseContext = struct {
     const Self = @This();
@@ -100,69 +101,45 @@ pub const SocketOptions = struct {
 };
 
 pub const Socket = struct {
-    pub const VTable = struct {
-        upgrade: *const fn (ctx: *anyopaque) anyerror!void,
-        upgradeWithData: *const fn (ctx: *anyopaque, data: []const u8) anyerror!void,
-        write: *const fn (ctx: *anyopaque, data: []const u8) anyerror!void,
-        read: *const fn (ctx: *anyopaque) ?[]const u8,
-        close: *const fn (ctx: *anyopaque) void,
-        // Pub/Sub methods
-        subscribe: *const fn (ctx: *anyopaque, topic: []const u8) void,
-        unsubscribe: *const fn (ctx: *anyopaque, topic: []const u8) void,
-        publish: *const fn (ctx: *anyopaque, topic: []const u8, message: []const u8) usize,
-        isSubscribed: *const fn (ctx: *anyopaque, topic: []const u8) bool,
-        // Options
-        setPublishToSelf: *const fn (ctx: *anyopaque, value: bool) void,
+    _internal: Internal = .{},
+
+    pub const Internal = struct {
+        http: Http = .{},
+        /// Whether a real backend has been attached (i.e. the route can upgrade).
+        attached: bool = false,
     };
 
-    backend_ctx: ?*anyopaque = null,
-    vtable: ?*const VTable = null,
-
     pub fn upgrade(self: Socket, data: anytype) !void {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                const DataType = @TypeOf(data);
-                if (DataType == void) {
-                    try vt.upgrade(ctx);
-                } else {
-                    const data_bytes = std.mem.asBytes(&data);
-                    try vt.upgradeWithData(ctx, data_bytes);
-                }
-            }
+        if (!self._internal.attached) return;
+        const DataType = @TypeOf(data);
+        if (DataType == void) {
+            try self._internal.http.wsUpgrade(null);
+        } else {
+            try self._internal.http.wsUpgrade(std.mem.asBytes(&data));
         }
     }
 
     /// Write data to the WebSocket connection.
     /// This should be called from the Socket handler to send messages.
     pub fn write(self: Socket, data: []const u8) !void {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                try vt.write(ctx, data);
-            }
-        }
+        if (!self._internal.attached) return;
+        try self._internal.http.wsWrite(data);
     }
 
     pub fn read(self: Socket) ?[]const u8 {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                return vt.read(ctx);
-            }
-        }
-        return null;
+        if (!self._internal.attached) return null;
+        return self._internal.http.wsRead();
     }
 
     /// Close the WebSocket connection.
     pub fn close(self: Socket) void {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                vt.close(ctx);
-            }
-        }
+        if (!self._internal.attached) return;
+        self._internal.http.wsClose();
     }
 
     /// Returns true if this socket has been upgraded to a WebSocket connection.
     pub fn isUpgraded(self: Socket) bool {
-        return self.backend_ctx != null and self.vtable != null;
+        return self._internal.attached;
     }
 
     // =========================================================================
@@ -178,11 +155,8 @@ pub const Socket = struct {
     /// ctx.socket.subscribe("notifications");
     /// ```
     pub fn subscribe(self: Socket, topic: []const u8) void {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                vt.subscribe(ctx, topic);
-            }
-        }
+        if (!self._internal.attached) return;
+        self._internal.http.wsSubscribe(topic);
     }
 
     /// Unsubscribe from a topic to stop receiving messages.
@@ -192,11 +166,8 @@ pub const Socket = struct {
     /// ctx.socket.unsubscribe("chat-room");
     /// ```
     pub fn unsubscribe(self: Socket, topic: []const u8) void {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                vt.unsubscribe(ctx, topic);
-            }
-        }
+        if (!self._internal.attached) return;
+        self._internal.http.wsUnsubscribe(topic);
     }
 
     /// Publish a message to all subscribers of a topic, excluding the sender.
@@ -207,12 +178,8 @@ pub const Socket = struct {
     /// const sent = ctx.socket.publish("chat-room", "Hello everyone!");
     /// ```
     pub fn publish(self: Socket, topic: []const u8, message: []const u8) usize {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                return vt.publish(ctx, topic, message);
-            }
-        }
-        return 0;
+        if (!self._internal.attached) return 0;
+        return self._internal.http.wsPublish(topic, message);
     }
 
     /// Check if this socket is subscribed to a topic.
@@ -224,12 +191,8 @@ pub const Socket = struct {
     /// }
     /// ```
     pub fn isSubscribed(self: Socket, topic: []const u8) bool {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                return vt.isSubscribed(ctx, topic);
-            }
-        }
-        return false;
+        if (!self._internal.attached) return false;
+        return self._internal.http.wsIsSubscribed(topic);
     }
 
     /// Configure whether publish() sends to self.
@@ -240,11 +203,8 @@ pub const Socket = struct {
     /// // Now publish() will include the sender
     /// ```
     pub fn setPublishToSelf(self: Socket, value: bool) void {
-        if (self.vtable) |vt| {
-            if (self.backend_ctx) |ctx| {
-                vt.setPublishToSelf(ctx, value);
-            }
-        }
+        if (!self._internal.attached) return;
+        self._internal.http.wsSetPublishToSelf(value);
     }
 
     /// Configure socket options.

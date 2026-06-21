@@ -12,6 +12,7 @@
         .bunjs = .{ .path = "../pkg/plugin-bun" },
         .esbuild = .{ .path = "../pkg/plugin-esbuild" },
         .tailwindcss = .{ .path = "../pkg/plugin-tailwindcss" },
+        .ui = .{ .path = "../pkg/ui" },
     },
     .paths = .{
         "build.zig",

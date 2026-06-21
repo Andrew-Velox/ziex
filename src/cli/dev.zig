@@ -68,7 +68,7 @@ var g_dev_shutting_down: bool = false;
 fn onDevShutdown() void {
     if (g_dev_shutting_down) return;
     g_dev_shutting_down = true;
-    std.debug.print("\n{s}Stopping dev server...{s}\n", .{ Colors.gray, Colors.reset });
+    std.debug.print("\n{s}Stopping dev server...{s}", .{ Colors.gray, Colors.reset });
     if (comptime builtin.os.tag != .windows) {
         if (runner) |r| if (r.id) |pid| std.posix.kill(pid, std.posix.SIG.KILL) catch {};
         if (builder) |b| if (b.id) |pid| std.posix.kill(pid, std.posix.SIG.KILL) catch {};

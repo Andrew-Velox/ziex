@@ -6,8 +6,8 @@
     "deploy": "vercel deploy --prebuilt"
   },
   "devDependencies": {
-    "@ziex/cli": "0.1.0-dev.1103",
+    "@ziex/cli": "0.1.0-dev.1252",
     "@zigc/cli": "0.16.0",
-    "vercel": "^54.7.1"
+    "vercel": "^54.14.0"
   }
 }

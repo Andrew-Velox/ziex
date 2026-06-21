@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: ziex-app
+    env: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
