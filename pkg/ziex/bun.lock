@@ -5,13 +5,12 @@
     "": {
       "name": "ziex",
       "dependencies": {
-        "@ziex/cli": "0.1.0-dev.8640",
+        "@ziex/cli": "0.1.0-dev.1252",
       },
       "devDependencies": {
         "@types/bun": "latest",
         "@types/react": "latest",
         "@types/react-dom": "latest",
-        "jsz": "github:nurulhudaapon/jsz",
         "zzon": "^1.7.1",
       },
       "peerDependencies": {
@@ -34,25 +33,23 @@
 
     "@types/react-dom": ["@types/react-dom@19.2.3", "", { "peerDependencies": { "@types/react": "^19.2.0" } }, "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ=="],
 
-    "@ziex/cli": ["@ziex/cli@0.1.0-dev.8640", "", { "optionalDependencies": { "@ziex/cli-darwin-arm64": "0.1.0-dev.865", "@ziex/cli-darwin-x64": "0.1.0-dev.865", "@ziex/cli-linux-arm64": "0.1.0-dev.865", "@ziex/cli-linux-x64": "0.1.0-dev.865", "@ziex/cli-win32-arm64": "0.1.0-dev.865", "@ziex/cli-win32-x64": "0.1.0-dev.865" }, "bin": { "zx": "bin/ziex", "ziex": "bin/ziex" } }, "sha512-smZGGI6h+AZr7ViV9fyZJQYcE8SwsbYx3HgoHhaYnTwzstc2votstiuNm9CDbuhuXbUEJW3XBmTq/e365v0fOw=="],
+    "@ziex/cli": ["@ziex/cli@0.1.0-dev.1252", "", { "optionalDependencies": { "@ziex/cli-darwin-arm64": "0.1.0-dev.1252", "@ziex/cli-darwin-x64": "0.1.0-dev.1252", "@ziex/cli-linux-arm64": "0.1.0-dev.1252", "@ziex/cli-linux-x64": "0.1.0-dev.1252", "@ziex/cli-win32-arm64": "0.1.0-dev.1252", "@ziex/cli-win32-x64": "0.1.0-dev.1252" }, "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-siZtnH+6ato28+KTA4RGR5mWSkRfKUy54bOwb/Dz9Tv/jdzNg+75QTn7TSAA589qupFU59TSGMDidnulRtJ3lw=="],
 
-    "@ziex/cli-darwin-arm64": ["@ziex/cli-darwin-arm64@0.1.0-dev.865", "", { "os": "darwin", "cpu": "arm64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-PID2MKsGFxMBrYxNQPT5GsuA6zv7EDrg8T27Bjn4924AMwd+MILoA4+jOG0/ybGhaMG3axm92NIB9pzf6YHsEw=="],
+    "@ziex/cli-darwin-arm64": ["@ziex/cli-darwin-arm64@0.1.0-dev.1252", "", { "os": "darwin", "cpu": "arm64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-lv+GwFkDVWPjkZtW7r0UJ/puReITyRcSGCnToEOC6cBT08NDpqH6WkP4Ar2Qgkd+fZLi+EKiqGtzul3O9Zi17Q=="],
 
-    "@ziex/cli-darwin-x64": ["@ziex/cli-darwin-x64@0.1.0-dev.865", "", { "os": "darwin", "cpu": "x64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-pCm+BGhpS48vzx9H3s+aP/YvuIgqX7ogj1CfldXrZraiID6gaBXn9gJl5Zgbu0FpVi0fYf0pd4G+NpKnBBCu2Q=="],
+    "@ziex/cli-darwin-x64": ["@ziex/cli-darwin-x64@0.1.0-dev.1252", "", { "os": "darwin", "cpu": "x64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-x9V/NKoJ9aVXJV5coB+ZkEDRApoMw5ERoQuWKHWr7xEMyq7icuK40sbQjtyrAGcW9AQR16qBXanT5fKwlWLCpw=="],
 
-    "@ziex/cli-linux-arm64": ["@ziex/cli-linux-arm64@0.1.0-dev.865", "", { "os": "linux", "cpu": "arm64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-k7Zb0v3r8ywQl44AamDUotei6mdCFM/8fAuWecI1LDkxmRfxiK4FN6LWiNaQRerKa+HrI1bi3kioaNyWuBoakA=="],
+    "@ziex/cli-linux-arm64": ["@ziex/cli-linux-arm64@0.1.0-dev.1252", "", { "os": "linux", "cpu": "arm64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-PuVGbwj+5IXr35cC8aJu/Vfg0M0Z95GLH6D4yb5SsDLj9zyV0+OpT783GXVWSro5D7M7BVHcXRhI4X0ctuQPnQ=="],
 
-    "@ziex/cli-linux-x64": ["@ziex/cli-linux-x64@0.1.0-dev.865", "", { "os": "linux", "cpu": "x64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-c4l0OGl2P8XrSaDhuqRNbC0lQjsmIJ5Fw9aekl9JDzfV3VRefuiWW4LbcXERpHd6x60D9PnTo3swhdYkeLmffQ=="],
+    "@ziex/cli-linux-x64": ["@ziex/cli-linux-x64@0.1.0-dev.1252", "", { "os": "linux", "cpu": "x64", "bin": { "zx": "bin/zx", "ziex": "bin/zx" } }, "sha512-BnHRb06WMdFTLLzt/JlBmrZ31nA5X1mK9KqpySgtE1ZpXGi5/WL93YpDpunCrr/vfihMWo59Gi/bRIZe7yKTpg=="],
 
-    "@ziex/cli-win32-arm64": ["@ziex/cli-win32-arm64@0.1.0-dev.865", "", { "os": "win32", "cpu": "arm64", "bin": { "zx": "bin/zx.exe", "ziex": "bin/zx.exe" } }, "sha512-/arptYcXTiyLbImN6+dO8T3z9tcjby6qYP0CDiZhg9XT4rsX+q2lcVU4FALS2EJq/l1tS8pT3f0bZR+X0ye93w=="],
+    "@ziex/cli-win32-arm64": ["@ziex/cli-win32-arm64@0.1.0-dev.1252", "", { "os": "win32", "cpu": "arm64", "bin": { "zx": "bin/zx.exe", "ziex": "bin/zx.exe" } }, "sha512-gTNQdEAJQhfYFPUCxReG9zf94tF9mGXEVyh0xgINBDPbR7B7FQXbpiS9U5qX2LrWK5+Vi2jbnwVQ80nMSTq+hw=="],
 
-    "@ziex/cli-win32-x64": ["@ziex/cli-win32-x64@0.1.0-dev.865", "", { "os": "win32", "cpu": "x64", "bin": { "zx": "bin/zx.exe", "ziex": "bin/zx.exe" } }, "sha512-BaRyHSUR1TEfph+uqnU8UCVEuTqqKUnJxgQGC6CppLPmK54dOn/QdOl/wiqbThd82aNfSz5QQnB7ITi/kcmfcw=="],
+    "@ziex/cli-win32-x64": ["@ziex/cli-win32-x64@0.1.0-dev.1252", "", { "os": "win32", "cpu": "x64", "bin": { "zx": "bin/zx.exe", "ziex": "bin/zx.exe" } }, "sha512-USIU2d7mqmIGBIF/wGNIAFkLuXmTpfhWqt1B16F2jikS/x1mg/lw8XQORM1NYYoUksttINc0w2g6bZ4kq+FuAw=="],
 
     "bun-types": ["bun-types@1.3.11", "", { "dependencies": { "@types/node": "*" } }, "sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg=="],
 
     "csstype": ["csstype@3.2.3", "", {}, "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ=="],
-
-    "jsz": ["jsz@github:nurulhudaapon/jsz#04db83c", {}, "nurulhudaapon-jsz-04db83c", "sha512-i9dg1qJzFLWgDS280Vpa0Mgi9oFoFNO07vM+lGDkvhL+NrmaE4gDcS904nP1sN3+iZoE3hqCiwHv0hua/0M+eg=="],
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
