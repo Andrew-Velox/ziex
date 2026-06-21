@@ -252,6 +252,15 @@ pub fn build(b: *std.Build) !void {
         .install_subdir = "static/assets/playground",
     });
     b.default_step.dependOn(&install_playground_scripts.step);
+
+    const branding_dep = b.dependency("branding", .{});
+    const install_branding = b.addInstallDirectory(.{
+        .source_dir = branding_dep.path("."),
+        .install_dir = .prefix,
+        .install_subdir = "static/assets/branding",
+        .include_extensions = &.{ "webp", "svg", "png", "gif" },
+    });
+    b.default_step.dependOn(&install_branding.step);
 }
 
 const bunjs = @import("bunjs");
