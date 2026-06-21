@@ -60,6 +60,16 @@ node_modules/
 !node/package.json
 !node/README.md
 
+# railway template
+!railway/railway.json
+!railway/README.md
+!railway/Dockerfile
+!railway/compose.yml
+!railway/.dockerignore
+
 # render template
 !render/render.yaml
 !render/README.md
+!render/Dockerfile
+!render/compose.yml
+!render/.dockerignore

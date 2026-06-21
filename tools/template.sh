@@ -102,6 +102,19 @@ populate_template() {
             cp "$base_file" "$target_file"
         fi
     done
+
+    # Copy _docker files (Dockerfile, compose.yml, .dockerignore)
+    if [ -d "templates/_docker" ]; then
+        find "templates/_docker" -type f | while read -r docker_file; do
+            rel_path="${docker_file#templates/_docker/}"
+            target_file="templates/$template/$rel_path"
+
+            if ! git check-ignore -q "$target_file"; then
+                mkdir -p "$(dirname "$target_file")"
+                sed -e 's/\$BIN_NAME/ziex_app/g' -e 's/\$PORT/3000/g' "$docker_file" > "$target_file"
+            fi
+        done
+    fi
 }
 
 clean_template() {
@@ -120,9 +133,18 @@ clean_template() {
     fi
 
     cd "$ROOT_DIR"
-    # Use git to list ignored files and remove them
+    # Remove ignored files (populated from _base)
     # Note: we use -X to remove only ignored files, -d to remove directories if empty
     git clean -fdX "templates/$template/"
+
+    # Remove files that were copied from _base/_docker but are unignored
+    for populated_file in .gitignore .gitattributes Dockerfile compose.yml .dockerignore; do
+        local target_file="templates/$template/$populated_file"
+        # Only remove if the file is not tracked by git (i.e., not committed)
+        if [ -f "$target_file" ] && ! git ls-files --error-unmatch "$target_file" 2>/dev/null; then
+            rm -f "$target_file"
+        fi
+    done
 }
 
 diff_template() {
