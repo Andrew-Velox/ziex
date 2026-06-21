@@ -290,13 +290,12 @@ pub fn initInner(
     zx_module.addOptions("zx_options", zx_options);
 
     // --- Dirs Setup --- //
-    // TODO: b.install_path alternative for zig 0.17, using hardcoded zig-out for now
-    const static_lazypath: LazyPath = if (opts.static_path) |p| p else .{ .cwd_relative = b.pathJoin(&.{ "zig-out", "static" }) };
+    const static_lazypath = b.graph.path(.install_prefix, "static");
     const assetsdir = static_lazypath.path(b, "assets");
 
     // --- ZX Transpilation ---
     const transpile_cmd = getZxRun(b, zx_exe, opts);
-    transpile_cmd.setName("zx transpile");
+    transpile_cmd.setName("translate-zx");
     transpile_cmd.addArg("transpile");
     transpile_cmd.addDirectoryArg(opts.site_path);
     // transpile_cmd.addArg("--verbose");
@@ -311,9 +310,9 @@ pub fn initInner(
     }
     // Always generate inlined sourcemaps so dev mode can remap errors to .zx files
     transpile_cmd.addArgs(&.{ "--map", "inline" });
-    // TODO: b.cache_root.path alternative for zig 0.17, using hardcoded .zig-cache for now
-    const cache_path_arg = b.pathJoin(&.{ ".zig-cache", "zx_transpile" });
-    transpile_cmd.addArgs(&.{ "--cache-dir", cache_path_arg });
+    // TODO: Instead of using named zx_transpile path, figoure out a way to use persistant outputDirectoryArg
+    transpile_cmd.addArgs(&.{"--cache-dir"});
+    transpile_cmd.addDirectoryArg(b.graph.path(.local_cache, "zx_transpile"));
     transpile_cmd.expectExitCode(0);
 
     const zxjs_default_href = "/assets/_/main.js";
@@ -601,8 +600,7 @@ pub fn initInner(
             "--binpath",
         });
 
-        // TODO: find out replacement of b.exe_dir for zig 0.17, using hardcoded zig-out/bin for now
-        dev_cmd.addArg(b.pathJoin(&.{ "zig-out", "bin", exe.out_filename }));
+        dev_cmd.addFileArg(b.graph.path(.install_bin, exe.out_filename));
         const dev_step = b.step(dev_step_name, "Run the Ziex app in development mode");
         dev_step.dependOn(&dev_cmd.step);
         dev_cmd.addPassthruArgs();
