@@ -240,7 +240,22 @@ async function main() {
   }
 
   outro(`Successfully created ${color.cyan(project)}!`);
-  console.log(`\n  cd ${project}\n  zig build dev\n`);
+  const is_node = template === 'node';
+  if (is_node) {
+    console.log(`
+    cd ${project}
+    npm i
+    npm run dev
+    
+    `);
+  }
+  else {
+    console.log(`
+    cd ${project}
+    zig build dev
+    
+    `);
+  }
 }
 
 // Make sure project name is suported Zig identifier
