@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://ziex.dev/branding/assets/banner-animated.svg" alt="Ziex banner" width="100%" />
+    <img src="https://raw.githubusercontent.com/ziex-dev/branding/main/banner-animated.svg" alt="Ziex banner" width="100%" />
 </p>
 
 A full-stack web framework for Zig. Declarative UI components using familiar patterns, with full access to Zig's control flow.
