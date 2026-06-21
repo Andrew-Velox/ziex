@@ -1,14 +1,13 @@
 const std = @import("std");
 const zli = @import("zli");
 const core_lang = @import("core_lang");
-const log = std.log.scoped(.cli);
-const util = @import("shared/util.zig");
-const flags = @import("shared/flag.zig");
-const base64 = std.base64.standard;
 
-// ============================================================================
-// Command Registration
-// ============================================================================
+const util = @import("shared/util.zig");
+const AppContext = @import("shared/context.zig").AppContext;
+const flags = @import("shared/flag.zig");
+
+const base64 = std.base64.standard;
+const log = std.log.scoped(.cli);
 
 const outdir_flag = zli.Flag{
     .name = "outdir",
@@ -83,148 +82,180 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 }
 
 fn transpile(ctx: zli.CommandContext) !void {
+    const app = AppContext.from(&ctx);
+    const io = app.io;
     const outdir = ctx.flag("outdir", []const u8);
-
     const copy_only = ctx.flag("copy-only", bool);
     const verbose = ctx.flag("verbose", bool);
-    const sourcemap_str = ctx.flag("map", []const u8);
-    const rootdir_str = ctx.flag("rootdir", []const u8);
-    const rootdir: ?[]const u8 = if (rootdir_str.len > 0) rootdir_str else null;
-    const depfile_str = ctx.flag("dep-file", []const u8);
-    const dep_file: ?[]const u8 = if (depfile_str.len > 0) depfile_str else null;
-    const cache_dir_str = ctx.flag("cache-dir", []const u8);
-    const cache_dir: ?[]const u8 = if (cache_dir_str.len > 0) cache_dir_str else null;
-    const base_path_str = ctx.flag("base-path", []const u8);
-    const base_path: ?[]const u8 = if (base_path_str.len > 0) base_path_str else null;
-    const map: core_lang.Ast.ParseOptions.MapMode = if (std.mem.eql(u8, sourcemap_str, "inline"))
-        .inlined
-    else if (std.mem.eql(u8, sourcemap_str, "none"))
-        .none
-    else if (sourcemap_str.len > 0 and !std.mem.eql(u8, sourcemap_str, "none"))
-        .{ .file = sourcemap_str }
-    else
-        .none;
-    const path = ctx.getArg("path") orelse {
-        try ctx.writer.print("Missing path arg\n", .{});
-        return;
+    const map = parseMapMode(ctx.flag("map", []const u8));
+
+    var arena = std.heap.ArenaAllocator.init(ctx.allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
+    const opts: TranspileOptions = .{
+        .path = ctx.getArg("path") orelse {
+            try ctx.writer.print("Missing path arg\n", .{});
+            return;
+        },
+        .outdir = outdir,
+        .verbose = verbose,
+        .map = map,
+        .rootdir = nonEmpty(ctx.flag("rootdir", []const u8)),
+        .dep_file = nonEmpty(ctx.flag("dep-file", []const u8)),
+        .cache_dir = nonEmpty(ctx.flag("cache-dir", []const u8)),
+        .base_path = nonEmpty(ctx.flag("base-path", []const u8)),
     };
 
     if (verbose) {
-        std.debug.print("Transpiling: {s} -> {s} (copy_only: {any}, verbose: {any})\n", .{ path, outdir, copy_only, verbose });
+        std.debug.print("Transpiling: {s} -> {s} (copy_only: {any}, verbose: {any})\n", .{ opts.path, outdir, copy_only, verbose });
     }
 
-    // std.debug.print("Copying only the files to the output directory: from {s} to {s} (copy_only: {any})\n", .{ path, outdir, copy_only });
-    // We no longer copy assets/public here, as it's now handled by the Zig build system
-
-    if (copy_only) return copyOnly(ctx, path, outdir) catch |err| {
-        std.debug.print("Error: Could not copy path '{s} -> {s}': {}\n", .{ path, outdir, err });
+    if (copy_only) return copyOnly(io, allocator, opts.path, outdir) catch |err| {
+        std.debug.print("Error: Could not copy path '{s} -> {s}': {}\n", .{ opts.path, outdir, err });
         return err;
     };
+    const is_default_outdir = std.mem.eql(u8, outdir, ".zx");
 
-    // Check if path is a file and outdir is default
-    const default_outdir = ".zx";
-    const is_default_outdir = std.mem.eql(u8, outdir, default_outdir);
-
-    const io = std.Io.Threaded.global_single_threaded.io();
-
-    // Check if path is a file (not a directory)
-    const stat = std.Io.Dir.cwd().statFile(io, path, .{}) catch |err| switch (err) {
-        error.IsDir => {
-            // It's a directory, proceed with normal transpileCommand
-            try transpileCommand(ctx.allocator, .{
-                .path = path,
-                .outdir = outdir,
-                .verbose = verbose,
-                .map = map,
-                .rootdir = rootdir,
-                .dep_file = dep_file,
-                .cache_dir = cache_dir,
-                .base_path = base_path,
-            });
-            return;
-        },
+    // If the path is a file whose extension is .zx/.mdzx and the user kept the
+    // default outdir, write the transpiled source directly to stdout.
+    const stat = std.Io.Dir.cwd().statFile(io, opts.path, .{}) catch |err| switch (err) {
+        error.IsDir => return transpileCommand(io, allocator, opts),
         else => {
-            std.debug.print("Error: Could not access path '{s}': {}\n", .{ path, err });
+            std.debug.print("Error: Could not access path '{s}': {}\n", .{ opts.path, err });
             return err;
         },
     };
 
-    // Path is a file
-    if (stat.kind == .file) {
-        const is_zx = std.mem.endsWith(u8, path, ".zx");
-        const is_mdzx = std.mem.endsWith(u8, path, ".mdzx");
-
-        if (is_zx or is_mdzx) {
-            // If outdir is default and path is a file, output to stdout
-            if (is_default_outdir) {
-                // Read the source file
-                const source = try std.Io.Dir.cwd().readFileAlloc(io, path, ctx.allocator, std.Io.Limit.limited(std.math.maxInt(usize)));
-                defer ctx.allocator.free(source);
-
-                const source_z = try ctx.allocator.dupeSentinel(u8, source, 0);
-                defer ctx.allocator.free(source_z);
-
-                // Parse and transpile
-                var result = try core_lang.Ast.parse(ctx.allocator, source_z, .{ .path = path, .map = map });
-                defer result.deinit(ctx.allocator);
-
-                // Output to stdout
-                try ctx.writer.writeAll(result.zig_source);
-
-                // Handle sourcemap for stdout output
-                if (result.sourcemap) |sm| {
-                    switch (map) {
-                        .none => {},
-                        .file => |map_path| {
-                            // Write sourcemap to the specified file
-                            const sourcemap_json = try sm.toJSON(
-                                ctx.allocator,
-                                path,
-                                path,
-                                source,
-                                result.zig_source,
-                            );
-                            defer ctx.allocator.free(sourcemap_json);
-
-                            try std.Io.Dir.cwd().writeFile(io, .{
-                                .sub_path = map_path,
-                                .data = sourcemap_json,
-                            });
-                        },
-                        .inlined => {
-                            // Append inline sourcemap to stdout
-                            const sourcemap_json = try sm.toJSON(
-                                ctx.allocator,
-                                path,
-                                path,
-                                source,
-                                null,
-                            );
-                            defer ctx.allocator.free(sourcemap_json);
-
-                            const base64_encoded = try base64Encode(ctx.allocator, sourcemap_json);
-                            defer ctx.allocator.free(base64_encoded);
-
-                            try ctx.writer.print("\n//# sourceMappingURL=data:application/json;base64,{s}\n", .{base64_encoded});
-                        },
-                    }
-                }
-                return;
-            }
-        }
+    if (stat.kind == .file and is_default_outdir and zxExtLen(opts.path) != null) {
+        try transpileToStdout(ctx, io, opts.path, map);
+        return;
     }
 
-    // Otherwise, proceed with normal transpileCommand
-    try transpileCommand(ctx.allocator, .{
-        .path = path,
-        .outdir = outdir,
-        .verbose = verbose,
-        .map = map,
-        .rootdir = rootdir,
-        .dep_file = dep_file,
-        .cache_dir = cache_dir,
-        .base_path = base_path,
-    });
+    try transpileCommand(io, allocator, opts);
+}
+
+/// Parse the `--map` flag value into a `MapMode`.
+fn parseMapMode(sourcemap_str: []const u8) core_lang.Ast.ParseOptions.MapMode {
+    if (std.mem.eql(u8, sourcemap_str, "inline")) return .inlined;
+    if (sourcemap_str.len == 0 or std.mem.eql(u8, sourcemap_str, "none")) return .none;
+    return .{ .file = sourcemap_str };
+}
+
+/// Transpile a single .zx/.mdzx file and write the result to stdout, emitting
+/// the configured sourcemap alongside it.
+fn transpileToStdout(ctx: zli.CommandContext, io: std.Io, path: []const u8, map: core_lang.Ast.ParseOptions.MapMode) !void {
+    const allocator = ctx.allocator;
+
+    const source = try readFile(io, allocator, path);
+    defer allocator.free(source);
+
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
+    defer allocator.free(source_z);
+
+    var result = try core_lang.Ast.parse(allocator, source_z, .{ .path = path, .map = map });
+    defer result.deinit(allocator);
+
+    try ctx.writer.writeAll(result.zig_source);
+
+    if (result.sourcemap) |sm| switch (map) {
+        .none => {},
+        .file => |map_path| {
+            const sourcemap_json = try sm.toJSON(allocator, path, path, source, result.zig_source);
+            defer allocator.free(sourcemap_json);
+            try writeFile(io, map_path, sourcemap_json);
+        },
+        .inlined => {
+            const sourcemap_json = try sm.toJSON(allocator, path, path, source, null);
+            defer allocator.free(sourcemap_json);
+            const encoded = try base64Encode(allocator, sourcemap_json);
+            defer allocator.free(encoded);
+            try ctx.writer.print("\n//# sourceMappingURL=data:application/json;base64,{s}\n", .{encoded});
+        },
+    };
+}
+
+/// Return the slice when non-empty, otherwise `null`.
+fn nonEmpty(s: []const u8) ?[]const u8 {
+    return if (s.len > 0) s else null;
+}
+
+/// Whether a path exists relative to the cwd.
+fn fileExists(io: std.Io, path: []const u8) bool {
+    std.Io.Dir.cwd().access(io, path, .{}) catch return false;
+    return true;
+}
+
+/// Create a directory path, ignoring "already exists".
+fn createDirSafe(io: std.Io, path: []const u8) !void {
+    std.Io.Dir.cwd().createDirPath(io, path) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
+}
+
+fn writeFile(io: std.Io, path: []const u8, data: []const u8) !void {
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = data });
+}
+
+fn copyFileSafe(io: std.Io, src: []const u8, dst: []const u8) !void {
+    try std.Io.Dir.cwd().copyFile(src, std.Io.Dir.cwd(), dst, io, .{});
+}
+
+fn readFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    return std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .unlimited);
+}
+
+/// Length of a `.zx`/`.mdzx` suffix, or `null` if the path is neither.
+fn zxExtLen(path: []const u8) ?usize {
+    if (std.mem.endsWith(u8, path, ".mdzx")) return ".mdzx".len;
+    if (std.mem.endsWith(u8, path, ".zx")) return ".zx".len;
+    return null;
+}
+
+/// Convert `[param]` segments into `:param` (drops the brackets). The returned
+/// slice is owned by `allocator`.
+fn normalizeRoutePath(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    var out = std.array_list.Managed(u8).init(allocator);
+    errdefer out.deinit();
+    for (path) |c| {
+        if (c == '[') {
+            try out.append(':');
+        } else if (c != ']') {
+            try out.append(c);
+        }
+    }
+    return out.toOwnedSlice();
+}
+
+/// Replace every occurrence of `needle` in `haystack` with `replacement`.
+/// Caller owns the returned slice.
+fn replaceAll(allocator: std.mem.Allocator, haystack: []const u8, needle: []const u8, replacement: []const u8) ![]u8 {
+    return std.mem.replaceOwned(u8, allocator, haystack, needle, replacement);
+}
+
+/// `replaceAll` that frees the input buffer.
+fn replaceAllOwned(allocator: std.mem.Allocator, input: []u8, needle: []const u8, replacement: []const u8) ![]u8 {
+    const out = try replaceAll(allocator, input, needle, replacement);
+    allocator.free(input);
+    return out;
+}
+
+/// Strip the `"@`/`@"` placeholder markers, collapse `@@@`→`@` and `@@`→`"`,
+/// and trim a trailing lone `@`. These markers carry quotes/signifiers through
+/// ZON/JSON serialization so they survive into the generated registry.
+fn stripPlaceholders(allocator: std.mem.Allocator, src: []const u8) ![]u8 {
+    var s = try replaceAll(allocator, src, "\"@", "");
+    s = try replaceAllOwned(allocator, s, "@\"", "");
+    s = try replaceAllOwned(allocator, s, "@@@", "@");
+    s = try replaceAllOwned(allocator, s, "@@", "\"");
+    if (s.len > 0 and s[s.len - 1] == '@') {
+        const trimmed = try allocator.dupe(u8, s[0 .. s.len - 1]);
+        allocator.free(s);
+        s = trimmed;
+    }
+    return s;
 }
 
 fn base64Encode(allocator: std.mem.Allocator, data: []const u8) ![]const u8 {
@@ -234,9 +265,30 @@ fn base64Encode(allocator: std.mem.Allocator, data: []const u8) ![]const u8 {
     return encoded;
 }
 
+/// Append an inline `//# sourceMappingURL=...` comment to `output_path`.
+fn writeInlineSourcemap(
+    io: std.Io,
+    allocator: std.mem.Allocator,
+    output_path: []const u8,
+    json: []const u8,
+) !void {
+    const encoded = try base64Encode(allocator, json);
+    defer allocator.free(encoded);
+    const comment = try std.fmt.allocPrint(
+        allocator,
+        "\n//# sourceMappingURL=data:application/json;base64,{s}\n",
+        .{encoded},
+    );
+    defer allocator.free(comment);
+    var file = try std.Io.Dir.cwd().openFile(io, output_path, .{ .mode = .read_write });
+    defer file.close(io);
+    const len = try file.length(io);
+    try file.writePositionalAll(io, comment, len);
+}
+
 // ---- Dep File ---- //
 
-fn writeDepFile(allocator: std.mem.Allocator, path: []const u8, target: []const u8, deps: []const []const u8) !void {
+fn writeDepFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8, target: []const u8, deps: []const []const u8) !void {
     var buf = std.ArrayList(u8).empty;
     defer buf.deinit(allocator);
     try buf.appendSlice(allocator, target);
@@ -252,7 +304,6 @@ fn writeDepFile(allocator: std.mem.Allocator, path: []const u8, target: []const 
         }
     }
     try buf.appendSlice(allocator, "\n");
-    const io = std.Io.Threaded.global_single_threaded.io();
     const f = try std.Io.Dir.cwd().createFile(io, path, .{});
     defer f.close(io);
     try f.writePositionalAll(io, buf.items, 0);
@@ -263,14 +314,13 @@ fn writeDepFile(allocator: std.mem.Allocator, path: []const u8, target: []const 
 /// same relative spelling (so the emitted `@embedFile` resolves at compile time)
 /// and record its absolute source path in `input_files` for the dep file.
 fn collectEmbedFiles(
+    io: std.Io,
     allocator: std.mem.Allocator,
     input_files: *std.array_list.Managed([]const u8),
     ast: *const std.zig.Ast,
     source_dir: []const u8,
     out_dir: []const u8,
 ) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
-
     for (0..ast.nodes.len) |i| {
         const node: std.zig.Ast.Node.Index = @enumFromInt(i);
         switch (ast.nodeTag(node)) {
@@ -295,9 +345,9 @@ fn collectEmbedFiles(
         const dst = std.fs.path.join(allocator, &.{ out_dir, embed_path }) catch continue;
         defer allocator.free(dst);
         if (std.fs.path.dirname(dst)) |parent| {
-            std.Io.Dir.cwd().createDirPath(io, parent) catch {};
+            createDirSafe(io, parent) catch {};
         }
-        std.Io.Dir.cwd().copyFile(src, std.Io.Dir.cwd(), dst, io, .{}) catch |err| {
+        copyFileSafe(io, src, dst) catch |err| {
             std.debug.print("Warning: Could not copy embedded file {s}: {}\n", .{ src, err });
         };
 
@@ -309,19 +359,14 @@ fn collectEmbedFiles(
 /// Re-run the `@embedFile` copy for a cached `.zx`/`.mdzx` whose transpilation was
 /// skipped. On a cache hit `transpileFile` (and thus `collectEmbedFiles`) never runs
 fn copyEmbedsForCached(
+    io: std.Io,
     allocator: std.mem.Allocator,
     input_files: *std.array_list.Managed([]const u8),
     zig_path: []const u8,
     source_dir: []const u8,
     out_dir: []const u8,
 ) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
-    const zig_src = try std.Io.Dir.cwd().readFileAlloc(
-        io,
-        zig_path,
-        allocator,
-        std.Io.Limit.limited(std.math.maxInt(usize)),
-    );
+    const zig_src = try readFile(io, allocator, zig_path);
     defer allocator.free(zig_src);
 
     const zig_src_z = try allocator.dupeSentinel(u8, zig_src, 0);
@@ -330,20 +375,19 @@ fn copyEmbedsForCached(
     var ast = try std.zig.Ast.parse(allocator, zig_src_z, .zig);
     defer ast.deinit(allocator);
 
-    try collectEmbedFiles(allocator, input_files, &ast, source_dir, out_dir);
+    try collectEmbedFiles(io, allocator, input_files, &ast, source_dir, out_dir);
 }
 
 /// Walk the transpiled Zig AST (`ast`, already produced by `core_lang.Ast.parse`)
 /// and append each `@import("...")` target that resolves to an existing
 /// `.zx`/`.mdzx` source (relative to `source_dir`) to `out`.
 fn collectZxImports(
+    io: std.Io,
     allocator: std.mem.Allocator,
     out: *std.array_list.Managed([]const u8),
     ast: *const std.zig.Ast,
     source_dir: []const u8,
 ) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
-
     for (0..ast.nodes.len) |i| {
         const node: std.zig.Ast.Node.Index = @enumFromInt(i);
         switch (ast.nodeTag(node)) {
@@ -392,6 +436,7 @@ fn collectZxImports(
 /// `.zx`/`.mdzx` file it `@import`s (resolved relative to the importing file)
 /// into the same `outdir`.
 fn transpileFileRecursive(
+    io: std.Io,
     allocator: std.mem.Allocator,
     global_components: *std.array_list.Managed(ClientComponentSerializable),
     opts: TranspileOptions,
@@ -416,7 +461,7 @@ fn transpileFileRecursive(
         for (imports.items) |p| allocator.free(p);
         imports.deinit();
     }
-    try transpileFile(allocator, global_components, opts, source_path, output_path, &imports, input_files);
+    try transpileFile(io, allocator, global_components, opts, source_path, output_path, &imports, input_files);
 
     const source_dir = std.fs.path.dirname(source_path) orelse ".";
     const out_dir = std.fs.path.dirname(output_path) orelse opts.outdir;
@@ -432,29 +477,29 @@ fn transpileFileRecursive(
         const dep_output = try std.fs.path.join(allocator, &.{ out_dir, out_rel });
         defer allocator.free(dep_output);
 
-        try transpileFileRecursive(allocator, global_components, opts, dep_source, dep_output, visited, input_files);
+        try transpileFileRecursive(io, allocator, global_components, opts, dep_source, dep_output, visited, input_files);
     }
 }
 
 // ---- Component Cache (per-file incremental) ---- //
 
 fn writeComponentCache(
+    io: std.Io,
     allocator: std.mem.Allocator,
     cache_path: []const u8,
     components: []const ClientComponentSerializable,
 ) !void {
     const json = try std.json.Stringify.valueAlloc(allocator, components, .{});
     defer allocator.free(json);
-    const io = std.Io.Threaded.global_single_threaded.io();
-    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = cache_path, .data = json });
+    try writeFile(io, cache_path, json);
 }
 
 fn readComponentCache(
+    io: std.Io,
     allocator: std.mem.Allocator,
     cache_path: []const u8,
     global_components: *std.array_list.Managed(ClientComponentSerializable),
 ) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
     const json = try std.Io.Dir.cwd().readFileAlloc(io, cache_path, allocator, std.Io.Limit.limited(4 * 1024 * 1024));
     defer allocator.free(json);
     const parsed = try std.json.parseFromSlice(
@@ -476,14 +521,13 @@ fn readComponentCache(
     }
 }
 
-fn copyOnly(ctx: zli.CommandContext, source_path: []const u8, dest_dir: []const u8) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
+fn copyOnly(io: std.Io, allocator: std.mem.Allocator, source_path: []const u8, dest_dir: []const u8) !void {
     const stat = std.Io.Dir.cwd().statFile(io, source_path, .{}) catch |err| switch (err) {
-        error.IsDir => return try copyDirectory(ctx.allocator, source_path, dest_dir),
+        error.IsDir => return try copyDirectory(io, allocator, source_path, dest_dir),
         else => return err,
     };
-    if (stat.kind == .directory) try copyDirectory(ctx.allocator, source_path, dest_dir);
-    if (stat.kind == .file) try copyFileToDir(ctx.allocator, source_path, dest_dir);
+    if (stat.kind == .directory) try copyDirectory(io, allocator, source_path, dest_dir);
+    if (stat.kind == .file) try copyFileToDir(io, allocator, source_path, dest_dir);
 }
 
 // ---- Path Utilities ---- //
@@ -567,13 +611,7 @@ fn findPackageRoot(allocator: std.mem.Allocator, io: std.Io, start_dir: []const 
 }
 
 fn getBasename(path: []const u8) []const u8 {
-    const sep = std.fs.path.sep;
-    if (std.mem.lastIndexOfScalar(u8, path, sep)) |last_sep| {
-        if (last_sep + 1 < path.len) {
-            return path[last_sep + 1 ..];
-        }
-    }
-    return path;
+    return std.fs.path.basename(path);
 }
 
 /// Escapes backslashes in a path string for use in Zig string literals.
@@ -716,37 +754,32 @@ fn getOutputDirRelativePath(allocator: std.mem.Allocator, dir_path: []const u8, 
     return try allocator.dupe(u8, relative_path);
 }
 
-// ---- File Operations ---- //
+// ============================================================================
+// File Operations
+// ============================================================================
+
 fn copyFileToDir(
+    io: std.Io,
     allocator: std.mem.Allocator,
     source_file: []const u8,
     dest_dir: []const u8,
 ) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
-    const dest_file = try std.fs.path.join(allocator, &.{ dest_dir, std.fs.path.basename(source_file) });
-    defer allocator.free(dest_file);
-    std.Io.Dir.cwd().createDirPath(io, dest_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
-    const dest_file_basename = std.fs.path.basename(dest_file);
-    try std.Io.Dir.cwd().copyFile(source_file, std.Io.Dir.cwd(), dest_file_basename, io, .{});
+    _ = allocator;
+    try createDirSafe(io, dest_dir);
+    try copyFileSafe(io, source_file, std.fs.path.basename(source_file));
 }
 
 /// Copy a directory recursively from source to destination
 fn copyDirectory(
+    io: std.Io,
     allocator: std.mem.Allocator,
     source_dir: []const u8,
     dest_dir: []const u8,
 ) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
     var source = try std.Io.Dir.cwd().openDir(io, source_dir, .{ .iterate = true });
     defer source.close(io);
 
-    std.Io.Dir.cwd().createDirPath(io, dest_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
+    try createDirSafe(io, dest_dir);
 
     var dest = try std.Io.Dir.cwd().openDir(io, dest_dir, .{});
     defer dest.close(io);
@@ -755,89 +788,41 @@ fn copyDirectory(
     defer walker.deinit();
 
     while (try walker.next(io)) |entry| {
-        const src_path = try std.fs.path.join(allocator, &.{ source_dir, entry.path });
-        defer allocator.free(src_path);
-
         const dst_path = try std.fs.path.join(allocator, &.{ dest_dir, entry.path });
         defer allocator.free(dst_path);
 
         switch (entry.kind) {
             .file => {
                 if (std.fs.path.dirname(dst_path)) |parent| {
-                    std.Io.Dir.cwd().createDirPath(io, parent) catch |err| switch (err) {
-                        error.PathAlreadyExists => {},
-                        else => return err,
-                    };
+                    createDirSafe(io, parent) catch {};
                 }
-                try std.Io.Dir.cwd().copyFile(src_path, std.Io.Dir.cwd(), dst_path, io, .{});
+                const src_path = try std.fs.path.join(allocator, &.{ source_dir, entry.path });
+                defer allocator.free(src_path);
+                try copyFileSafe(io, src_path, dst_path);
             },
-            .directory => {
-                std.Io.Dir.cwd().createDirPath(io, dst_path) catch |err| switch (err) {
-                    error.PathAlreadyExists => {},
-                    else => return err,
-                };
-            },
+            .directory => try createDirSafe(io, dst_path),
             else => continue,
         }
     }
 }
 
-// ---- Client Component Handling ---- //
-const ClientComponentSerializable = struct { type: core_lang.Ast.ClientComponentMetadata.Type, id: []const u8, name: []const u8, path: []const u8, import: []const u8, route: []const u8 };
-fn genClientComponents(allocator: std.mem.Allocator, components: []const ClientComponentSerializable, output_dir: []const u8, verbose: bool) !void {
+const ClientComponentSerializable = struct {
+    type: core_lang.Ast.ClientComponentMetadata.Type,
+    id: []const u8,
+    name: []const u8,
+    path: []const u8,
+    import: []const u8,
+    route: []const u8,
+};
+
+fn genClientComponents(io: std.Io, allocator: std.mem.Allocator, components: []const ClientComponentSerializable, output_dir: []const u8, verbose: bool) !void {
     _ = verbose;
-    // Generate Zig array literal contents (without outer array declaration)
     var aw = std.Io.Writer.Allocating.init(allocator);
     defer aw.deinit();
 
     std.zon.stringify.serialize(components, .{ .whitespace = true }, &aw.writer) catch @panic("OOM");
-
-    var zon_str = try allocator.dupe(u8, aw.written());
+    const zon_str = try stripPlaceholders(allocator, aw.written());
     defer allocator.free(zon_str);
-
-    // Replace all instances of "@ and @" with empty string (similar to JSON handling)
-    const placeHolder_start = "\"@";
-    const placeHolder_end = "@\"";
-
-    while (std.mem.indexOf(u8, zon_str, placeHolder_start)) |index| {
-        const old_zon_str = zon_str;
-        const before = zon_str[0..index];
-        const after = zon_str[index + placeHolder_start.len ..];
-        zon_str = try std.mem.concat(allocator, u8, &.{ before, "", after });
-        allocator.free(old_zon_str);
-    }
-    while (std.mem.indexOf(u8, zon_str, placeHolder_end)) |index| {
-        const old_zon_str = zon_str;
-        const before = zon_str[0..index];
-        const after = zon_str[index + placeHolder_end.len ..];
-        zon_str = try std.mem.concat(allocator, u8, &.{ before, "", after });
-        allocator.free(old_zon_str);
-    }
-
-    // Replace @@@ with @ (for @import, @intCast, etc.)
-    while (std.mem.indexOf(u8, zon_str, "@@@")) |index| {
-        const old_zon_str = zon_str;
-        const before = zon_str[0..index];
-        const after = zon_str[index + 3 ..]; // Skip "@@@"
-        zon_str = try std.mem.concat(allocator, u8, &.{ before, "@", after });
-        allocator.free(old_zon_str);
-    }
-
-    // Replace @@ placeholders with double quotes (for quotes inside @import())
-    while (std.mem.indexOf(u8, zon_str, "@@")) |index| {
-        const old_zon_str = zon_str;
-        const before = zon_str[0..index];
-        const after = zon_str[index + 2 ..]; // Skip "@@"
-        zon_str = try std.mem.concat(allocator, u8, &.{ before, "\"", after });
-        allocator.free(old_zon_str);
-    }
-
-    // Remove any trailing standalone @ that might be left (from the end marker)
-    if (zon_str.len > 0 and zon_str[zon_str.len - 1] == '@') {
-        const old_zon_str = zon_str;
-        zon_str = try allocator.dupe(u8, zon_str[0 .. zon_str.len - 1]);
-        allocator.free(old_zon_str);
-    }
 
     const cmps_client = @embedFile("./transpile/template/components.zig");
     const placeholder = "    // PLACEHOLDER_ZX_COMPONENTS\n";
@@ -848,20 +833,16 @@ fn genClientComponents(allocator: std.mem.Allocator, components: []const ClientC
     const before = cmps_client[0..placeholder_index];
     const after = cmps_client[placeholder_index + placeholder.len ..];
 
-    const cmps_client_z = try std.mem.concat(allocator, u8, &.{ before, zon_str[2..(zon_str.len - 1)], after });
+    const cmps_client_z = try std.mem.concat(allocator, u8, &.{ before, zon_str[2 .. zon_str.len - 1], after });
     defer allocator.free(cmps_client_z);
 
     const cmps_client_path = try std.fs.path.join(allocator, &.{ output_dir, "components.zig" });
     defer allocator.free(cmps_client_path);
 
-    const io = std.Io.Threaded.global_single_threaded.io();
-    try std.Io.Dir.cwd().writeFile(io, .{
-        .sub_path = cmps_client_path,
-        .data = cmps_client_z,
-    });
+    try writeFile(io, cmps_client_path, cmps_client_z);
 }
 
-fn genReactComponents(allocator: std.mem.Allocator, components: []const ClientComponentSerializable, output_dir: []const u8, input_dir: []const u8, verbose: bool) !void {
+fn genReactComponents(io: std.Io, allocator: std.mem.Allocator, components: []const ClientComponentSerializable, output_dir: []const u8, input_dir: []const u8, verbose: bool) !void {
     if (components.len == 0) return;
 
     var json_str = std.json.Stringify.valueAlloc(allocator, components, .{
@@ -869,24 +850,9 @@ fn genReactComponents(allocator: std.mem.Allocator, components: []const ClientCo
     }) catch @panic("OOM");
     defer allocator.free(json_str);
 
-    // Replace all instances of "@ and @" with empty string
-    const placeHolder_start = "\"@";
-    const placeHolder_end = "@\"";
-
-    while (std.mem.indexOf(u8, json_str, placeHolder_start)) |index| {
-        const before = json_str[0..index];
-        const after = json_str[index + placeHolder_start.len ..];
-        const new_json_str = try std.mem.concat(allocator, u8, &.{ before, "", after });
-        allocator.free(json_str);
-        json_str = new_json_str;
-    }
-    while (std.mem.indexOf(u8, json_str, placeHolder_end)) |index| {
-        const before = json_str[0..index];
-        const after = json_str[index + placeHolder_end.len ..];
-        const new_json_str = try std.mem.concat(allocator, u8, &.{ before, "", after });
-        allocator.free(json_str);
-        json_str = new_json_str;
-    }
+    // Strip the `"@`/`@"` placeholder markers that survived serialization.
+    json_str = try replaceAllOwned(allocator, json_str, "\"@", "");
+    json_str = try replaceAllOwned(allocator, json_str, "@\"", "");
 
     const main_csr_react = @embedFile("./transpile/template/components.ts");
     const placeholder = "`{[ZX_COMPONENTS]s}`";
@@ -910,27 +876,19 @@ fn genReactComponents(allocator: std.mem.Allocator, components: []const ClientCo
     // for a package.json. The generated registry must live under the
     // package's node_modules so bare-specifier imports like
     // `@ziex/components` resolve correctly.
-    const io = std.Io.Threaded.global_single_threaded.io();
     const pkg_rootdir = try findPackageRoot(allocator, io, input_dir);
     defer allocator.free(pkg_rootdir);
 
     const ziex_dir = try std.fs.path.join(allocator, &.{ pkg_rootdir, "node_modules", "@ziex", "components" });
     defer allocator.free(ziex_dir);
-    std.Io.Dir.cwd().createDirPath(io, ziex_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
+    try createDirSafe(io, ziex_dir);
 
     const main_csr_react_path = try std.fs.path.join(allocator, &.{ ziex_dir, "index.ts" });
     defer allocator.free(main_csr_react_path);
 
-    try std.Io.Dir.cwd().writeFile(io, .{
-        .sub_path = main_csr_react_path,
-        .data = main_csr_react_z,
-    });
+    try writeFile(io, main_csr_react_path, main_csr_react_z);
 }
 
-// --- Route and Meta Generation --- //
 const Route = struct {
     path: []const u8,
     page_import: ?[]const u8 = null,
@@ -942,33 +900,22 @@ const Route = struct {
 
     fn deinit(self: *Route, allocator: std.mem.Allocator) void {
         allocator.free(self.path);
-        if (self.page_import) |import| {
-            allocator.free(import);
-        }
-        if (self.layout_import) |import| {
-            allocator.free(import);
-        }
-        if (self.notfound_import) |import| {
-            allocator.free(import);
-        }
-        if (self.error_import) |import| {
-            allocator.free(import);
-        }
-        if (self.route_import) |import| {
-            allocator.free(import);
-        }
-        if (self.proxy_import) |import| {
-            allocator.free(import);
-        }
+        const fields = [_]?[]const u8{
+            self.page_import,
+            self.layout_import,
+            self.notfound_import,
+            self.error_import,
+            self.route_import,
+            self.proxy_import,
+        };
+        for (fields) |maybe| if (maybe) |s| allocator.free(s);
     }
 };
 
-fn genRoutes(allocator: std.mem.Allocator, output_dir: []const u8, rootdir: ?[]const u8, base_path: ?[]const u8, verbose: bool) !void {
+fn genRoutes(io: std.Io, allocator: std.mem.Allocator, output_dir: []const u8, rootdir: ?[]const u8, base_path: ?[]const u8, verbose: bool) !void {
     var routes = std.array_list.Managed(Route).init(allocator);
     defer {
-        for (routes.items) |*route| {
-            route.deinit(allocator);
-        }
+        for (routes.items) |*route| route.deinit(allocator);
         routes.deinit();
     }
 
@@ -976,44 +923,25 @@ fn genRoutes(allocator: std.mem.Allocator, output_dir: []const u8, rootdir: ?[]c
     const pages_dir = try std.fs.path.join(allocator, &.{ output_dir, "pages" });
     defer allocator.free(pages_dir);
 
-    const has_pages = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, pages_dir, .{}) catch break :blk false;
-        break :blk true;
-    };
-
+    const has_pages = fileExists(io, pages_dir);
     if (has_pages) {
         if (verbose) std.debug.print("Scanning pages directory: {s}\n", .{pages_dir});
-        const pages_import_prefix = try std.mem.concat(allocator, u8, &.{"pages"});
-        defer allocator.free(pages_import_prefix);
-
         var layout_stack = std.array_list.Managed([]const u8).init(allocator);
         defer {
-            for (layout_stack.items) |layout| {
-                allocator.free(layout);
-            }
+            for (layout_stack.items) |layout| allocator.free(layout);
             layout_stack.deinit();
         }
-
-        try scanPagesRecursive(allocator, pages_dir, "", &layout_stack, pages_import_prefix, &routes);
+        try scanPagesRecursive(io, allocator, pages_dir, "", &layout_stack, "pages", &routes);
     }
 
     // Scan routes directory for API routes
     const routes_dir = try std.fs.path.join(allocator, &.{ output_dir, "routes" });
     defer allocator.free(routes_dir);
 
-    const has_routes = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, routes_dir, .{}) catch break :blk false;
-        break :blk true;
-    };
-
+    const has_routes = fileExists(io, routes_dir);
     if (has_routes) {
         if (verbose) std.debug.print("Scanning routes directory: {s}\n", .{routes_dir});
-        const routes_import_prefix = try std.mem.concat(allocator, u8, &.{"routes"});
-        defer allocator.free(routes_import_prefix);
-
-        try scanRoutesRecursive(allocator, routes_dir, "", routes_import_prefix, &routes);
+        try scanRoutesRecursive(io, allocator, routes_dir, "", "routes", &routes);
     }
 
     if (!has_pages and !has_routes) {
@@ -1026,9 +954,7 @@ fn genRoutes(allocator: std.mem.Allocator, output_dir: []const u8, rootdir: ?[]c
     const writer = &content.writer;
 
     try writer.writeAll("pub const routes = [_]zx.server.ServerMeta.Route{\n");
-    for (routes.items) |route| {
-        try writeRoute(writer, route);
-    }
+    for (routes.items) |route| try writeRoute(writer, route);
     try writer.writeAll("};\n\n");
 
     // Generate a RoutePaths enum of all unique route paths.
@@ -1073,18 +999,12 @@ fn genRoutes(allocator: std.mem.Allocator, output_dir: []const u8, rootdir: ?[]c
     var ast = try std.zig.Ast.parse(allocator, content_z, .zig);
     defer ast.deinit(allocator);
 
-    if (ast.errors.len > 0) {
-        return error.ParseError;
-    }
+    if (ast.errors.len > 0) return error.ParseError;
 
     const rendered_zig_source = try ast.renderAlloc(allocator);
     defer allocator.free(rendered_zig_source);
 
-    const io = std.Io.Threaded.global_single_threaded.io();
-    try std.Io.Dir.cwd().writeFile(io, .{
-        .sub_path = meta_path,
-        .data = rendered_zig_source,
-    });
+    try writeFile(io, meta_path, rendered_zig_source);
 
     if (verbose) std.debug.print("Generated meta.zig at: {s}\n", .{meta_path});
 }
@@ -1154,6 +1074,7 @@ fn writeRoute(writer: anytype, route: Route) !void {
 }
 
 fn scanPagesRecursive(
+    io: std.Io,
     allocator: std.mem.Allocator,
     current_dir: []const u8,
     current_path: []const u8,
@@ -1161,59 +1082,12 @@ fn scanPagesRecursive(
     import_prefix: []const u8,
     routes: *std.array_list.Managed(Route),
 ) !void {
-    const page_path = try std.fs.path.join(allocator, &.{ current_dir, "page.zig" });
-    defer allocator.free(page_path);
-
-    const layout_path = try std.fs.path.join(allocator, &.{ current_dir, "layout.zig" });
-    defer allocator.free(layout_path);
-
-    const notfound_path = try std.fs.path.join(allocator, &.{ current_dir, "notfound.zig" });
-    defer allocator.free(notfound_path);
-
-    const error_path = try std.fs.path.join(allocator, &.{ current_dir, "error.zig" });
-    defer allocator.free(error_path);
-
-    const route_file_path = try std.fs.path.join(allocator, &.{ current_dir, "route.zig" });
-    defer allocator.free(route_file_path);
-
-    const proxy_file_path = try std.fs.path.join(allocator, &.{ current_dir, "proxy.zig" });
-    defer allocator.free(proxy_file_path);
-
-    const has_page = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, page_path, .{}) catch break :blk false;
-        break :blk true;
-    };
-
-    const has_layout = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, layout_path, .{}) catch break :blk false;
-        break :blk true;
-    };
-
-    const has_notfound = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, notfound_path, .{}) catch break :blk false;
-        break :blk true;
-    };
-
-    const has_error = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, error_path, .{}) catch break :blk false;
-        break :blk true;
-    };
-
-    const has_route = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, route_file_path, .{}) catch break :blk false;
-        break :blk true;
-    };
-
-    const has_proxy = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, proxy_file_path, .{}) catch break :blk false;
-        break :blk true;
-    };
+    const has_page = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "page.zig" }));
+    const has_route = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "route.zig" }));
+    const has_proxy = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "proxy.zig" }));
+    const has_layout = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "layout.zig" }));
+    const has_notfound = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "notfound.zig" }));
+    const has_error = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "error.zig" }));
 
     var current_layout_import: ?[]const u8 = null;
     if (has_layout) {
@@ -1222,40 +1096,12 @@ fn scanPagesRecursive(
     }
 
     if (has_page or has_route or has_proxy) {
-        const page_import = if (has_page)
-            try std.mem.concat(allocator, u8, &.{ import_prefix, "/page.zig" })
-        else
-            null;
-
-        // Co-located route.zig in pages directory
-        const route_import = if (has_route)
-            try std.mem.concat(allocator, u8, &.{ import_prefix, "/route.zig" })
-        else
-            null;
-
-        // Proxy middleware (cascading handled at runtime like layouts)
-        const proxy_import = if (has_proxy)
-            try std.mem.concat(allocator, u8, &.{ import_prefix, "/proxy.zig" })
-        else
-            null;
-
-        // Only set layout if the current directory has a layout file
-        const layout_import = if (has_layout)
-            try std.mem.concat(allocator, u8, &.{ import_prefix, "/layout.zig" })
-        else
-            null;
-
-        // Only set notfound if the current directory has a notfound file
-        const notfound_import = if (has_notfound)
-            try std.mem.concat(allocator, u8, &.{ import_prefix, "/notfound.zig" })
-        else
-            null;
-
-        // Only set error if the current directory has an error file
-        const error_import = if (has_error)
-            try std.mem.concat(allocator, u8, &.{ import_prefix, "/error.zig" })
-        else
-            null;
+        const page_import = if (has_page) try std.mem.concat(allocator, u8, &.{ import_prefix, "/page.zig" }) else null;
+        const route_import = if (has_route) try std.mem.concat(allocator, u8, &.{ import_prefix, "/route.zig" }) else null;
+        const proxy_import = if (has_proxy) try std.mem.concat(allocator, u8, &.{ import_prefix, "/proxy.zig" }) else null;
+        const layout_import = if (has_layout) try std.mem.concat(allocator, u8, &.{ import_prefix, "/layout.zig" }) else null;
+        const notfound_import = if (has_notfound) try std.mem.concat(allocator, u8, &.{ import_prefix, "/notfound.zig" }) else null;
+        const error_import = if (has_error) try std.mem.concat(allocator, u8, &.{ import_prefix, "/error.zig" }) else null;
 
         const route_path = if (current_path.len == 0)
             try allocator.dupe(u8, "/")
@@ -1263,31 +1109,21 @@ fn scanPagesRecursive(
             try allocator.dupe(u8, current_path);
         defer allocator.free(route_path);
 
-        // In route path we can have users/[id]/profile in those such case convert to users/:id/profile
-        var normalized_route_path = std.array_list.Managed(u8).init(allocator);
-        for (route_path) |c| {
-            if (c == '[') {
-                try normalized_route_path.append(':');
-            } else if (c != ']') {
-                try normalized_route_path.append(c);
-            }
-            // skip ']' characters
-        }
+        const normalized_route_path = try normalizeRoutePath(allocator, route_path);
 
         // Only add route if it has a page or route handler (not just proxy)
         if (has_page or has_route) {
-            const route = Route{
-                .path = try normalized_route_path.toOwnedSlice(),
+            try routes.append(.{
+                .path = normalized_route_path,
                 .page_import = page_import,
                 .route_import = route_import,
                 .proxy_import = proxy_import,
                 .layout_import = layout_import,
                 .notfound_import = notfound_import,
                 .error_import = error_import,
-            };
-            try routes.append(route);
+            });
         } else {
-            normalized_route_path.deinit();
+            allocator.free(normalized_route_path);
             if (page_import) |p| allocator.free(p);
             if (route_import) |r| allocator.free(r);
             if (proxy_import) |pr| allocator.free(pr);
@@ -1297,7 +1133,6 @@ fn scanPagesRecursive(
         }
     }
 
-    const io = std.Io.Threaded.global_single_threaded.io();
     var dir = try std.Io.Dir.cwd().openDir(io, current_dir, .{ .iterate = true });
     defer dir.close(io);
 
@@ -1309,7 +1144,7 @@ fn scanPagesRecursive(
         const child_dir = try std.fs.path.join(allocator, &.{ current_dir, entry.name });
         defer allocator.free(child_dir);
 
-        const child_path = if (std.mem.eql(u8, current_path, "/"))
+        const child_path = if (current_path.len == 0 or std.mem.eql(u8, current_path, "/"))
             try std.mem.concat(allocator, u8, &.{ "/", entry.name })
         else
             try std.mem.concat(allocator, u8, &.{ current_path, "/", entry.name });
@@ -1318,7 +1153,7 @@ fn scanPagesRecursive(
         const child_import_prefix = try std.mem.concat(allocator, u8, &.{ import_prefix, "/", entry.name });
         defer allocator.free(child_import_prefix);
 
-        try scanPagesRecursive(allocator, child_dir, child_path, layout_stack, child_import_prefix, routes);
+        try scanPagesRecursive(io, allocator, child_dir, child_path, layout_stack, child_import_prefix, routes);
     }
 
     if (current_layout_import) |layout| {
@@ -1329,65 +1164,35 @@ fn scanPagesRecursive(
 
 /// Scan routes directory for API route files (route.zig) and proxy middleware (proxy.zig)
 fn scanRoutesRecursive(
+    io: std.Io,
     allocator: std.mem.Allocator,
     current_dir: []const u8,
     current_path: []const u8,
     import_prefix: []const u8,
     routes: *std.array_list.Managed(Route),
 ) !void {
-    const route_file_path = try std.fs.path.join(allocator, &.{ current_dir, "route.zig" });
-    defer allocator.free(route_file_path);
-
-    const proxy_file_path = try std.fs.path.join(allocator, &.{ current_dir, "proxy.zig" });
-    defer allocator.free(proxy_file_path);
-
-    const has_route = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, route_file_path, .{}) catch break :blk false;
-        break :blk true;
-    };
-
-    const has_proxy = blk: {
-        const io = std.Io.Threaded.global_single_threaded.io();
-        std.Io.Dir.cwd().access(io, proxy_file_path, .{}) catch break :blk false;
-        break :blk true;
-    };
+    const has_route = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "route.zig" }));
+    const has_proxy = fileExists(io, try std.fs.path.join(allocator, &.{ current_dir, "proxy.zig" }));
 
     if (has_route) {
         const route_import = try std.mem.concat(allocator, u8, &.{ import_prefix, "/route.zig" });
+        const proxy_import = if (has_proxy) try std.mem.concat(allocator, u8, &.{ import_prefix, "/proxy.zig" }) else null;
 
-        const proxy_import = if (has_proxy)
-            try std.mem.concat(allocator, u8, &.{ import_prefix, "/proxy.zig" })
-        else
-            null;
-
-        // Build the URL path from directory structure
         const route_path = if (current_path.len == 0)
             try allocator.dupe(u8, "/")
         else
             try allocator.dupe(u8, current_path);
         defer allocator.free(route_path);
 
-        // Normalize route path: convert [id] to :id
-        var normalized_route_path = std.array_list.Managed(u8).init(allocator);
-        for (route_path) |c| {
-            if (c == '[') {
-                try normalized_route_path.append(':');
-            } else if (c != ']') {
-                try normalized_route_path.append(c);
-            }
-        }
+        const normalized_route_path = try normalizeRoutePath(allocator, route_path);
 
-        const route = Route{
-            .path = try normalized_route_path.toOwnedSlice(),
+        try routes.append(.{
+            .path = normalized_route_path,
             .route_import = route_import,
             .proxy_import = proxy_import,
-        };
-        try routes.append(route);
+        });
     }
 
-    // Recurse into subdirectories
-    const io = std.Io.Threaded.global_single_threaded.io();
     var dir = std.Io.Dir.cwd().openDir(io, current_dir, .{ .iterate = true }) catch return;
     defer dir.close(io);
 
@@ -1408,12 +1213,12 @@ fn scanRoutesRecursive(
         const child_import_prefix = try std.mem.concat(allocator, u8, &.{ import_prefix, "/", entry.name });
         defer allocator.free(child_import_prefix);
 
-        try scanRoutesRecursive(allocator, child_dir, child_path, child_import_prefix, routes);
+        try scanRoutesRecursive(io, allocator, child_dir, child_path, child_import_prefix, routes);
     }
 }
 
-// --- Transpilation --- //
 fn transpileFile(
+    io: std.Io,
     allocator: std.mem.Allocator,
     global_components: *std.array_list.Managed(ClientComponentSerializable),
     opts: TranspileOptions,
@@ -1422,13 +1227,7 @@ fn transpileFile(
     imports_out: ?*std.array_list.Managed([]const u8),
     input_files: *std.array_list.Managed([]const u8),
 ) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
-    const source = try std.Io.Dir.cwd().readFileAlloc(
-        io,
-        source_path,
-        allocator,
-        std.Io.Limit.limited(std.math.maxInt(usize)),
-    );
+    const source = try readFile(io, allocator, source_path);
     defer allocator.free(source);
 
     const source_z = try allocator.dupeSentinel(u8, source, 0);
@@ -1457,12 +1256,12 @@ fn transpileFile(
 
     const ast_source_dir = std.fs.path.dirname(source_path) orelse ".";
     if (imports_out) |out| {
-        try collectZxImports(allocator, out, &result.zig_ast, ast_source_dir);
+        try collectZxImports(io, allocator, out, &result.zig_ast, ast_source_dir);
     }
     // Auto-copy any files this component `@embedFile`s into the output dir.
     {
         const ast_out_dir = std.fs.path.dirname(output_path) orelse opts.outdir;
-        try collectEmbedFiles(allocator, input_files, &result.zig_ast, ast_source_dir, ast_out_dir);
+        try collectEmbedFiles(io, allocator, input_files, &result.zig_ast, ast_source_dir, ast_out_dir);
     }
 
     // Extract route from source path
@@ -1473,10 +1272,10 @@ fn transpileFile(
     for (result.client_components.items) |component| {
         const cloned_id = try allocator.dupe(u8, component.id);
         const cloned_name = try allocator.dupe(u8, component.name);
+        const cloned_route = try allocator.dupe(u8, component_route);
 
         var cloned_path: []const u8 = undefined;
         var cloned_import: []const u8 = undefined;
-        var cloned_route: []const u8 = undefined;
 
         switch (component.type) {
             .client => {
@@ -1492,14 +1291,13 @@ fn transpileFile(
 
                 cloned_path = try allocator.dupe(u8, clean_path);
 
-                // Generate Zig import with componentWithProps wrapper for props hydration
+                // Generate Zig import with componentWithProps wrapper for props hydration.
                 // Format: zx.componentWithProps(@import("path").ComponentName)
-                // Placeholders:
+                // Placeholders (stripped later by stripPlaceholders):
                 //   "@ and @" - markers to strip outer quotes from ZON serialization
                 //   @@@ - literal @ (for @import)
                 //   @@ - literal " (for quotes inside @import())
-                const import_str = try std.fmt.allocPrint(allocator, "@zx.client.ComponentMeta.init(@@@import(@@{s}@@).{s})@", .{ clean_path, component.name });
-                cloned_import = import_str;
+                cloned_import = try std.fmt.allocPrint(allocator, "@zx.client.ComponentMeta.init(@@@import(@@{s}@@).{s})@", .{ clean_path, component.name });
             },
             .react => {
                 // For .react components, the path is relative to project root (e.g., site/pages/...).
@@ -1515,15 +1313,11 @@ fn transpileFile(
                 };
                 defer allocator.free(abs_component_path);
 
-                const import_str = try std.fmt.allocPrint(allocator, "@async () => (await import('{s}')).default@", .{abs_component_path});
+                cloned_import = try std.fmt.allocPrint(allocator, "@async () => (await import('{s}')).default@", .{abs_component_path});
                 cloned_path = try allocator.dupe(u8, component.path);
-                cloned_import = import_str;
             },
             else => return error.InvalidComponentType,
         }
-
-        // Clone the route for this component
-        cloned_route = try allocator.dupe(u8, component_route);
 
         try global_components.append(.{
             .type = component.type,
@@ -1535,77 +1329,43 @@ fn transpileFile(
         });
     }
 
-    if (std.fs.path.dirname(output_path)) |dir| {
-        std.Io.Dir.cwd().createDirPath(io, dir) catch |err| switch (err) {
-            error.PathAlreadyExists => {},
-            else => return err,
-        };
-    }
-
-    try std.Io.Dir.cwd().writeFile(io, .{
-        .sub_path = output_path,
-        .data = result.zig_source,
-    });
+    if (std.fs.path.dirname(output_path)) |dir| try createDirSafe(io, dir);
+    try writeFile(io, output_path, result.zig_source);
 
     // Handle sourcemap based on config
-    if (result.sourcemap) |sm| {
-        switch (opts.map) {
-            .none => {},
-            .file => |map_path| {
-                // Write sourcemap to a separate file
-                const sourcemap_json = try sm.toJSON(
-                    allocator,
-                    output_path,
-                    relative_source_path,
-                    source,
-                    result.zig_source,
-                );
-                defer allocator.free(sourcemap_json);
-
-                try std.Io.Dir.cwd().writeFile(io, .{
-                    .sub_path = map_path,
-                    .data = sourcemap_json,
-                });
-
-                if (opts.verbose) std.debug.print("Sourcemap: {s}\n", .{map_path});
-            },
-            .inlined => {
-                // For inlined sourcemaps, append to the generated file as a comment
-                const sourcemap_json = try sm.toJSON(
-                    allocator,
-                    output_path,
-                    relative_source_path,
-                    source,
-                    null,
-                );
-                defer allocator.free(sourcemap_json);
-
-                const base64_encoded = try base64Encode(allocator, sourcemap_json);
-                defer allocator.free(base64_encoded);
-
-                const inline_comment = try std.fmt.allocPrint(
-                    allocator,
-                    "\n//# sourceMappingURL=data:application/json;base64,{s}\n",
-                    .{base64_encoded},
-                );
-                defer allocator.free(inline_comment);
-
-                // Append to the output file
-
-                var file = try std.Io.Dir.cwd().openFile(io, output_path, .{ .mode = .read_write });
-                defer file.close(io);
-                const len = try file.length(io);
-                try file.writePositionalAll(io, inline_comment, len);
-
-                if (opts.verbose) std.debug.print("Inlined sourcemap in: {s}\n", .{output_path});
-            },
-        }
-    }
+    if (result.sourcemap) |sm| switch (opts.map) {
+        .none => {},
+        .file => |map_path| {
+            const sourcemap_json = try sm.toJSON(
+                allocator,
+                output_path,
+                relative_source_path,
+                source,
+                result.zig_source,
+            );
+            defer allocator.free(sourcemap_json);
+            try writeFile(io, map_path, sourcemap_json);
+            if (opts.verbose) std.debug.print("Sourcemap: {s}\n", .{map_path});
+        },
+        .inlined => {
+            const sourcemap_json = try sm.toJSON(
+                allocator,
+                output_path,
+                relative_source_path,
+                source,
+                null,
+            );
+            defer allocator.free(sourcemap_json);
+            try writeInlineSourcemap(io, allocator, output_path, sourcemap_json);
+            if (opts.verbose) std.debug.print("Inlined sourcemap in: {s}\n", .{output_path});
+        },
+    };
 
     if (opts.verbose) std.debug.print("Transpiled: {s} -> {s}\n", .{ source_path, output_path });
 }
 
 fn transpileDirectory(
+    io: std.Io,
     allocator: std.mem.Allocator,
     global_components: *std.array_list.Managed(ClientComponentSerializable),
     input_files: *std.array_list.Managed([]const u8),
@@ -1615,7 +1375,6 @@ fn transpileDirectory(
     var task = progress.start("Transpiling .zx files", 0);
     defer task.end();
 
-    const io = std.Io.Threaded.global_single_threaded.io();
     var dir = try std.Io.Dir.cwd().openDir(io, opts.path, .{ .iterate = true });
     defer dir.close(io);
 
@@ -1687,7 +1446,7 @@ fn transpileDirectory(
             };
 
             if (should_skip) {
-                readComponentCache(allocator, cache_path, global_components) catch |err| {
+                readComponentCache(io, allocator, cache_path, global_components) catch |err| {
                     std.debug.print("Warning: Failed to read component cache for {s}: {}\n", .{ input_path, err });
                 };
                 if (opts.cache_dir) |_| {
@@ -1703,14 +1462,14 @@ fn transpileDirectory(
                 {
                     const embed_src_dir = std.fs.path.dirname(input_path) orelse ".";
                     const embed_out_dir = std.fs.path.dirname(output_path) orelse opts.outdir;
-                    copyEmbedsForCached(allocator, input_files, cache_out_path, embed_src_dir, embed_out_dir) catch |err| {
+                    copyEmbedsForCached(io, allocator, input_files, cache_out_path, embed_src_dir, embed_out_dir) catch |err| {
                         std.debug.print("Warning: Failed to copy embedded files for cached {s}: {}\n", .{ input_path, err });
                     };
                 }
                 if (opts.verbose) std.debug.print("Skipped (up-to-date): {s}\n", .{input_path});
             } else {
                 const components_before = global_components.items.len;
-                transpileFile(allocator, global_components, opts, input_path, output_path, null, input_files) catch |err| {
+                transpileFile(io, allocator, global_components, opts, input_path, output_path, null, input_files) catch |err| {
                     global_components.items.len = components_before;
                     std.debug.print("Error transpiling {s}: {}\n", .{ input_path, err });
                     continue;
@@ -1725,7 +1484,7 @@ fn transpileDirectory(
                     };
                 }
 
-                writeComponentCache(allocator, cache_path, global_components.items[components_before..]) catch |err| {
+                writeComponentCache(io, allocator, cache_path, global_components.items[components_before..]) catch |err| {
                     std.debug.print("Warning: Failed to write component cache for {s}: {}\n", .{ input_path, err });
                 };
             }
@@ -1792,8 +1551,7 @@ const TranspileOptions = struct {
     base_path: ?[]const u8 = null,
 };
 
-fn transpileCommand(allocator: std.mem.Allocator, opts: TranspileOptions) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
+fn transpileCommand(io: std.Io, allocator: std.mem.Allocator, opts: TranspileOptions) !void {
     // Start root progress for the entire transpile operation
     var progress = std.Progress.start(io, .{ .root_name = "Transpile" });
     defer progress.end();
@@ -1836,7 +1594,7 @@ fn transpileCommand(allocator: std.mem.Allocator, opts: TranspileOptions) !void 
 
     switch (stat.kind) {
         .directory => {
-            try transpileDirectory(allocator, &all_client_cmps, &input_files, opts, progress);
+            try transpileDirectory(io, allocator, &all_client_cmps, &input_files, opts, progress);
         },
         .file => {
             const is_zx = std.mem.endsWith(u8, opts.path, ".zx");
@@ -1863,7 +1621,7 @@ fn transpileCommand(allocator: std.mem.Allocator, opts: TranspileOptions) !void 
                 while (it.next()) |k| allocator.free(k.*);
                 visited.deinit();
             }
-            try transpileFileRecursive(allocator, &all_client_cmps, opts, opts.path, outpath, &visited, &input_files);
+            try transpileFileRecursive(io, allocator, &all_client_cmps, opts, opts.path, outpath, &visited, &input_files);
             task.completeOne();
         },
         else => {
@@ -1874,13 +1632,13 @@ fn transpileCommand(allocator: std.mem.Allocator, opts: TranspileOptions) !void 
 
     // Write dep file (Make format) so zig build can track .zx inputs for caching
     if (opts.dep_file) |dep_file_path| {
-        writeDepFile(allocator, dep_file_path, dep_file_path, input_files.items) catch |err| {
+        writeDepFile(io, allocator, dep_file_path, dep_file_path, input_files.items) catch |err| {
             std.debug.print("Warning: Failed to write dep file: {}\n", .{err});
         };
     }
 
     // Generate routes
-    genRoutes(allocator, opts.outdir, opts.rootdir, opts.base_path, opts.verbose) catch |err| switch (err) {
+    genRoutes(io, allocator, opts.outdir, opts.rootdir, opts.base_path, opts.verbose) catch |err| switch (err) {
         error.NoPagesOrRoutes => {}, // No routes to generate is not an error
         else => std.debug.print("Warning: Failed to generate meta.zig: {}\n", .{err}),
     };
@@ -1900,12 +1658,12 @@ fn transpileCommand(allocator: std.mem.Allocator, opts: TranspileOptions) !void 
     }
 
     // @rendering={.react}
-    genReactComponents(allocator, react_cmps.items, opts.outdir, opts.path, opts.verbose) catch |err| {
+    genReactComponents(io, allocator, react_cmps.items, opts.outdir, opts.path, opts.verbose) catch |err| {
         std.debug.print("Warning: Failed to generate main.tsx: {}\n", .{err});
     };
 
     // @rendering={.client}
-    genClientComponents(allocator, client_cmps.items, opts.outdir, opts.verbose) catch |err| {
+    genClientComponents(io, allocator, client_cmps.items, opts.outdir, opts.verbose) catch |err| {
         std.debug.print("Warning: Failed to generate main_wasm.zig: {}\n", .{err});
     };
 }

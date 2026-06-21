@@ -1,6 +1,5 @@
 const std = @import("std");
 const initlib = @import("src/build/init.zig");
-
 const build_zon = @import("build.zig.zon");
 
 /// Options for initializing
@@ -111,11 +110,11 @@ pub fn build(b: *std.Build) !void {
 
     // --- Steps: Test --- //
     {
-        const mod_tests = b.addTest(.{ .root_module = mod });
-        const run_mod_tests = b.addRunArtifact(mod_tests);
-
-        const exe_tests = b.addTest(.{ .root_module = exe.root_module });
-        const run_exe_tests = b.addRunArtifact(exe_tests);
+        const mode_test = b.createModule(.{ .root_source_file = b.path("src/root.zig") });
+        if (b.lazyDependency("adapters", .{})) |ad| mode_test.addImport("zqlite", ad.module("zqlite"));
+        mode_test.addOptions("zx_info", options);
+        mode_test.addOptions("zx_module_options", zx_module_options);
+        mode_test.addImport("zx_core_lang", zx_core_lang_mod);
 
         const testing_mod = b.createModule(.{
             .root_source_file = b.path("test/main.zig"),
@@ -123,7 +122,16 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "cli_options", .module = cli_options_dev.createModule() },
-                .{ .name = "zx", .module = mod },
+                .{ .name = "zx", .module = mode_test },
+                .{ .name = "html_hover", .module = b.createModule(.{
+                    .root_source_file = b.path("src/lsp/html_hover.zig"),
+                    .imports = &.{
+                        .{ .name = "core_lang", .module = zx_core_lang_mod },
+                    },
+                }) },
+                .{ .name = "builder", .module = b.createModule(.{
+                    .root_source_file = b.path("src/cli/dev/Builder.zig"),
+                }) },
             },
         });
         const testing_mod_tests = b.addTest(.{
@@ -133,24 +141,8 @@ pub fn build(b: *std.Build) !void {
         const test_run = b.addRunArtifact(testing_mod_tests);
         test_run.step.dependOn(b.getInstallStep());
 
-        // LSP HTML hover docs: tested standalone since the LSP server itself
-        // depends on ZLS (excluded by default / not yet available for 0.17).
-        const html_hover_mod = b.createModule(.{
-            .root_source_file = b.path("src/lsp/html_hover.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "core_lang", .module = zx_core_lang_mod },
-            },
-        });
-        const html_hover_tests = b.addTest(.{ .root_module = html_hover_mod });
-        const run_html_hover_tests = b.addRunArtifact(html_hover_tests);
-
         const test_step = b.step("test", "Run tests");
-        test_step.dependOn(&run_mod_tests.step);
-        test_step.dependOn(&run_exe_tests.step);
         test_step.dependOn(&test_run.step);
-        test_step.dependOn(&run_html_hover_tests.step);
 
         const transpile_only = b.addExecutable(.{
             .name = "transpile-only",
