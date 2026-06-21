@@ -11,21 +11,24 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
     const optimize = exe.root_module.optimize;
     const wasm_target = b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .freestanding, .abi = .none });
 
+    const ziex_lsp = b.option(bool, "ziex-lsp", "Enable `zig build zx -- lsp`, used by code editors whenz `zx` cli is not in PATH") orelse false;
+
     const zx_dep = b.dependencyFromBuildZig(build_zig, .{
         .optimize = optimize,
         .target = target,
         .@"exclude-core-lang" = true, // Users don't need parser/transpiler
+        .@"feature-sqlite" = if (options.app != null and options.app.?.features.sqlite != null) true else null,
     });
 
     const zx_host_dep = b.dependencyFromBuildZig(build_zig, .{
         .optimize = options.cli.optimize, // Always in release mode for faster transpilation
         // No target = host target, so zx CLI can execute during build
-        .@"exclude-lsp" = true, // Skip LSP for faster build-time transpilation
     });
 
     // Full CLI dep (includes LSP) for the `zig build zx` step
     const zx_full_dep = b.dependencyFromBuildZig(build_zig, .{
         .optimize = options.cli.optimize,
+        .lsp = ziex_lsp,
     });
 
     const zx_wasm_dep = b.dependencyFromBuildZig(build_zig, .{

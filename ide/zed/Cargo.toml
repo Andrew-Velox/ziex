@@ -1,12 +1,12 @@
 [package]
-name = "nurulhudaapon_ziex"
+name = "ziex-dev_ziex"
 version = "0.1.0-dev.278"
 edition = "2021"
 publish = false
 license = "MIT"
 
 [lib]
-path = "src/zx.rs"
+path = "src/ziex.rs"
 crate-type = ["cdylib"]
 
 [dependencies]

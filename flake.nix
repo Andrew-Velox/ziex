@@ -27,7 +27,7 @@
             export ZIG_LOCAL_CACHE_DIR="$tmp/cache"
             export ZIG_GLOBAL_CACHE_DIR="$tmp/cache"
             mkdir -p "$ZIG_LOCAL_CACHE_DIR"
-            zig build -p "$tmp/out" -Doptimize=Debug -Dexclude-lsp=true
+            zig build -p "$tmp/out" -Doptimize=Debug
             "$tmp/out/bin/zx" "$@"
             '';
         }) + "/bin/zx";

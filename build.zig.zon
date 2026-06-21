@@ -9,6 +9,7 @@
     .dependencies = .{
         // Ziex JS - The JavaScript glue code for csr/wasi/cloudflare/aws-lambda/vercel/react
         .ziex_js = .{
+            // TODO: publish to github packages and use from there instead
             .url = "https://registry.npmjs.org/ziex/-/ziex-0.1.0-dev.1232.tgz",
             .hash = "ziex_js-0.1.0-dev-v1W0GRqPAwD3VLCRLZRGJnmnjzPCemE0EIU1820xyZBn",
         },
@@ -19,10 +20,11 @@
         },
         // Ziex Language Server utilities
         // .zls = .{
-        //     .url = "git+https://github.com/ziex-dev/zls.git?ref=zx-0.16.0#9dc776aae7db3d522be18a8d20f77f2caa085554",
-        //     .hash = "zls-0.16.0-rmm5ftHOJgC9W6p-o3hJMFIbjWE4hKV1CIU_tOSjNiSj",
+        //     .url = "git+https://github.com/ziex-dev/zls.git#8da87d4f3305a550e7b739bad764e34bf1e46a08",
+        //     .hash = "zls-0.17.0-dev-rmm5fhsnJgACAm2dSuoMNDK6QziDk419sy5-ORvIiL0y",
+        //     .lazy = true,
         // },
-        .adapters = .{ .path = "pkg/adapters" },
+        .adapters = .{ .path = "pkg/adapters", .lazy = true },
         .zli = .{ .path = "vendor/cliz" }, // Get rid of this in favor of copying from Zig's new builtin args parser once 0.16.0 is released
         .zig_js = .{ .path = "vendor/jsz" },
         .tree_sitter = .{ .path = "vendor/zig-tree-sitter" },

@@ -34,7 +34,7 @@ impl zed::Extension for ZxExtension {
             }
         }
 
-        // Use `zx lsp` if zx is in PATH, otherwise fall back to `zig build zx -- lsp`
+        // Use `zx lsp` if zx is in PATH, otherwise fall back to `zig build zx -Dziex-lsp=true -- lsp`
         if let Some(zx_path) = worktree.which("zx") {
             Ok(zed::Command { command: zx_path, args: vec!["lsp".into()], env })
         } else {
@@ -43,7 +43,7 @@ impl zed::Extension for ZxExtension {
                 .ok_or("Neither zx nor zig found in PATH.")?;
             Ok(zed::Command {
                 command: zig_path,
-                args: vec!["build".into(), "zx".into(), "--".into(), "lsp".into()],
+                args: vec!["build".into(), "zx".into(), "-Dziex-lsp=true".into(), "--".into(), "lsp".into()],
                 env,
             })
         }

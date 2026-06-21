@@ -44,7 +44,7 @@ jobs:
         version: 0.16.0
           
     - name: Build project
-      run: zig build
+      run: zig build -Dlsp=true
       
     - name: Verify executable
       run: |
