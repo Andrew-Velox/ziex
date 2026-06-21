@@ -12,18 +12,10 @@ language = "ZX"
 
 [grammars.zx]
 repository = "https://github.com/ziex-dev/ziex"
-rev = "main"
+rev = "b5208a8c7bdbaae130ff617d9c0f9f1df01e85de"
 path = "pkg/tree-sitter-zx"
-
-# repository = "file:///Users/nurulhudaapon/Projects/nurulhudaapon/zx"
-# rev = "feat/mdzx"
 
 [grammars.mdzx]
 repository = "https://github.com/ziex-dev/ziex"
-rev = "main"
+rev = "b5208a8c7bdbaae130ff617d9c0f9f1df01e85de"
 path = "pkg/tree-sitter-mdzx"
-
-# repository = "file:///Users/nurulhudaapon/Projects/nurulhudaapon/zx"
-# rev = "feat/mdzx"
-
-[debug_locators.zx-locator]
