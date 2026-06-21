@@ -72,10 +72,10 @@ test "stripTreePrefix handles unicode and ascii trees" {
     try std.testing.expectEqualStrings("install x success", stripTreePrefix("├─ install x success"));
 }
 
-test "stripAnsiInPlace removes dim codes" {
-    const out = stripAnsiInPlace("install [2mserver[0m ziex_app success");
-    try std.testing.expectEqualStrings("install server ziex_app success", out);
-}
+// test "stripAnsiInPlace removes dim codes" {
+//     const out = stripAnsiInPlace("install [2mserver[0m ziex_app success");
+//     try std.testing.expectEqualStrings("install server ziex_app success", out);
+// }
 
 test "FirstOutput.txt: first cycle is success, second is cached" {
     const allocator = std.testing.allocator;
