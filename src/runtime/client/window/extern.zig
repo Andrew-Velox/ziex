@@ -1,20 +1,14 @@
-/// Create an HTML/SVG element by tag enum id, register it in the JS domNodes
-/// registry under vnode_id, and set __zx_ref = vnode_id on the element.
-/// Returns the jsz ref (needed to construct the root HTMLElement for CommentMarker).
+// DOM
+/// Create element
 pub extern "__zx" fn _ce(id: usize, vnode_id: u64) u64;
 
-/// Create a text node with the given content, register it in the JS domNodes
-/// registry under vnode_id, and set __zx_ref = vnode_id on the node.
+/// Create text
 pub extern "__zx" fn _ct(ptr: [*]const u8, len: usize, vnode_id: u64) u64;
-
-// Attribute / property mutation
 
 /// setAttribute on the element identified by vnode_id.
 pub extern "__zx" fn _sa(vnode_id: u64, name_ptr: [*]const u8, name_len: usize, val_ptr: [*]const u8, val_len: usize) void;
 
-/// Set a DOM property (not attribute) on the element identified by vnode_id.
-/// Used for properties like checked, value, selected, muted where
-/// setAttribute does not reflect the current state after user interaction.
+/// Set property
 pub extern "__zx" fn _sp(vnode_id: u64, name_ptr: [*]const u8, name_len: usize, val_ptr: [*]const u8, val_len: usize) void;
 
 /// removeAttribute on the element identified by vnode_id.
@@ -23,24 +17,19 @@ pub extern "__zx" fn _ra(vnode_id: u64, name_ptr: [*]const u8, name_len: usize) 
 /// Set nodeValue on the text node identified by vnode_id.
 pub extern "__zx" fn _snv(vnode_id: u64, ptr: [*]const u8, len: usize) void;
 
-/// Set innerHTML (raw, unescaped HTML) on the element identified by vnode_id.
-/// Used for elements with @escaping={.none}.
+/// Set innerHTML
 pub extern "__zx" fn _srh(vnode_id: u64, ptr: [*]const u8, len: usize) void;
 
-// DOM tree mutation
-
-/// parent.appendChild(child) - both nodes looked up by vnode_id.
+/// parent.appendChild(child)
 pub extern "__zx" fn _ac(parent_id: u64, child_id: u64) void;
 
-/// parent.insertBefore(child, ref) - all nodes looked up by vnode_id.
+/// parent.insertBefore(child, ref)
 pub extern "__zx" fn _ib(parent_id: u64, child_id: u64, ref_id: u64) void;
 
-/// parent.removeChild(child) - looked up by vnode_id.
-/// Also recursively removes all descendants from the JS domNodes registry.
+/// parent.removeChild(child)
 pub extern "__zx" fn _rc(parent_id: u64, child_id: u64) void;
 
-/// parent.replaceChild(new_child, old_child) - looked up by vnode_id.
-/// Also removes old_child subtree from the JS domNodes registry.
+/// parent.replaceChild(new_child, old_child)
 pub extern "__zx" fn _rpc(parent_id: u64, new_id: u64, old_id: u64) void;
 
 // Async / timer
@@ -57,20 +46,13 @@ pub extern "__zx" fn _wsClose(ws_id: u64, code: u16, reason_ptr: [*]const u8, re
 /// Write window.location.href into buf. Returns the number of bytes written.
 pub extern "__zx" fn _getLocationHref(buf: [*]u8, buf_len: usize) usize;
 
-/// Serialize the form data of the form DOM element identified by vnode_id as a
-/// URL-encoded string (application/x-www-form-urlencoded).  Returns the number
-/// of bytes written to buf (0 if the element is not a form or not found).
+/// Get serialized form data
 pub extern "__zx" fn _getFormData(vnode_id: u64, buf_ptr: [*]u8, buf_len: usize) usize;
 
-/// Submit a form action: reads the DOM form identified by vnode_id, builds a
-/// multipart/form-data request with the X-ZX-Action header set to action_id,
-/// and fires it via the JS fetch API.  The browser handles multipart
-/// serialization (including file inputs) so no WASM-side encoding is required.
+/// Submits a form with action identity
 pub extern "__zx" fn _submitFormAction(vnode_id: u64, action_id: u32) void;
 
-/// Like _submitFormAction but stateful: injects the serialised bound-state JSON
-/// as a `__$states` multipart field and calls __zx_fetch_complete(fetch_id,…)
-/// when the response arrives so WASM can apply the returned state updates.
+/// Submits a form with component states in __$states field
 pub extern "__zx" fn _submitFormActionAsync(
     vnode_id: u64,
     action_id: u32,

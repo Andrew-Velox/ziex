@@ -10,6 +10,13 @@ fn getGlobalAllocator() std.mem.Allocator {
     return zx.allocator;
 }
 
+pub const Constants = struct {
+    pub const action_form_name = "__$action";
+    pub const states_form_name = "__$states";
+    pub const action_header_name = "x-action";
+    pub const event_header_name = "x-event";
+};
+
 pub const Bound = struct {
     state_ptr: *anyopaque,
     /// Serialize the current state value to its positional JSON representation.
@@ -394,7 +401,7 @@ pub fn actionHandler(ctx: *anyopaque, event: zx.client.Event) void {
     const id_str = std.fmt.bufPrint(&id_buf, "{d}", .{handler_id}) catch "0";
     const headers = [_]CoreFetch.RequestInit.Header{
         .{ .name = "Content-Type", .value = "application/json" },
-        .{ .name = "X-ZX-Action", .value = id_str },
+        .{ .name = Constants.action_header_name, .value = id_str },
     };
 
     if (bound_states.len > 0) {
@@ -432,7 +439,7 @@ pub fn actionHandler(ctx: *anyopaque, event: zx.client.Event) void {
 }
 
 fn eventHandler(ctx: *anyopaque, event: zx.client.Event) void {
-    if (!is_wasm) return;
+    if (comptime (!is_wasm)) return;
     event.preventDefault();
 
     const client_fetch = @import("../client/fetch.zig");
@@ -458,9 +465,11 @@ fn eventHandler(ctx: *anyopaque, event: zx.client.Event) void {
         state_jsons.append(getGlobalAllocator(), json) catch {};
     }
 
+    var id_buf: [16]u8 = undefined;
+    const id_str = std.fmt.bufPrint(&id_buf, "{d}", .{handler_id}) catch "0";
     const headers = [_]CoreFetch.RequestInit.Header{
         .{ .name = "Content-Type", .value = "application/json" },
-        .{ .name = "X-ZX-Server-Event", .value = "1" },
+        .{ .name = Constants.event_header_name, .value = id_str },
     };
 
     const payload = Payload{

@@ -83,7 +83,7 @@ export class ZxBridge extends ZxBridgeCore {
         fetch(window.location.href, {
             method: 'POST',
             // `>>> 0` reinterprets the i32 from wasm as u32 (ids can exceed 2^31).
-            headers: { 'X-ZX-Action': String(actionId >>> 0) },
+            headers: { 'x-action': String(actionId >>> 0) },
             body: formData,
         })
         .then(async (response) => {
@@ -366,7 +366,7 @@ export class ZxBridge extends ZxBridgeCore {
                     fetch(window.location.href, {
                         method: 'POST',
                         // `>>> 0` reinterprets the i32 from wasm as u32 (ids can exceed 2^31).
-                        headers: { 'X-ZX-Action': String(actionId >>> 0) },
+                        headers: { 'x-action': String(actionId >>> 0) },
                         body: formData,
                     }).catch(() => {});
                 },
