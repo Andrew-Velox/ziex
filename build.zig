@@ -14,6 +14,7 @@ pub fn build(b: *std.Build) !void {
 
     const enable_lsp = b.option(bool, "lsp", "Enabled zx lsp") orelse false;
     const enable_sqlite = b.option(bool, "feature-sqlite", "Enabled sqlite support") orelse false;
+    const enable_postgres = b.option(bool, "feature-postgres", "Enabled postgres support") orelse false;
     const exclude_core_lang = b.option(bool, "exclude-core-lang", "Exclude core language tools (Ast/Parse/sourcemap) - only needed by CLI") orelse false;
     const version = b.option([]const u8, "version", "Version to embed in the binary") orelse build_zon.version;
 
@@ -54,8 +55,12 @@ pub fn build(b: *std.Build) !void {
     {
         if (!is_client) {
             if (enable_sqlite) {
-                const adapters_dep = b.lazyDependency("adapters", .{ .target = target, .optimize = optimize });
-                if (adapters_dep) |a| mod.addImport("zqlite", a.module("zqlite"));
+                const db_sqlite_dep = b.lazyDependency("db_sqlite", .{ .target = target, .optimize = optimize });
+                if (db_sqlite_dep) |a| mod.addImport("zqlite", a.module("zqlite"));
+            }
+            if (enable_postgres) {
+                const db_postgres_dp = b.lazyDependency("db_postgres", .{ .target = target, .optimize = optimize });
+                if (db_postgres_dp) |a| mod.addImport("db_postgres", a.module("postgres"));
             }
 
             mod.addImport("httpz", httpz_dep.module("httpz"));
@@ -111,7 +116,7 @@ pub fn build(b: *std.Build) !void {
     // --- Steps: Test --- //
     {
         const mode_test = b.createModule(.{ .root_source_file = b.path("src/root.zig") });
-        if (b.lazyDependency("adapters", .{})) |ad| mode_test.addImport("zqlite", ad.module("zqlite"));
+        if (b.lazyDependency("db_sqlite", .{})) |ad| mode_test.addImport("zqlite", ad.module("zqlite"));
         mode_test.addOptions("zx_info", options);
         mode_test.addOptions("zx_module_options", zx_module_options);
         mode_test.addImport("zx_core_lang", zx_core_lang_mod);

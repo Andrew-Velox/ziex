@@ -121,6 +121,7 @@ pub fn build(b: *std.Build) !void {
             // .copy_embedded_sources = true,
             .features = .{
                 .sqlite = .enabled,
+                // .postgres = .enabled,
                 .kv = .enabled,
                 .cache = .enabled,
             },

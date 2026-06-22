@@ -18,6 +18,7 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
         .target = target,
         .@"exclude-core-lang" = true, // Users don't need parser/transpiler
         .@"feature-sqlite" = if (options.app != null and options.app.?.features.sqlite != null) true else null,
+        .@"feature-postgres" = if (options.app != null and options.app.?.features.postgres != null) true else null,
     });
 
     const zx_host_dep = b.dependencyFromBuildZig(build_zig, .{
@@ -283,6 +284,7 @@ pub fn initInner(
     zx_options.addOption([]const u8, "cli_command", cli_command_opt orelse "--");
     zx_options.addOption(bool, "introspect", b.option(bool, "introspect", "Print Ziex app metadata and exit") orelse false);
     zx_options.addOption(bool, "feat_sqlite_server", if (opts.features.sqlite) |s| s.server != null else false);
+    zx_options.addOption(bool, "feat_pg_server", if (opts.features.postgres) |s| s.server != null else false);
     zx_options.addOption(bool, "feat_kv_server", if (opts.features.kv) |k| k.server != null else false);
     zx_options.addOption(bool, "feat_kv_client", if (opts.features.kv) |k| k.client != null else false);
     zx_options.addOption(bool, "feat_cache_server", if (opts.features.cache) |c| c.server != null else false);
