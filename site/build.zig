@@ -126,7 +126,7 @@ pub fn build(b: *std.Build) !void {
             },
         },
         .client = .{
-            .jsglue_href = "/assets/_/main.js",
+            .jsglue_href = "/assets/_/main-dev.js",
             .jsglue_install_subdir = "pkg/ziex",
         },
         .cli = .{ .optimize = optimize },
@@ -212,7 +212,7 @@ pub fn build(b: *std.Build) !void {
         },
     });
 
-    const install_main_js = b.addInstallFile(site_scripts.dir.path(b, "client.js"), "static/assets/_/main.js");
+    const install_main_js = b.addInstallFile(site_scripts.dir.path(b, "client.js"), "static/assets/_/main-dev.js");
     const install_docs_js = b.addInstallFile(site_scripts.dir.path(b, "docs.js"), "static/assets/docs.js");
     const install_home_js = b.addInstallFile(site_scripts.dir.path(b, "home.js"), "static/assets/home.js");
     b.default_step.dependOn(&install_main_js.step);
