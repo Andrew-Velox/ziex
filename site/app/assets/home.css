@@ -567,7 +567,7 @@ a.hero-badge:hover {
 }
 
 .hero-install .install-box-content {
-    padding: 1rem 1.1rem;
+    padding: 0.8rem;
     background: linear-gradient(180deg, rgba(13, 16, 22, 0.98) 0%, rgba(10, 13, 18, 1) 100%);
     min-width: 0;
     overflow-x: hidden;
@@ -622,6 +622,7 @@ a.hero-badge:hover {
 
 .hero-install .install-box-header:has(#tab-unix:checked)+.install-box-content #content-unix,
 .hero-install .install-box-header:has(#tab-windows:checked)+.install-box-content #content-windows,
+.hero-install .install-box-header:has(#tab-node:checked)+.install-box-content #content-node,
 .hero-install .install-box-header:has(#tab-zig-mac:checked)+.install-box-content #content-zig-mac,
 .hero-install .install-box-header:has(#tab-zig-win:checked)+.install-box-content #content-zig-win,
 .hero-install .install-box-header:has(#tab-zig-other:checked)+.install-box-content #content-zig-other {
@@ -630,6 +631,7 @@ a.hero-badge:hover {
 
 .hero-install .install-box-header:has(#tab-unix:checked) .install-tab-labels label[for="tab-unix"],
 .hero-install .install-box-header:has(#tab-windows:checked) .install-tab-labels label[for="tab-windows"],
+.hero-install .install-box-header:has(#tab-node:checked) .install-tab-labels label[for="tab-node"],
 .hero-install .install-box-header:has(#tab-zig-mac:checked) .install-tab-labels label[for="tab-zig-mac"],
 .hero-install .install-box-header:has(#tab-zig-win:checked) .install-tab-labels label[for="tab-zig-win"],
 .hero-install .install-box-header:has(#tab-zig-other:checked) .install-tab-labels label[for="tab-zig-other"] {
@@ -640,10 +642,20 @@ a.hero-badge:hover {
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
 }
 
+.hero-install .install-tab-separator {
+    width: 1px;
+    align-self: stretch;
+    margin: 0.35rem 0.15rem;
+    background: rgba(255, 255, 255, 0.12);
+    flex-shrink: 0;
+}
+
 .hero-install .install-prompt {
     color: var(--zx-primary-light);
     font-weight: 600;
     margin-right: 0.25rem;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .hero-install .copy-button {
@@ -1662,6 +1674,7 @@ a.hero-badge:hover {
 }
 
 .code-example .comment,
+.install-code .comment,
 .feature-code-window .comment {
     font-style: italic;
     color: #7a9aa8;

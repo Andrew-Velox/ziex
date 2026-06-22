@@ -430,7 +430,7 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
                                 Compile-time safety, deterministic performance, absolute simplicity, and a delightful developer experience.
                             </p>
                             <div class="hero-install">
-                                <InstallCLI allocator={allocator} />
+                                <InstallCLI allocator={allocator} show_init={true} />
                             </div>
                             <div class="hero-cta">
                                 <a href="/learn" class="btn btn-primary">Get Started</a>

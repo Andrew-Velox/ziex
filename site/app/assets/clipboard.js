@@ -95,7 +95,7 @@ function setupCopyButtons() {
           .map((line) => line.textContent.replace(/^\$\s*|^>\s*/, '').trim())
           .join(' && ');
       } else {
-        text = installCode.textContent.replace(/^\$\s*|^>\s*/, '').trim();
+        text = installCode.textContent.replace(/^\$\s*|^>\s*/, '').replace(" #or", "").trim();
       }
 
       copyText(text, copyButton);
