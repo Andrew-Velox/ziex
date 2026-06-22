@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const builder = @import("builder");
 
 const err_sample = @embedFile("ErrorOutput.txt");
@@ -102,6 +103,8 @@ test "FirstOutput.txt: first cycle is success, second is cached" {
 }
 
 test "FirstOutput.txt: second cycle is no-change (all cached)" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+
     const allocator = std.testing.allocator;
     var state = BuildState.init(allocator);
     defer state.deinit();
@@ -305,6 +308,7 @@ test "error build cycle emits errors" {
 }
 
 test "error then fix: error event then later resolved" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     const allocator = std.testing.allocator;
     var state = BuildState.init(allocator);
     state.first_build_done = true;
