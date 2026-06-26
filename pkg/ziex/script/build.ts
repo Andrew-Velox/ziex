@@ -31,6 +31,9 @@ async function main() {
     entrypoints: [join(pkgDir, "src/index.ts"), join(pkgDir, "src/react/index.ts"), join(pkgDir, "src/wasm/index.ts"), join(pkgDir, "src/cloudflare/index.ts"), join(pkgDir, "src/aws-lambda/index.ts"), join(pkgDir, "src/vercel/index.ts")],
     outdir: pkgDistDir,
     // minify: true,
+    define: {
+      __DEV__: "true",
+    }
   });
 
   // Build standalone WASM init script (auto-initializes, for direct <script> usage)
@@ -38,8 +41,23 @@ async function main() {
   await Bun.build({
     entrypoints: [join(pkgDir, "src/wasm/init.ts")],
     outdir: join(pkgDistDir, "wasm"),
-    minify: false,
+    minify: true,
     naming: "[name].js",
+    define: {
+      __DEV__: "false",
+    }
+  });
+
+  // Build standalone WASM init script (auto-initializes, for direct <script> usage)
+  console.log(`\x1b[33m📦 ${pkgName} - Building standalone dev wasm/init.dev.js...\x1b[0m`);
+  await Bun.build({
+    entrypoints: [join(pkgDir, "src/wasm/init.ts")],
+    outdir: join(pkgDistDir, "wasm"),
+    minify: false,
+    naming: "[name].dev.js",
+    define: {
+      __DEV__: "true",
+    }
   });
 
   // Generate TypeScript declaration files

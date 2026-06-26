@@ -761,15 +761,15 @@ export async function init(options: InitOptions = {}): Promise<{ source: WebAsse
         },
     };
 
-    // TODO: dev only and prebundle a dev and prod version before publishing
-    // if (import.meta.env.DEV)
-    registerDevReinit(normalizedOptions);
+    if (typeof __DEV__ !== "undefined" && __DEV__) registerDevReinit(normalizedOptions);
 
     return { source, bridge };
 }
 
 // Global type declarations
 declare global {
+    const __DEV__: boolean;
+
     interface HTMLElement {
         __zx_ref?: number;
     }
