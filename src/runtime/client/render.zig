@@ -55,12 +55,28 @@ pub fn applyPatches(
                 const data = &patch.data.PLACEMENT;
                 const dom_parent_id = resolveDomParentId(client, data.parent_id);
 
-                _ = try createPlatformNodes(allocator, data.vnode, client, options);
+                const resolved = try vdom.resolveComponent(allocator, data.vnode.component, data.vnode.owner_component_id, 0);
+                const placed_is_fragment = resolved == .element and resolved.element.tag == .fragment;
 
-                if (data.reference_id) |ref_id| {
-                    ext._ib(dom_parent_id, data.vnode.id, ref_id);
-                } else {
-                    ext._ac(dom_parent_id, data.vnode.id);
+                const create_options = RenderOptions{
+                    .base_path = options.base_path,
+                    .dom_parent_id = if (placed_is_fragment) dom_parent_id else null,
+                    .marker = null,
+                };
+                _ = try createPlatformNodes(allocator, data.vnode, client, create_options);
+
+                if (!placed_is_fragment) {
+                    const ref_id = data.reference_id orelse blk: {
+                        if (vnodeIsFragment(client, data.parent_id)) {
+                            break :blk findFragmentInsertReference(client, data.parent_id, data.index);
+                        }
+                        break :blk findChildInsertReference(client, data.parent_id, data.index);
+                    };
+                    if (ref_id) |reference_id| {
+                        ext._ib(dom_parent_id, data.vnode.id, reference_id);
+                    } else {
+                        ext._ac(dom_parent_id, data.vnode.id);
+                    }
                 }
 
                 if (client.getVElementById(data.parent_id)) |parent_vnode| {
@@ -70,9 +86,11 @@ pub fn applyPatches(
             },
             .DELETION => {
                 const data = patch.data.DELETION;
-                const dom_parent_id = resolveDomParentId(client, data.parent_id);
 
-                ext._rc(dom_parent_id, data.vnode_id);
+                if (!vnodeIsFragment(client, data.vnode_id)) {
+                    const dom_parent_id = resolveDomParentId(client, data.parent_id);
+                    ext._rc(dom_parent_id, data.vnode_id);
+                }
 
                 if (client.getVElementById(data.vnode_id)) |vnode| {
                     client.unregisterVElement(vnode);
@@ -94,7 +112,18 @@ pub fn applyPatches(
 
                 _ = try createPlatformNodes(allocator, data.new_vnode, client, options);
 
-                ext._rpc(dom_parent_id, data.new_vnode.id, data.old_vnode_id);
+                if (vnodeIsFragment(client, data.old_vnode_id)) {
+                    const ref_id = findFragmentInsertReference(client, data.old_vnode_id, 0);
+                    if (ref_id) |reference_id| {
+                        ext._ib(dom_parent_id, data.new_vnode.id, reference_id);
+                    } else {
+                        ext._ac(dom_parent_id, data.new_vnode.id);
+                    }
+                } else if (vnodeIsFragment(client, data.new_vnode.id)) {
+                    ext._rc(dom_parent_id, data.old_vnode_id);
+                } else {
+                    ext._rpc(dom_parent_id, data.new_vnode.id, data.old_vnode_id);
+                }
 
                 if (client.getVElementById(data.old_vnode_id)) |old_vnode| {
                     client.unregisterVElement(old_vnode);
@@ -115,8 +144,9 @@ pub fn applyPatches(
                 const data = patch.data.MOVE;
                 const dom_parent_id = resolveDomParentId(client, data.parent_id);
 
-                if (data.reference_id) |ref_id| {
-                    ext._ib(dom_parent_id, data.vnode_id, ref_id);
+                const ref_id = data.reference_id orelse findFragmentInsertReference(client, data.parent_id, data.new_index);
+                if (ref_id) |reference_id| {
+                    ext._ib(dom_parent_id, data.vnode_id, reference_id);
                 } else {
                     ext._ac(dom_parent_id, data.vnode_id);
                 }
@@ -430,6 +460,13 @@ fn resolveDomParentId(client: anytype, parent_vnode_id: u64) u64 {
     return parent_vnode_id;
 }
 
+fn vnodeIsFragment(client: anytype, vnode_id: u64) bool {
+    if (client.getVElementById(vnode_id)) |vnode| {
+        return vnode.component == .element and vnode.component.element.tag == .fragment;
+    }
+    return false;
+}
+
 fn findDomParentInSubtree(node: *VNode, target_id: u64, dom_ancestor: ?u64) ?u64 {
     const dom_here: ?u64 = if (node.component == .element and node.component.element.tag != .fragment)
         node.id
@@ -444,6 +481,65 @@ fn findDomParentInSubtree(node: *VNode, target_id: u64, dom_ancestor: ?u64) ?u64
         else
             dom_ancestor;
         if (findDomParentInSubtree(child, target_id, next_ancestor)) |found| return found;
+    }
+    return null;
+}
+
+fn firstDomNodeId(vnode: *VNode) ?u64 {
+    switch (vnode.component) {
+        .element => |elem| {
+            if (elem.tag == .fragment) {
+                for (vnode.children.items) |child| {
+                    if (firstDomNodeId(child)) |id| return id;
+                }
+                return null;
+            }
+            return vnode.id;
+        },
+        .text => return vnode.id,
+        else => return null,
+    }
+}
+
+/// When inserting into a fragment vnode, DOM nodes must be placed before the
+/// fragment's next sibling (e.g. conditional `{if ...}` before the following `<p>`).
+fn findFragmentInsertReference(client: anytype, fragment_id: u64, insert_index: usize) ?u64 {
+    var vtrees_iter = client.vtrees.iterator();
+    while (vtrees_iter.next()) |entry| {
+        if (findFragmentInsertReferenceInSubtree(entry.value_ptr.vtree, fragment_id, insert_index)) |id| return id;
+    }
+    return null;
+}
+
+fn findFragmentInsertReferenceInSubtree(parent: *VNode, fragment_id: u64, insert_index: usize) ?u64 {
+    for (parent.children.items, 0..) |child, i| {
+        if (child.id == fragment_id) {
+            if (insert_index < child.children.items.len) {
+                if (firstDomNodeId(child.children.items[insert_index])) |id| return id;
+            }
+            if (i + 1 < parent.children.items.len) {
+                return firstDomNodeId(parent.children.items[i + 1]);
+            }
+            return null;
+        }
+        if (findFragmentInsertReferenceInSubtree(child, fragment_id, insert_index)) |id| return id;
+    }
+    return null;
+}
+
+/// Find the DOM node to insert before when placing a child at `insert_index` in `parent_id`.
+fn findChildInsertReference(client: anytype, parent_id: u64, insert_index: usize) ?u64 {
+    if (client.getVElementById(parent_id)) |parent| {
+        if (insert_index < parent.children.items.len) {
+            const at_slot = parent.children.items[insert_index];
+            if (vnodeIsFragment(client, at_slot.id)) {
+                if (insert_index + 1 < parent.children.items.len) {
+                    return firstDomNodeId(parent.children.items[insert_index + 1]);
+                }
+                return null;
+            }
+            return firstDomNodeId(at_slot);
+        }
     }
     return null;
 }

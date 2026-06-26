@@ -393,6 +393,11 @@ fn concatRawText(allocator: zx.Allocator, children: ?[]const zx.Component) ![]co
     return aw.written();
 }
 
+fn componentIsFragment(component: zx.Component) bool {
+    if (component != .element) return false;
+    return component.element.tag == .fragment;
+}
+
 /// Reconcile children of a parent vnode. Mirrors React's reconcileChildrenArray.
 ///
 /// React's algorithm (from ReactChildFiber.js):
@@ -438,6 +443,29 @@ fn reconcileChildren(
         if (areComponentsSameType(old_child.component, resolved)) {
             try diff(allocator, old_child, resolved, parent, patches);
             last_placed_index = old_idx;
+        } else if (componentIsFragment(old_child.component) or componentIsFragment(resolved)) {
+            // Fragment↔element mismatches must not REPLACE — fragments have no DOM node.
+            try patches.append(allocator, Patch{
+                .type = .DELETION,
+                .data = .{ .DELETION = .{
+                    .vnode_id = old_child.id,
+                    .parent_id = parent.id,
+                } },
+            });
+            const new_vnode = try createVNodeFromComponent(
+                allocator,
+                resolved,
+                componentOwnerId(allocator, new_children_slice[new_idx], old_velement.owner_component_id, new_idx),
+            );
+            try patches.append(allocator, Patch{
+                .type = .PLACEMENT,
+                .data = .{ .PLACEMENT = .{
+                    .vnode = new_vnode,
+                    .parent_id = parent.id,
+                    .reference_id = null,
+                    .index = old_idx,
+                } },
+            });
         } else {
             try patches.append(allocator, Patch{
                 .type = .REPLACE,
