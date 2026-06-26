@@ -1,7 +1,3 @@
-//! Server-side WebSocket client implementation using websocket.zig (via httpz).
-//!
-//! This module provides outgoing WebSocket connections from the server.
-
 const std = @import("std");
 const WebSocket = @import("../core/WebSocket.zig");
 const websocket = @import("httpz").websocket;

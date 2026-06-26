@@ -1,10 +1,3 @@
-//! Shared Event types for both client-side and server-side event handlers.
-//!
-//! Both `zx.client.Event` and `zx.server.Event` share this state interface:
-//!   - `Event.Stateful` - wrapper with `state()` for handlers bound via `ctx.bind()`
-//!   - `StateHandle(T)` - returned by `state()`, provides `.get()` / `.set()`
-//!   - `StateContext` - positional state accessor used internally by the bind wrappers
-
 const std = @import("std");
 const zx = @import("../../root.zig");
 

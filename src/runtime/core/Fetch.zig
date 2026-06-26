@@ -1,34 +1,30 @@
-//! Fetch API - A unified HTTP client for ZX using an Io abstraction.
-//!
-//! Uses a custom `Io` interface that allows the same `fetch()` function
-//! to work on both server (blocking) and client (WASM/async).
-//!
-//! **Usage:**
-//! ```zig
-//! // Server-side (blocking)
-//! var response = try zx.fetch(zx.Io.blocking, allocator, url, .{});
-//! defer response.deinit();
-//!
-//! // Client-side (WASM) - use with callback
-//! zx.fetch(zx.Io.wasm(&callback), allocator, url, .{});
-//! ```
+/// Fetch API - A unified HTTP client for ZX using an Io abstraction.
+///
+/// Uses a custom `Io` interface that allows the same `fetch()` function
+/// to work on both server (blocking) and client (WASM/async).
+///
+/// **Usage:**
+/// ```zig
+/// // Server-side (blocking)
+/// var response = try zx.fetch(zx.Io.blocking, allocator, url, .{});
+/// defer response.deinit();
+///
+/// // Client-side (WASM) - use with callback
+/// zx.fetch(zx.Io.wasm(&callback), allocator, url, .{});
+/// ```
+pub const Fetch = @This();
 
 const std = @import("std");
 const builtin = @import("builtin");
 const common = @import("common.zig");
 
-pub const Fetch = @This();
+const server_impl = if (!is_wasm) @import("../server/fetch.zig") else struct {};
+const client_impl = if (is_wasm) @import("../client/fetch.zig") else struct {};
 
-// Re-export common types
 pub const Method = common.Method;
 pub const ContentType = common.ContentType;
 
-/// Whether we're running in a browser environment (WASM)
 pub const is_wasm = builtin.cpu.arch == .wasm32 or builtin.cpu.arch == .wasm64;
-
-// ============================================================================
-// Io - Execution Model Abstraction
-// ============================================================================
 
 /// Io determines how fetch operations are executed.
 ///
@@ -67,10 +63,6 @@ pub const Io = struct {
     }
 };
 
-// ============================================================================
-// Request Options
-// ============================================================================
-
 /// Options for configuring a fetch request.
 pub const RequestInit = struct {
     /// The request method (GET, POST, PUT, DELETE, etc.)
@@ -93,10 +85,6 @@ pub const RequestInit = struct {
         value: []const u8,
     };
 };
-
-// ============================================================================
-// Response
-// ============================================================================
 
 /// The Response interface of the Fetch API represents the response to a request.
 pub const Response = struct {
@@ -186,10 +174,6 @@ pub const Headers = struct {
     }
 };
 
-// ============================================================================
-// Error Types
-// ============================================================================
-
 pub const FetchError = error{
     Timeout,
     NetworkError,
@@ -204,10 +188,6 @@ pub const FetchError = error{
     Unknown,
 };
 
-// ============================================================================
-// Callback Type
-// ============================================================================
-
 /// Callback type for async fetch completion.
 /// - response: The response if successful, null on error
 /// - err: The error if failed, null on success
@@ -215,17 +195,6 @@ pub const ResponseCallback = *const fn (response: ?*Response, err: ?FetchError) 
 
 /// Like ResponseCallback but carries an opaque context pointer for stateful callbacks.
 pub const ResponseCallbackCtx = *const fn (ctx: *anyopaque, response: ?*Response, err: ?FetchError) void;
-
-// ============================================================================
-// Platform Implementations
-// ============================================================================
-
-const server_impl = if (!is_wasm) @import("../server/fetch.zig") else struct {};
-const client_impl = if (is_wasm) @import("../client/fetch.zig") else struct {};
-
-// ============================================================================
-// Main Fetch Function
-// ============================================================================
 
 /// Perform an HTTP fetch request.
 ///

@@ -1,13 +1,14 @@
+const Action = @This();
+
 const std = @import("std");
 const zx = @import("../../root.zig");
 const Request = @import("../core/Request.zig");
 const Response = @import("../core/Response.zig");
 const CoreEvent = @import("../core/Event.zig");
+const File = @import("../core/File.zig");
 
 const StateContext = CoreEvent.StateContext;
 const Allocator = std.mem.Allocator;
-
-const Action = @This();
 
 request: Request = undefined,
 response: Response = undefined,
@@ -36,12 +37,12 @@ pub fn data(self: Action, comptime T: type) T {
     if (std.mem.indexOf(u8, content_type, "multipart/form-data") != null) {
         const mfd = self.request.multiFormData();
         inline for (type_struct.field_names, type_struct.field_types) |field_name, field_type| {
-            if (comptime field_type == zx.File) {
+            if (comptime field_type == File) {
                 const val = mfd.get(field_name);
-                @field(result, field_name) = if (val) |v| zx.File.fromBytes(v.data, v.filename orelse "", "", self.arena) else zx.File{};
-            } else if (comptime field_type == ?zx.File) {
+                @field(result, field_name) = if (val) |v| File.fromBytes(v.data, v.filename orelse "", "", self.arena) else File{};
+            } else if (comptime field_type == ?File) {
                 const val = mfd.get(field_name);
-                @field(result, field_name) = if (val) |v| zx.File.fromBytes(v.data, v.filename orelse "", "", self.arena) else null;
+                @field(result, field_name) = if (val) |v| File.fromBytes(v.data, v.filename orelse "", "", self.arena) else null;
             } else {
                 @field(result, field_name) = parseFormField(field_type, mfd.getValue(field_name), self.arena);
             }
@@ -49,8 +50,8 @@ pub fn data(self: Action, comptime T: type) T {
     } else {
         const fd = self.request.formData();
         inline for (type_struct.field_names, type_struct.field_types) |field_name, field_type| {
-            if (comptime field_type == zx.File or field_type == ?zx.File) {
-                @field(result, field_name) = if (comptime field_type == zx.File) zx.File{} else null;
+            if (comptime field_type == File or field_type == ?File) {
+                @field(result, field_name) = if (comptime field_type == File) File{} else null;
             } else {
                 @field(result, field_name) = parseFormField(field_type, fd.get(field_name), self.arena);
             }

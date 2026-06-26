@@ -142,10 +142,6 @@ pub const Socket = struct {
         return self._internal.attached;
     }
 
-    // =========================================================================
-    // Pub/Sub API - Topic-based broadcasting
-    // =========================================================================
-
     /// Subscribe to a topic to receive published messages.
     /// Multiple sockets can subscribe to the same topic.
     ///

@@ -1,13 +1,7 @@
-//! Represents an uploaded file from a multipart form submission.
-//!
-//! The `data` field is a type-erased `std.Io.AnyReader` so call-site code
-//! is written against the reader interface today and will continue to compile
-//! unchanged when a streaming multipart parser is introduced in the future.
-//! Currently the reader is backed by the in-memory request body bytes.
+// TODO: get rid of File interface and probably just have reader in file field of MFD.
+pub const File = @This();
 
 const std = @import("std");
-
-pub const File = @This();
 
 /// Original filename as reported by the browser (empty string when absent).
 name: []const u8 = "",
@@ -20,12 +14,9 @@ content_type: []const u8 = "",
 size: usize = 0,
 
 /// Reader interface for the file content.
-/// Do not retain this value after the action handler returns; the backing
-/// memory belongs to the request arena.
-data: std.Io.AnyReader = emptyReader(),
+data: std.Io.Reader = emptyReader(),
 
 /// Build a File backed by an in-memory byte slice.
-/// `fbs_alloc` must outlive the returned File (use the request arena).
 pub fn fromBytes(
     bytes: []const u8,
     name: []const u8,
@@ -46,14 +37,12 @@ pub fn fromBytes(
     };
 }
 
-// ── Internal ────────────────────────────────────────────────────────────────
+var empty_ctx: u8 = 0;
 
 fn emptyReadFn(_: *const anyopaque, _: []u8) anyerror!usize {
     return 0;
 }
 
-var empty_ctx: u8 = 0;
-
-fn emptyReader() std.Io.AnyReader {
+fn emptyReader() std.Io.Reader {
     return .{ .context = &empty_ctx, .readFn = &emptyReadFn };
 }

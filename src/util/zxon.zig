@@ -11,10 +11,6 @@ const std = @import("std");
 /// Options for serialize/parse - reserved for future use.
 pub const Options = struct {};
 
-// ──────────────────────────────────────────────────────────────
-//  Serialize
-// ──────────────────────────────────────────────────────────────
-
 /// Serialize `value` into ZXON positional format.
 pub fn serialize(value: anytype, writer: *std.Io.Writer, options: Options) anyerror!void {
     _ = options;
@@ -91,10 +87,6 @@ inline fn escapeByte(w: *std.Io.Writer, c: u8) !void {
         else => try w.writeByte(c),
     }
 }
-
-// ──────────────────────────────────────────────────────────────
-//  Parse
-// ──────────────────────────────────────────────────────────────
 
 /// Parse a ZXON-encoded `string` into a value of type `T`.
 pub fn parse(comptime T: type, allocator: std.mem.Allocator, data: []const u8, options: Options) !T {
@@ -261,8 +253,6 @@ fn readFloat(comptime T: type, d: []const u8, p: *usize) !T {
     return std.fmt.parseFloat(T, d[start..p.*]) catch 0;
 }
 
-// ── Helpers ──────────────────────────────────────────────────
-
 fn peek(d: []const u8, p: *const usize) u8 {
     return if (p.* < d.len) d[p.*] else 0;
 }
@@ -289,10 +279,6 @@ fn literal(d: []const u8, p: *usize, lit: []const u8) bool {
     }
     return false;
 }
-
-// ──────────────────────────────────────────────────────────────
-//  Schema
-// ──────────────────────────────────────────────────────────────
 
 /// Returns a comptime structural schema descriptor for `T`.
 /// The hash uniquely identifies the field-name / type structure so that

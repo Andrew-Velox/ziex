@@ -1,10 +1,10 @@
+pub const Request = @This();
+
 const std = @import("std");
 const common = @import("common.zig");
 const Http = @import("Http.zig");
 const FormDataModule = @import("FormData.zig");
 const MultiFormDataModule = @import("MultiFormData.zig");
-
-pub const Request = @This();
 
 pub const FormData = FormDataModule;
 pub const MultiFormData = MultiFormDataModule;
@@ -13,9 +13,6 @@ pub const Version = common.Version;
 pub const Cookies = common.Cookies;
 pub const Header = common.Header;
 pub const MultiFormEntry = common.MultiFormEntry;
-
-// --- Instance Properties --- //
-// MDN: [Request instance properties](https://developer.mozilla.org/en-US/docs/Web/API/Request#instance_properties)
 
 /// Contains the URL of the request.
 ///
@@ -74,9 +71,6 @@ arena: std.mem.Allocator,
 /// Internal backend transport carrier. All request reads delegate here.
 _internal: Http.Facade = .{},
 
-// --- Instance Methods --- //
-// MDN: [Request instance methods](https://developer.mozilla.org/en-US/docs/Web/API/Request#instance_methods)
-
 /// Returns the request body as text.
 ///
 /// MDN: [Request.text](https://developer.mozilla.org/en-US/docs/Web/API/Request/text)
@@ -102,9 +96,6 @@ pub fn multiFormData(self: *const Request) MultiFormDataModule {
     return .{ ._internal = self._internal };
 }
 
-// --- URLSearchParams --- //
-// MDN: [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
-
 /// The URLSearchParams interface defines utility methods to work with the query string of a URL.
 ///
 /// MDN: [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
@@ -124,8 +115,6 @@ pub const URLSearchParams = struct {
         return self._internal.http.reqQueryHas(name);
     }
 };
-
-// --- Params --- //
 
 /// The Params interface provides utility methods to work with URL parameters.
 /// extracted from dynamic routes.
@@ -155,9 +144,6 @@ pub const Params = struct {
     }
 };
 
-// --- Headers --- //
-// MDN: [Headers](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
-
 /// The Headers interface of the Fetch API allows you to perform various actions on HTTP request and response headers.
 ///
 /// MDN: [Headers](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
@@ -179,7 +165,6 @@ pub const Headers = struct {
     }
 };
 
-/// Builder for creating Request objects.
 pub const Builder = struct {
     url: []const u8 = "",
     method: Method = .GET,
@@ -190,7 +175,6 @@ pub const Builder = struct {
     protocol: Version = .@"HTTP/1.1",
     arena: std.mem.Allocator,
     cookie_header: []const u8 = "",
-    /// The unified backend transport for this request/response pair.
     http: Http = .{},
 
     /// Builds the Request object with all configured values.

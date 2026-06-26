@@ -1,8 +1,8 @@
+pub const Response = @This();
+
 const std = @import("std");
 const common = @import("common.zig");
 const Http = @import("Http.zig");
-
-pub const Response = @This();
 
 pub const Cookies = common.Cookies;
 pub const CookieOptions = common.CookieOptions;
@@ -28,9 +28,6 @@ pub const ResponseType = enum {
     @"opaque",
     opaqueredirect,
 };
-
-// --- Instance Properties --- //
-// MDN: [Response instance properties](https://developer.mozilla.org/en-US/docs/Web/API/Response#instance_properties)
 
 /// A ReadableStream of the body contents.
 ///
@@ -86,8 +83,6 @@ arena: std.mem.Allocator,
 
 /// Internal backend transport carrier. All response writes delegate here.
 _internal: Http.Facade = .{},
-
-// --- Methods --- //
 
 /// Sets the HTTP status code using an HttpStatus enum.
 pub fn setStatus(self: *const Response, stat: HttpStatus) void {
@@ -153,9 +148,6 @@ pub fn clearWriter(self: *const Response) void {
     self._internal.http.resClearWriter();
 }
 
-// --- Headers --- //
-// MDN: [Headers](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
-
 /// The Headers interface of the Fetch API allows you to perform various actions on HTTP request and response headers.
 ///
 /// MDN: [Headers](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
@@ -186,8 +178,6 @@ pub const Headers = struct {
     }
 };
 
-// --- Cookies --- //
-
 /// The ResponseCookies interface provides utility methods to work with cookies on the response.
 pub const ResponseCookies = struct {
     _internal: Http.Facade = .{},
@@ -208,17 +198,14 @@ pub const ResponseCookies = struct {
     }
 };
 
-/// Builder for creating Response objects.
 pub const Builder = struct {
     status: u16 = 200,
     redirected: bool = false,
     url: []const u8 = "",
     response_type: ResponseType = .default,
     arena: std.mem.Allocator,
-    /// The unified backend transport for this request/response pair.
     http: Http = .{},
 
-    /// Builds the Response object with all configured values.
     pub fn build(self: Builder) Response {
         return .{
             .body = "",

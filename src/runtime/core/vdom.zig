@@ -1,5 +1,8 @@
 pub const VDOMTree = @This();
 
+const zx = @import("../../root.zig");
+const std = @import("std");
+
 var next_velement_id: u64 = 0;
 
 pub const VNode = struct {
@@ -635,6 +638,3 @@ fn componentOwnerId(allocator: zx.Allocator, component: zx.Component, owner_comp
         else => owner_component_id,
     };
 }
-
-const zx = @import("../../root.zig");
-const std = @import("std");

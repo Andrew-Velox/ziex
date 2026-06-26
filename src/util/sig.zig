@@ -1,9 +1,3 @@
-//! Cross-platform graceful shutdown handling via Ctrl+C / SIGINT / SIGTERM.
-//!
-//! Signal handlers (POSIX) and the Windows console control handler cannot
-//! close over state, so the user callback is stored in a global. Call
-//! `register` once with the function to run on shutdown.
-
 const std = @import("std");
 const builtin = @import("builtin");
 

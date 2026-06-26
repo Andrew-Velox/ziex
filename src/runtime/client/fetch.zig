@@ -1,7 +1,3 @@
-//! Client-side (WASM/Browser) Fetch implementation.
-//!
-//! Uses JavaScript's native fetch() API via WASM interop.
-
 const std = @import("std");
 const builtin = @import("builtin");
 const window = @import("window.zig");
@@ -17,10 +13,6 @@ const ResponseCallbackCtx = Fetch.ResponseCallbackCtx;
 
 pub const is_wasm = window.is_wasm;
 var next_fetch_id: u64 = 1;
-
-// ============================================================================
-// Async Fetch
-// ============================================================================
 
 /// Perform an async HTTP fetch request with callback.
 pub fn fetchAsync(
@@ -109,10 +101,6 @@ pub fn fetchAsyncCtx(
         fetch_id,
     );
 }
-
-// ============================================================================
-// Callback Registry
-// ============================================================================
 
 const MAX_PENDING = 64;
 
@@ -252,10 +240,6 @@ export fn __zx_fetch_complete(
         cb(response, null);
     }
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 fn serializeHeadersJson(headers: ?[]const RequestInit.Header, buf: []u8) []const u8 {
     var len: usize = 0;

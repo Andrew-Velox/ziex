@@ -1,5 +1,3 @@
-//! HTML escaping and unescaping utilities.
-
 const std = @import("std");
 
 /// Escape a string for use inside an HTML attribute value.

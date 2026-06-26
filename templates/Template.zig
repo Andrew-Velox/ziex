@@ -1,8 +1,3 @@
-//! Embeds the canonical `_base` starter template so the `zx init` command can
-//! materialize a new project. This file is rooted in `templates/` so that
-//! `@embedFile` is permitted to read files under `_base/`. It is intentionally
-//! kept outside `_base/` so it is never copied into generated user projects.
-
 const base = "_base/";
 const docker = "_docker/";
 

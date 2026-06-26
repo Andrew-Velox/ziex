@@ -1,22 +1,11 @@
-//! The MultiFormData interface provides a way to construct a set of key/value pairs
-//! representing multipart form fields and their values, including file uploads.
-//!
-//! This implementation handles multipart/form-data with file upload support.
-//! For simple key-value form data (application/x-www-form-urlencoded), use FormData instead.
-//!
-//! https://developer.mozilla.org/en-US/docs/Web/API/FormData
+pub const MultiFormData = @This();
 
 const std = @import("std");
 const Http = @import("Http.zig");
 
-pub const MultiFormData = @This();
-
-// --- Types --- //
+pub const File = @import("File.zig");
 
 /// A single form data entry value, which can be a string or a file.
-///
-/// **Zig Note:** In the web standard, values can be `string | Blob`.
-/// This implementation uses a struct that can represent both.
 pub const Value = struct {
     /// The value content as bytes
     data: []const u8,
@@ -35,26 +24,15 @@ pub const Entry = struct {
     value: Value,
 };
 
-// --- Instance Fields --- //
-
 /// Internal backend transport carrier. All reads delegate here.
 _internal: Http.Facade = .{},
 
-// --- Instance Methods --- //
-// https://developer.mozilla.org/en-US/docs/Web/API/FormData#instance_methods
-
 /// Returns the first value associated with a given key from within a MultiFormData object.
-///
-/// https://developer.mozilla.org/en-US/docs/Web/API/FormData/get
-///
-/// **Zig Note:** Returns `?Value` instead of `FormDataEntryValue | null`.
 pub fn get(self: *const MultiFormData, name: []const u8) ?Value {
     return self._internal.http.reqMultiGet(name);
 }
 
 /// Returns the first string value associated with a given key.
-///
-/// **Zig Note:** Convenience method that returns just the data portion.
 pub fn getValue(self: *const MultiFormData, name: []const u8) ?[]const u8 {
     if (self.get(name)) |v| {
         return v.data;
@@ -63,23 +41,14 @@ pub fn getValue(self: *const MultiFormData, name: []const u8) ?[]const u8 {
 }
 
 /// Returns an array of all the values associated with a given key from within a MultiFormData.
-///
-/// https://developer.mozilla.org/en-US/docs/Web/API/FormData/getAll
-///
-/// **Zig Note:** Returns `?[]const Value` instead of `FormDataEntryValue[]`.
-/// Requires an allocator for the returned slice.
 pub fn getAll(self: *const MultiFormData, name: []const u8, allocator: std.mem.Allocator) ?[]const Value {
     return self._internal.http.reqMultiGetAll(name, allocator);
 }
 
 /// Returns whether a MultiFormData object contains a certain key.
-///
-/// https://developer.mozilla.org/en-US/docs/Web/API/FormData/has
 pub fn has(self: *const MultiFormData, name: []const u8) bool {
     return self._internal.http.reqMultiHas(name);
 }
-
-// --- Iterator --- //
 
 /// Iterator for MultiFormData entries backed by parallel key/value arrays.
 pub const Iterator = struct {

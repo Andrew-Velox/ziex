@@ -1,7 +1,3 @@
-//! Client-side (WASM/Browser) WebSocket implementation.
-//!
-//! Uses JavaScript's native WebSocket API via WASM interop.
-
 const std = @import("std");
 const builtin = @import("builtin");
 const ext = @import("window/extern.zig");
@@ -14,10 +10,6 @@ const ErrorEvent = WebSocket.ErrorEvent;
 const WebSocketError = WebSocket.WebSocketError;
 
 pub const is_wasm = builtin.cpu.arch == .wasm32 or builtin.cpu.arch == .wasm64;
-
-// ============================================================================
-// WebSocket ID Counter & Registry
-// ============================================================================
 
 var next_ws_id: u64 = 1;
 const MAX_WEBSOCKETS = 32;
@@ -58,10 +50,6 @@ fn getWebSocketById(ws_id: u64) ?*WebSocket {
     }
     return null;
 }
-
-// ============================================================================
-// Connect
-// ============================================================================
 
 pub fn connect(ws: *WebSocket) WebSocketError!void {
     const ws_id = next_ws_id;
@@ -105,10 +93,6 @@ pub fn connect(ws: *WebSocket) WebSocketError!void {
     );
 }
 
-// ============================================================================
-// Send
-// ============================================================================
-
 pub fn send(ws: *WebSocket, data: []const u8) WebSocketError!void {
     const ws_id = getWsId(ws) orelse return error.NotConnected;
     ext._wsSend(ws_id, data.ptr, data.len, 0);
@@ -119,10 +103,6 @@ pub fn sendBinary(ws: *WebSocket, data: []const u8) WebSocketError!void {
     ext._wsSend(ws_id, data.ptr, data.len, 1);
 }
 
-// ============================================================================
-// Close
-// ============================================================================
-
 pub fn close(ws: *WebSocket, options: CloseOptions) void {
     const ws_id = getWsId(ws) orelse return;
     const code = options.code orelse 1000;
@@ -130,10 +110,6 @@ pub fn close(ws: *WebSocket, options: CloseOptions) void {
 
     ext._wsClose(ws_id, code, reason.ptr, reason.len);
 }
-
-// ============================================================================
-// Deinit
-// ============================================================================
 
 pub fn deinit(ws: *WebSocket) void {
     const ws_id = getWsId(ws) orelse return;
@@ -152,10 +128,6 @@ fn getWsId(ws: *WebSocket) ?u64 {
     }
     return null;
 }
-
-// ============================================================================
-// Exported callbacks (called by JS)
-// ============================================================================
 
 /// Called by JS when WebSocket connection opens
 export fn __zx_ws_onopen(ws_id: u64, protocol_ptr: [*]const u8, protocol_len: usize) void {

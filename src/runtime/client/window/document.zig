@@ -1,20 +1,13 @@
-//! DOM bindings for client-side JavaScript interop.
-//! Provides Zig interfaces to browser Document and Element APIs.
-//! On server builds, these types exist but their methods are no-ops.
+pub const Document = @This();
 
 const std = @import("std");
 const builtin = @import("builtin");
 const bom = @import("../window.zig");
 const ext = @import("../window/extern.zig");
+
 const Console = bom.Console;
-
-/// Whether we're running in a browser environment (WASM)
 const is_wasm = bom.is_wasm;
-
-/// JS Object type - real in WASM, void stub on server
 const JsObject = if (is_wasm) @import("js").Object else void;
-
-pub const Document = @This();
 
 pub const HTMLElement = struct {
     ref: JsObject,

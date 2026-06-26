@@ -1,8 +1,3 @@
-//! Server-side Fetch implementation using std.http.Client.
-//!
-//! This module provides the native Zig HTTP client implementation for server-side
-//! fetch operations. It wraps std.http.Client with the Fetch API interface.
-
 const std = @import("std");
 const Fetch = @import("../core/Fetch.zig");
 

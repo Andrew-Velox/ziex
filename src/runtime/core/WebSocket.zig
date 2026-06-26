@@ -1,43 +1,37 @@
-//! WebSocket API - Client-side WebSocket interface following MDN spec.
-//!
-//! The WebSocket object provides the API for creating and managing a WebSocket
-//! connection to a server, as well as for sending and receiving data on the connection.
-//!
-//! https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
-//!
-//! **Usage:**
-//! ```zig
-//! // Create a WebSocket connection
-//! var ws = try WebSocket.init(allocator, "ws://localhost:8080", .{});
-//! defer ws.deinit();
-//!
-//! // Set event handlers
-//! ws.onopen = &handleOpen;
-//! ws.onmessage = &handleMessage;
-//! ws.onerror = &handleError;
-//! ws.onclose = &handleClose;
-//!
-//! // Connect (blocking on server, async on client)
-//! try ws.connect();
-//!
-//! // Send data
-//! try ws.send("Hello, Server!");
-//!
-//! // Close connection
-//! ws.close(.{ .code = 1000, .reason = "Normal closure" });
-//! ```
+/// WebSocket API - Client-side WebSocket interface following MDN spec.
+///
+/// The WebSocket object provides the API for creating and managing a WebSocket
+/// connection to a server, as well as for sending and receiving data on the connection.
+///
+/// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
+///
+/// **Usage:**
+/// ```zig
+/// // Create a WebSocket connection
+/// var ws = try WebSocket.init(allocator, "ws://localhost:8080", .{});
+/// defer ws.deinit();
+///
+/// // Set event handlers
+/// ws.onopen = &handleOpen;
+/// ws.onmessage = &handleMessage;
+/// ws.onerror = &handleError;
+/// ws.onclose = &handleClose;
+///
+/// // Connect (blocking on server, async on client)
+/// try ws.connect();
+///
+/// // Send data
+/// try ws.send("Hello, Server/");
+///
+/// // Close connection
+/// ws.close(.{ .code = 1000, .reason = "Normal closure" });
+/// ```
+pub const WebSocket = @This();
 
 const std = @import("std");
 const builtin = @import("builtin");
 
-pub const WebSocket = @This();
-
-/// Whether we're running in a browser environment (WASM)
 pub const is_wasm = builtin.cpu.arch == .wasm32 or builtin.cpu.arch == .wasm64;
-
-// ============================================================================
-// ReadyState - Connection State
-// ============================================================================
 
 /// The state of the WebSocket connection.
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
@@ -52,10 +46,6 @@ pub const ReadyState = enum(u16) {
     closed = 3,
 };
 
-// ============================================================================
-// Binary Type
-// ============================================================================
-
 /// The type of binary data being transmitted.
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/binaryType
 pub const BinaryType = enum {
@@ -64,10 +54,6 @@ pub const BinaryType = enum {
     /// Binary data is returned as ArrayBuffer/byte slices
     arraybuffer,
 };
-
-// ============================================================================
-// Close Event / Options
-// ============================================================================
 
 /// Options for closing a WebSocket connection.
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
@@ -91,10 +77,6 @@ pub const CloseEvent = struct {
     /// Whether the connection was cleanly closed.
     was_clean: bool,
 };
-
-// ============================================================================
-// Message Event
-// ============================================================================
 
 /// Message event data passed to onmessage handler.
 /// https://developer.mozilla.org/en-US/docs/Web/API/MessageEvent
@@ -124,19 +106,11 @@ pub const MessageEvent = struct {
     }
 };
 
-// ============================================================================
-// Error Event
-// ============================================================================
-
 /// Error event passed to onerror handler.
 pub const ErrorEvent = struct {
     /// Error message describing what went wrong.
     message: []const u8,
 };
-
-// ============================================================================
-// Event Handlers (Callback Types)
-// ============================================================================
 
 /// Callback for when the connection is opened.
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/open_event
@@ -154,10 +128,6 @@ pub const ErrorHandler = *const fn (ws: *WebSocket, event: ErrorEvent) void;
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close_event
 pub const CloseHandler = *const fn (ws: *WebSocket, event: CloseEvent) void;
 
-// ============================================================================
-// WebSocket Init Options
-// ============================================================================
-
 /// Options for creating a WebSocket connection.
 pub const InitOptions = struct {
     /// Sub-protocols to use for the connection.
@@ -168,10 +138,6 @@ pub const InitOptions = struct {
     /// User data to associate with this WebSocket.
     user_data: ?*anyopaque = null,
 };
-
-// ============================================================================
-// Error Types
-// ============================================================================
 
 pub const WebSocketError = error{
     /// The WebSocket connection failed.
@@ -202,10 +168,6 @@ pub const WebSocketError = error{
     ProtocolError,
 };
 
-// ============================================================================
-// Platform Implementations
-// ============================================================================
-
 const server_impl = if (!is_wasm) @import("../server/websocket.zig") else struct {
     pub fn connect(_: *WebSocket) WebSocketError!void {
         return error.UnsupportedPlatform;
@@ -233,10 +195,6 @@ const client_impl = if (is_wasm) @import("../client/websocket.zig") else struct 
     pub fn close(_: *WebSocket, _: CloseOptions) void {}
     pub fn deinit(_: *WebSocket) void {}
 };
-
-// ============================================================================
-// Instance Properties
-// ============================================================================
 
 /// The absolute URL of the WebSocket.
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/url
@@ -280,8 +238,6 @@ onerror: ?ErrorHandler = null,
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close_event
 onclose: ?CloseHandler = null,
 
-// --- Internal Fields --- //
-
 /// Allocator for internal allocations.
 _allocator: std.mem.Allocator,
 
@@ -293,10 +249,6 @@ _requested_protocols: ?[]const []const u8 = null,
 
 /// Backend-specific context (platform implementation data).
 _backend_ctx: ?*anyopaque = null,
-
-// ============================================================================
-// Constructor
-// ============================================================================
 
 /// Creates a new WebSocket connection to the specified URL.
 ///
@@ -324,10 +276,6 @@ pub fn init(allocator: std.mem.Allocator, url: []const u8, options: InitOptions)
         ._requested_protocols = options.protocols,
     };
 }
-
-// ============================================================================
-// Instance Methods
-// ============================================================================
 
 /// Establishes the WebSocket connection.
 ///
@@ -472,10 +420,6 @@ pub fn deinit(self: *WebSocket) void {
     }
 }
 
-// ============================================================================
-// Helper Methods
-// ============================================================================
-
 /// Get the user data associated with this WebSocket.
 pub fn getUserData(self: *WebSocket, comptime T: type) ?*T {
     if (self._user_data) |ptr| {
@@ -488,10 +432,6 @@ pub fn getUserData(self: *WebSocket, comptime T: type) ?*T {
 pub fn isConnected(self: *const WebSocket) bool {
     return self.ready_state == .open;
 }
-
-// ============================================================================
-// Internal Callbacks (Called by platform implementations)
-// ============================================================================
 
 /// Called by platform implementation when connection is opened.
 pub fn _handleOpen(self: *WebSocket) void {
