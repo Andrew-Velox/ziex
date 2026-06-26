@@ -240,7 +240,7 @@ fn dev(ctx: zli.CommandContext) !void {
             break :blk l;
         };
 
-        if (try build_state.processLine(line)) |event| {
+        if (try build_state.processLine(cleanLine(allocator, line))) |event| {
             if (pending_no_change) {
                 pending_no_change = false;
                 rebuild_timer = null;
@@ -444,6 +444,7 @@ fn readOneLine(
 ) error{ Eof, ReadFailed }![]const u8 {
     _ = reader.streamDelimiter(&line_writer.writer, '\n') catch return error.Eof;
     const line = line_writer.written();
+
     _ = reader.takeByte() catch return error.ReadFailed;
     return line;
 }
@@ -626,4 +627,14 @@ fn stripAnsi(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
         }
     }
     return out.toOwnedSlice(allocator);
+}
+
+fn cleanLine(allocator: std.mem.Allocator, line: []const u8) []const u8 {
+    const prefix = "info(verbose): ";
+    const ansi_clean = stripAnsi(allocator, line) catch line;
+    const has_prefix = std.mem.startsWith(u8, ansi_clean, prefix);
+
+    log.debug("\ncleanLine: {s} -> {}\n", .{ ansi_clean, has_prefix });
+    if (!has_prefix) return ansi_clean;
+    return ansi_clean[prefix.len..];
 }
