@@ -74,11 +74,8 @@ pub const VNode = struct {
                 }
 
                 if (element.children) |children| {
-                    // Flatten fragments: lift fragment children into this node's
-                    // children list (React-style - fragments produce no DOM node).
-                    const flat = try flattenComponents(allocator, children);
-                    try self.children.ensureTotalCapacity(allocator, flat.len);
-                    for (flat, 0..) |child, child_index| {
+                    try self.children.ensureTotalCapacity(allocator, children.len);
+                    for (children, 0..) |child, child_index| {
                         const child_vnode = try createFromComponent(allocator, child, owner_component_id, child_index);
                         self.children.appendAssumeCapacity(child_vnode);
                     }
@@ -292,6 +289,13 @@ pub fn diff(
                         return;
                     }
 
+                    if (new_element.tag == .fragment) {
+                        old_vnode.component = resolved_component;
+                        old_vnode.key = VNode.extractKey(resolved_component);
+                        try reconcileChildren(allocator, old_vnode, resolved_component, old_vnode, patches);
+                        return;
+                    }
+
                     old_vnode.component = resolved_component;
                     old_vnode.key = VNode.extractKey(resolved_component);
 
@@ -389,61 +393,6 @@ fn concatRawText(allocator: zx.Allocator, children: ?[]const zx.Component) ![]co
     return aw.written();
 }
 
-fn flattenComponents(allocator: zx.Allocator, children: []const zx.Component) ![]const zx.Component {
-    var has_fragments = false;
-    for (children) |child| {
-        switch (child) {
-            .element => |elem| {
-                if (elem.tag == .fragment) {
-                    has_fragments = true;
-                    break;
-                }
-            },
-            else => {},
-        }
-    }
-    if (!has_fragments) return children;
-
-    const count = countFlattened(children);
-    const result = try allocator.alloc(zx.Component, count);
-    var idx: usize = 0;
-    flattenInto(children, result, &idx);
-    return result;
-}
-
-fn countFlattened(children: []const zx.Component) usize {
-    var count: usize = 0;
-    for (children) |child| {
-        switch (child) {
-            .element => |elem| {
-                if (elem.tag == .fragment) {
-                    count += if (elem.children) |fc| countFlattened(fc) else 0;
-                    continue;
-                }
-            },
-            else => {},
-        }
-        count += 1;
-    }
-    return count;
-}
-
-fn flattenInto(children: []const zx.Component, result: []zx.Component, idx: *usize) void {
-    for (children) |child| {
-        switch (child) {
-            .element => |elem| {
-                if (elem.tag == .fragment) {
-                    if (elem.children) |fc| flattenInto(fc, result, idx);
-                    continue;
-                }
-            },
-            else => {},
-        }
-        result[idx.*] = child;
-        idx.* += 1;
-    }
-}
-
 /// Reconcile children of a parent vnode. Mirrors React's reconcileChildrenArray.
 ///
 /// React's algorithm (from ReactChildFiber.js):
@@ -473,7 +422,7 @@ fn reconcileChildren(
         const element = new_component.element;
         if (element.children) |children| break :blk children else break :blk &[_]zx.Component{};
     } else &[_]zx.Component{};
-    const new_children_slice = try flattenComponents(allocator, new_children_raw);
+    const new_children_slice = new_children_raw;
 
     var old_idx: usize = 0;
     var new_idx: usize = 0;

@@ -334,8 +334,10 @@ pub fn render(self: *Client, cmp: ComponentMeta) !void {
         const vtree_ptr = self.vtrees.getPtr(cmp.id).?;
 
         // Map the VDOM to platform-specific nodes (DOM)
-        const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{});
-        try marker.replaceContent(dom_node);
+        const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{ .marker = marker });
+        if (dom_node) |node| {
+            try marker.replaceContent(node);
+        }
 
         // registerVElement is already called recursively inside createPlatformNodes
         return;
@@ -352,8 +354,10 @@ pub fn render(self: *Client, cmp: ComponentMeta) !void {
             try self.vtrees.put(cmp.id, new_vtree);
             const vtree_ptr = self.vtrees.getPtr(cmp.id).?;
 
-            const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{});
-            try marker.replaceContent(dom_node);
+            const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{ .marker = marker });
+            if (dom_node) |node| {
+                try marker.replaceContent(node);
+            }
             return;
         }
 
