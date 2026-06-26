@@ -14,8 +14,8 @@
         .tailwindcss = .{ .path = "../pkg/plugin-tailwindcss" },
         .ui = .{ .path = "../pkg/ui" },
         .zig = .{
-            .url = "git+https://github.com/ziex-dev/zig.git?ref=0.17.0-dev#3f244f738a6e4bbaf4e33d3967952b3eb13bdd4f",
-            .hash = "zig-0.0.0-Fp4XJIEf_A0yo_pEE71WaIz5hySNNRPxV9OCyvj5WUIV",
+            .url = "git+https://github.com/ziex-dev/zig.git?ref=0.17.0-dev.956#e6e760971f3e3d65e638c743632d3db49a1e8bed",
+            .hash = "zig-0.0.0-Fp4XJF8XDw4HjA_SFmHjgG5HNEEH_r8aHcuzDRhqBibq",
         },
         .branding = .{
             .url = "git+https://github.com/ziex-dev/branding.git#04a22af76e2198d06c429e4025f960f76d93bf9f",
