@@ -1,0 +1,89 @@
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-lib -cflags -std=c11 -- /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/tree_sitter-0.27.0-Tw2sR0f_CwDrLd0k6L_8HRkq6z-omnRpV8JeIWbbCFfw/lib/src/lib.c -ODebug -I /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/tree_sitter-0.27.0-Tw2sR0f_CwDrLd0k6L_8HRkq6z-omnRpV8JeIWbbCFfw/lib/include -I /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/tree_sitter-0.27.0-Tw2sR0f_CwDrLd0k6L_8HRkq6z-omnRpV8JeIWbbCFfw/lib/src -I /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/tree_sitter-0.27.0-Tw2sR0f_CwDrLd0k6L_8HRkq6z-omnRpV8JeIWbbCFfw/lib/src/wasm -D_POSIX_C_SOURCE=200112L -D_DEFAULT_SOURCE= -D_BSD_SOURCE= -D_DARWIN_C_SOURCE= -Mroot -lc --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name tree-sitter -static --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-lib -cflags -std=c11 -- /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../pkg/tree-sitter-zx/src/parser.c -ODebug -I /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../pkg/tree-sitter-zx/src -DTREE_SITTER_DEBUG= -Mroot -lc --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name tree_sitter_zx -static --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-lib -cflags -std=c11 -- /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../pkg/tree-sitter-mdzx/src/parser.c -ODebug -I /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../pkg/tree-sitter-mdzx/src -DTREE_SITTER_DEBUG= -Mroot -lc --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name tree_sitter_mdzx -static --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): install -C /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/ziex_js-0.1.0-dev-v1W0GRqPAwD3VLCRLZRGJnmnjzPCemE0EIU1820xyZBn/wasm/init.js /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-out/static/assets/_/main.js
+info(verbose): install -C /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/app/public/favicon.ico /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-out/static/favicon.ico
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-exe -ODebug --dep cli_options --dep core_lang --dep zx_info --dep zli --dep tree_sitter --dep tree_sitter_zx --dep build_options --dep app_template -Mroot=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../src/main.zig -Mcli_options=.zig-cache/o/4fd11c1ab177b4d15335556679e876a6/options.zig -ODebug --dep tree_sitter --dep tree_sitter_zx --dep tree_sitter_mdzx -Mcore_lang=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../src/core/root.zig -Mzx_info=.zig-cache/o/81a434cd57aea01a64d4764d7c98bb76/options.zig -fno-single-threaded -ODebug -Mzli=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../vendor/cliz/src/zli.zig .zig-cache/o/8be9c53d837666244de2b3d6be98a8ba/libtree-sitter.a -ODebug -I .zig-cache/o/47c68f5d5b83c11378c2df69e216399a --dep build -Mtree_sitter=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../vendor/zig-tree-sitter/src/root.zig .zig-cache/o/f47c9b0dbf5f5fa3d79b18b327b2268f/libtree_sitter_zx.a -ODebug -I .zig-cache/o/f1467de1083468613398e9513d83a308 -Mtree_sitter_zx=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../pkg/tree-sitter-zx/bindings/zig/root.zig -Mbuild_options=.zig-cache/o/fb0b7a6008feadd3e0bea3c01a47268f/options.zig -Mapp_template=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../templates/Template.zig .zig-cache/o/18cebcbe4d6a02541af18e9136c3766a/libtree_sitter_mdzx.a -ODebug -I .zig-cache/o/f1467de1083468613398e9513d83a308 -Mtree_sitter_mdzx=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../pkg/tree-sitter-mdzx/bindings/zig/root.zig -Mbuild=.zig-cache/o/9fdeaf4c13fa9b525ec2b8ebb9d4e277/options.zig -lc --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name zx --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): ./.zig-cache/o/5fc901199550c8cd8b728e45e01f08e3/zx transpile /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/app --outdir ./.zig-cache/tmp/4eda55c7bdfa5bc1/app --rootdir ./zig-out/static --dep-file ./.zig-cache/tmp/4eda55c7bdfa5bc1/transpile.d --map inline --cache-dir .zig-cache/zx_transpile
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-exe -fno-entry -ODebug -target wasm32-freestanding-none -mcpu baseline --dep zx -Mroot=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/app/main.zig -ODebug -target wasm32-freestanding-none -mcpu baseline --dep js --dep zx_info --dep zx_module_options --dep injections --dep zx_meta --dep zx_options -Mzx=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../src/root.zig -ODebug -target wasm32-freestanding-none -mcpu baseline -Mjs=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../vendor/jsz/src/main.zig -Mzx_info=.zig-cache/o/81a434cd57aea01a64d4764d7c98bb76/options.zig -Mzx_module_options=.zig-cache/o/819a7b2df2874554c8e3d9dd567885d0/options.zig -Minjections=.zig-cache/o/22fae4ad6cc5a00469eac24f73b4c44d/injections.zon --dep js --dep zx_info --dep zx_module_options --dep injections --dep zx -Mzx_meta=.zig-cache/o/c05fa92ac2c029ce42e15835714e49f4/app/meta.zig -Mzx_options=.zig-cache/o/d57dd3e5b3a326371d4f528a989fe6c2/options.zig --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name main -rdynamic --export-memory --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-exe -ODebug --dep app --dep zx -Mroot=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/app/main.zig --dep httpz --dep zx_info --dep zx_module_options --dep zx_options --dep injections --dep zx --dep app -Mapp=.zig-cache/o/c05fa92ac2c029ce42e15835714e49f4/app/meta.zig -ODebug --dep httpz --dep zx_info --dep zx_module_options --dep zx_options --dep injections --dep app -Mzx=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../src/root.zig -ODebug --dep metrics --dep websocket --dep build -Mhttpz=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/httpz-0.0.0-PNVzrATcCADK2AQ3S7KDpH49xF3iMZ6Itih2-uBglAae/src/httpz.zig -Mzx_info=.zig-cache/o/81a434cd57aea01a64d4764d7c98bb76/options.zig -Mzx_module_options=.zig-cache/o/7d930d1180425d2ab6dec8010276025f/options.zig -Mzx_options=.zig-cache/o/d57dd3e5b3a326371d4f528a989fe6c2/options.zig -Minjections=.zig-cache/o/22fae4ad6cc5a00469eac24f73b4c44d/injections.zon -ODebug -Mmetrics=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/metrics-0.0.0-W7G4eKXEAQDnX3LGPHFttHEV1nQn934f_shdK7p3BW66/src/metrics.zig -ODebug --dep build=build0 -Mwebsocket=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/websocket-0.1.0-ZPISdaXaBADnMkB-sc_PBK4Ri0DX2AyxIJsAgWFIicUH/src/websocket.zig -Mbuild=.zig-cache/o/62f454a5ae5887612b1a541324846c32/options.zig -Mbuild0=.zig-cache/o/bd1d5f68cd9ad230fe4fb7358ce37ada/options.zig -lc --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name ziex_app --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): install -C .zig-cache/o/f2bc56fe935a26ccc36bd2387146ffef/main.wasm /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-out/static/assets/_/main.wasm
+info(verbose): install -C .zig-cache/o/c3e1984cae7e1ec11b4deef3a39e24a0/ziex_app /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-out/bin/ziex_app
+Build Summary: 27/27 steps succeeded
+install success
++- install ziex_app success
+|  +- install server ziex_app success 2s MaxRSS:388M
+|     +- install app/public/ cached
+|     +- install dependency to static/assets/_/main.js cached
+|     +- zx transpile success 762ms
+|     |  +- compile exe zx Debug native success 6s MaxRSS:568M
+|     |     +- options success
+|     |     +- options success
+|     |     +- WriteFile . success
+|     |     +- compile lib tree-sitter Debug native success 1s MaxRSS:159M
+|     |     +- compile lib tree-sitter Debug native (reused)
+|     |     +- WriteFile cached
+|     |     +- compile lib tree_sitter_zx Debug native success 564ms MaxRSS:137M
+|     |     +- compile lib tree_sitter_zx Debug native (reused)
+|     |     +- options success
+|     |     +- WriteFile success
+|     |     +- compile lib tree_sitter_mdzx Debug native success 709ms MaxRSS:163M
+|     |     +- compile lib tree_sitter_mdzx Debug native (reused)
+|     |     +- options success
+|     +- zx transpile (+1 more reused dependencies)
+|     +- options cached
+|     +- options success
+|     +- options success
+|     +- WriteFile injections.zon success
+|     +- options success
+|     +- options success
++- install client ziex_app success
+   +- compile exe main Debug wasm32-freestanding-none success 977ms MaxRSS:284M
+      +- zx transpile (+1 more reused dependencies)
+      +- options cached
+      +- options success
+      +- WriteFile injections.zon (reused)
+      +- zx transpile (+1 more reused dependencies)
+      +- options (reused)
+
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-exe -ODebug --dep app --dep zx -Mroot=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/app/main.zig --dep httpz --dep zx_info --dep zx_module_options --dep zx_options --dep injections --dep zx --dep app -Mapp=.zig-cache/o/c05fa92ac2c029ce42e15835714e49f4/app/meta.zig -ODebug --dep httpz --dep zx_info --dep zx_module_options --dep zx_options --dep injections --dep app -Mzx=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../src/root.zig -ODebug --dep metrics --dep websocket --dep build -Mhttpz=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/httpz-0.0.0-PNVzrATcCADK2AQ3S7KDpH49xF3iMZ6Itih2-uBglAae/src/httpz.zig -Mzx_info=.zig-cache/o/81a434cd57aea01a64d4764d7c98bb76/options.zig -Mzx_module_options=.zig-cache/o/7d930d1180425d2ab6dec8010276025f/options.zig -Mzx_options=.zig-cache/o/d57dd3e5b3a326371d4f528a989fe6c2/options.zig -Minjections=.zig-cache/o/22fae4ad6cc5a00469eac24f73b4c44d/injections.zon -ODebug -Mmetrics=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/metrics-0.0.0-W7G4eKXEAQDnX3LGPHFttHEV1nQn934f_shdK7p3BW66/src/metrics.zig -ODebug --dep build=build0 -Mwebsocket=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-pkg/websocket-0.1.0-ZPISdaXaBADnMkB-sc_PBK4Ri0DX2AyxIJsAgWFIicUH/src/websocket.zig -Mbuild=.zig-cache/o/62f454a5ae5887612b1a541324846c32/options.zig -Mbuild0=.zig-cache/o/bd1d5f68cd9ad230fe4fb7358ce37ada/options.zig -lc --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name ziex_app --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): /Users/nurulhudaapon/.asdf/installs/zig/master/zig build-exe -fno-entry -ODebug -target wasm32-freestanding-none -mcpu baseline --dep zx -Mroot=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/app/main.zig -ODebug -target wasm32-freestanding-none -mcpu baseline --dep js --dep zx_info --dep zx_module_options --dep injections --dep zx_meta --dep zx_options -Mzx=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../src/root.zig -ODebug -target wasm32-freestanding-none -mcpu baseline -Mjs=/Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/../../vendor/jsz/src/main.zig -Mzx_info=.zig-cache/o/81a434cd57aea01a64d4764d7c98bb76/options.zig -Mzx_module_options=.zig-cache/o/819a7b2df2874554c8e3d9dd567885d0/options.zig -Minjections=.zig-cache/o/22fae4ad6cc5a00469eac24f73b4c44d/injections.zon --dep js --dep zx_info --dep zx_module_options --dep injections --dep zx -Mzx_meta=.zig-cache/o/c05fa92ac2c029ce42e15835714e49f4/app/meta.zig -Mzx_options=.zig-cache/o/d57dd3e5b3a326371d4f528a989fe6c2/options.zig --cache-dir .zig-cache --global-cache-dir /Users/nurulhudaapon/.cache/zig --name main -rdynamic --export-memory --zig-lib-dir /Users/nurulhudaapon/.asdf/installs/zig/master/lib/ --listen=-
+info(verbose): install -C .zig-cache/o/f2bc56fe935a26ccc36bd2387146ffef/main.wasm /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-out/static/assets/_/main.wasm
+info(verbose): install -C .zig-cache/o/c3e1984cae7e1ec11b4deef3a39e24a0/ziex_app /Users/nurulhudaapon/Projects/ziex-dev/ziex/bench/ziex/zig-out/bin/ziex_app
+Build Summary: 27/27 steps succeeded
+install success
++- install ziex_app cached
+|  +- install server ziex_app cached 86ms MaxRSS:33M
+|     +- install app/public/ cached
+|     +- install dependency to static/assets/_/main.js cached
+|     +- zx transpile cached
+|     |  +- compile exe zx Debug native cached 6s MaxRSS:568M
+|     |     +- options cached
+|     |     +- options cached
+|     |     +- WriteFile . cached
+|     |     +- compile lib tree-sitter Debug native cached 1s MaxRSS:159M
+|     |     +- compile lib tree-sitter Debug native (reused)
+|     |     +- WriteFile cached
+|     |     +- compile lib tree_sitter_zx Debug native cached 564ms MaxRSS:137M
+|     |     +- compile lib tree_sitter_zx Debug native (reused)
+|     |     +- options cached
+|     |     +- WriteFile cached
+|     |     +- compile lib tree_sitter_mdzx Debug native cached 709ms MaxRSS:163M
+|     |     +- compile lib tree_sitter_mdzx Debug native (reused)
+|     |     +- options cached
+|     +- zx transpile (+1 more reused dependencies)
+|     +- options cached
+|     +- options cached
+|     +- options cached
+|     +- WriteFile injections.zon cached
+|     +- options cached
+|     +- options cached
++- install client ziex_app cached
+   +- compile exe main Debug wasm32-freestanding-none cached 75ms MaxRSS:32M
+      +- zx transpile (+1 more reused dependencies)
+      +- options cached
+      +- options cached
+      +- WriteFile injections.zon (reused)
+      +- zx transpile (+1 more reused dependencies)
+      +- options (reused)
+

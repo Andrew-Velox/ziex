@@ -18,6 +18,7 @@ test/data/**/*.zxcache
 /package.json
 /bun.lock
 /src/cli/init/template/bun.lock
+bench/result.csv
 
 # macOS
 .DS_Store

@@ -1,7 +1,7 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
     const class_name = "container";
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
@@ -11,9 +11,9 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .section,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", class_name),
-                            _zx.attr("id", "main"),
-                            _zx.attr("data-active", "true"),
+                            _zx.attr(@src(), "class", class_name),
+                            _zx.attr(@src(), "id", "main"),
+                            _zx.attr(@src(), "data-active", "true"),
                         }),
                         .children = &.{
                             _zx.ele(
@@ -31,9 +31,9 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "text"),
-                            _zx.attr("class", "input"),
-                            _zx.attr("placeholder", "Enter text"),
+                            _zx.attr(@src(), "type", "text"),
+                            _zx.attr(@src(), "class", "input"),
+                            _zx.attr(@src(), "placeholder", "Enter text"),
                         }),
                     },
                 ),

@@ -3,8 +3,6 @@ pub const Client = @This();
 const window = @import("window.zig");
 const is_wasm = window.is_wasm;
 
-/// Global instance counter for assigning unique IDs to component instances
-var instance_counter: u16 = 0;
 
 /// The component ID that is currently being rendered.
 /// Set by Client.render() so that ComponentCtx and ifpl can register subscriptions.
@@ -26,12 +24,12 @@ pub const ComponentMeta = struct {
             @compileError("Client.ComponentMeta.init requires a function");
         }
 
-        const param_count = FuncInfo.@"fn".params.len;
+        const param_count = FuncInfo.@"fn".param_types.len;
         if (param_count < 1 or param_count > 2) {
             @compileError("Component function must have 1 or 2 parameters");
         }
 
-        const FirstParamType = FuncInfo.@"fn".params[0].type.?;
+        const FirstParamType = FuncInfo.@"fn".param_types[0].?;
         const first_is_allocator = FirstParamType == std.mem.Allocator;
         const first_is_ctx_ptr = @typeInfo(FirstParamType) == .pointer and
             @hasField(@typeInfo(FirstParamType).pointer.child, "allocator") and
@@ -72,7 +70,7 @@ pub const ComponentMeta = struct {
 
                 // Case 2: Component takes allocator and props - fn Component(allocator, props) Component
                 if (first_is_allocator and param_count == 2) {
-                    const PropsType = FuncInfo.@"fn".params[1].type.?;
+                    const PropsType = FuncInfo.@"fn".param_types[1].?;
                     const props = if (props_json) |pj| zx.util.zxon.parse(PropsType, allocator, pj, .{}) catch std.mem.zeroes(PropsType) else std.mem.zeroes(PropsType);
                     return normalizeResult(func(allocator, props));
                 }
@@ -87,13 +85,11 @@ pub const ComponentMeta = struct {
                     // Reset slot counters so hooks run in stable order every render.
                     if (@hasField(CtxType, "_internal")) {
                         ctx._internal = .{
-                            .instance_id = instance_counter,
                             .component_id = current_render_id,
                             .state_idx = 0,
-                            .handler_idx = 0,
                         };
                     }
-                    instance_counter +%= 1; // Wrap around on overflow
+
 
                     // Parse props if the context has a props field
                     if (@hasField(CtxType, "props")) {
@@ -338,8 +334,10 @@ pub fn render(self: *Client, cmp: ComponentMeta) !void {
         const vtree_ptr = self.vtrees.getPtr(cmp.id).?;
 
         // Map the VDOM to platform-specific nodes (DOM)
-        const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{});
-        try marker.replaceContent(dom_node);
+        const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{ .marker = marker });
+        if (dom_node) |node| {
+            try marker.replaceContent(node);
+        }
 
         // registerVElement is already called recursively inside createPlatformNodes
         return;
@@ -356,8 +354,10 @@ pub fn render(self: *Client, cmp: ComponentMeta) !void {
             try self.vtrees.put(cmp.id, new_vtree);
             const vtree_ptr = self.vtrees.getPtr(cmp.id).?;
 
-            const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{});
-            try marker.replaceContent(dom_node);
+            const dom_node = try vtree_mod.createPlatformNodes(allocator, vtree_ptr.vtree, self, .{ .marker = marker });
+            if (dom_node) |node| {
+                try marker.replaceContent(node);
+            }
             return;
         }
 

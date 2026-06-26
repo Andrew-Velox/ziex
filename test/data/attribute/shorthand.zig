@@ -3,7 +3,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
     const value: i32 = 42;
     const class = "b-1 bold";
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .form,
         .{
@@ -13,8 +13,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("data-name", @"data-name"),
-                            _zx.attr("class", class),
+                            _zx.attr(@src(), "data-name", @"data-name"),
+                            _zx.attr(@src(), "class", class),
                         }),
                     },
                 ),
@@ -22,7 +22,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("value", value),
+                            _zx.attr(@src(), "value", value),
                         }),
                     },
                 ),

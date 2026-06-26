@@ -160,7 +160,7 @@ jobs:
         run: |
           BIN_VERSION=$(bash tools/version --resolve --with-sha "${{ needs.resolve-version.outputs.version }}")
           echo "Embedding binary version: $BIN_VERSION"
-          zig build release-${{ matrix.target.name }} -Dversion="$BIN_VERSION"
+          zig build release-${{ matrix.target.name }} -Dversion="$BIN_VERSION" -Dlsp=true
 
       - name: Prepare artifact
         shell: bash

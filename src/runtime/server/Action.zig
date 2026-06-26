@@ -31,27 +31,28 @@ pub fn data(self: Action, comptime T: type) T {
 
     const content_type = self.request.headers.get("content-type") orelse "";
     var result: T = undefined;
+    const type_struct = @typeInfo(T).@"struct";
 
     if (std.mem.indexOf(u8, content_type, "multipart/form-data") != null) {
         const mfd = self.request.multiFormData();
-        inline for (@typeInfo(T).@"struct".fields) |field| {
-            if (comptime field.type == zx.File) {
-                const val = mfd.get(field.name);
-                @field(result, field.name) = if (val) |v| zx.File.fromBytes(v.data, v.filename orelse "", "", self.arena) else zx.File{};
-            } else if (comptime field.type == ?zx.File) {
-                const val = mfd.get(field.name);
-                @field(result, field.name) = if (val) |v| zx.File.fromBytes(v.data, v.filename orelse "", "", self.arena) else null;
+        inline for (type_struct.field_names, type_struct.field_types) |field_name, field_type| {
+            if (comptime field_type == zx.File) {
+                const val = mfd.get(field_name);
+                @field(result, field_name) = if (val) |v| zx.File.fromBytes(v.data, v.filename orelse "", "", self.arena) else zx.File{};
+            } else if (comptime field_type == ?zx.File) {
+                const val = mfd.get(field_name);
+                @field(result, field_name) = if (val) |v| zx.File.fromBytes(v.data, v.filename orelse "", "", self.arena) else null;
             } else {
-                @field(result, field.name) = parseFormField(field.type, mfd.getValue(field.name), self.arena);
+                @field(result, field_name) = parseFormField(field_type, mfd.getValue(field_name), self.arena);
             }
         }
     } else {
         const fd = self.request.formData();
-        inline for (@typeInfo(T).@"struct".fields) |field| {
-            if (comptime field.type == zx.File or field.type == ?zx.File) {
-                @field(result, field.name) = if (comptime field.type == zx.File) zx.File{} else null;
+        inline for (type_struct.field_names, type_struct.field_types) |field_name, field_type| {
+            if (comptime field_type == zx.File or field_type == ?zx.File) {
+                @field(result, field_name) = if (comptime field_type == zx.File) zx.File{} else null;
             } else {
-                @field(result, field.name) = parseFormField(field.type, fd.get(field.name), self.arena);
+                @field(result, field_name) = parseFormField(field_type, fd.get(field_name), self.arena);
             }
         }
     }

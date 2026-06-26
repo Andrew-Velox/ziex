@@ -254,8 +254,8 @@ pub fn generate(io: std.Io, allocator: std.mem.Allocator) ![]const u8 {
     try style_struct.addField(fa, "", "extra", "?[]const u8", "null");
 
     _ = try style_struct.addMethod(fa, "", "format", "(self: Style, w: anytype) std.Io.Writer.Error!void",
-        \\inline for (std.meta.fields(Style)) |f| {
-        \\    try @import("core.zig").formatProperty(f.name, @field(self, f.name), w);
+        \\inline for (std.meta.fieldNames(Style)) |field_name| {
+        \\    try @import("core.zig").formatProperty(field_name, @field(self, field_name), w);
         \\}
     );
 

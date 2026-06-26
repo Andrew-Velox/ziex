@@ -33,7 +33,9 @@ pub fn create(
     _ = run.addDepFileOutputArg("transpile.d");
     run.addArgs(&.{ "--map", "inline" });
 
-    const basename = opts.root_source_file.basename(b, &run.step);
+    // TODO: LazyPath.basename has been removed zig 0.17, figoure out alternative
+    // const basename = opts.root_source_file.basename(b, &run.step);
+    const basename = std.fs.path.basename(opts.root_source_file.src_path.sub_path);
     const ext = std.fs.path.extension(basename);
     const out_basename = b.fmt("{s}.zig", .{basename[0 .. basename.len - ext.len]});
 

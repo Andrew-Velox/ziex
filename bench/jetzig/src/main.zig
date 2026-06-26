@@ -21,3 +21,7 @@ pub fn main() !void {
 
     try app.start(routes, .{});
 }
+
+pub const std_options: std.Options = .{
+    .log_level = .err,
+};

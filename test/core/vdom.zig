@@ -177,3 +177,153 @@ test "deletion" {
     try testing.expectEqual(@as(usize, 1), patches.items.len);
     try testing.expectEqual(.DELETION, patches.items[0].type);
 }
+
+test "conditional fragment preserves sibling vnodes" {
+    const allocator = testing.allocator;
+
+    const empty_frag = zx.Component{ .element = .{ .tag = .fragment, .children = null } };
+    const welcome_p = zx.Component{ .element = .{ .tag = .p, .children = &[_]zx.Component{.{ .text = "Welcome" }} } };
+    const msg_p = zx.Component{ .element = .{ .tag = .p, .children = &[_]zx.Component{.{ .text = "msg" }} } };
+    const input_name = zx.Component{ .element = .{ .tag = .input, .attributes = &[_]zx.Element.Attribute{.{ .name = "name", .value = "name" }} } };
+    const input_id = zx.Component{ .element = .{ .tag = .input, .attributes = &[_]zx.Element.Attribute{.{ .name = "name", .value = "id" }} } };
+
+    const comp1 = zx.Component{ .element = .{ .tag = .form, .children = &[_]zx.Component{ empty_frag, msg_p, input_name, input_id } } };
+
+    const cond_frag = zx.Component{ .element = .{ .tag = .fragment, .children = &[_]zx.Component{welcome_p} } };
+    const comp2 = zx.Component{ .element = .{ .tag = .form, .children = &[_]zx.Component{ cond_frag, msg_p, input_name, input_id } } };
+
+    var tree = VDOMTree.init(allocator, comp1);
+    defer tree.deinit(allocator);
+
+    const input_name_id = tree.vtree.children.items[2].id;
+    const input_id_id = tree.vtree.children.items[3].id;
+
+    var patches = try tree.diffWithComponent(allocator, comp2);
+    defer {
+        for (patches.items) |patch| {
+            if (patch.type == .REPLACE) {
+                patch.data.REPLACE.new_vnode.deinit(allocator);
+            }
+            if (patch.type == .PLACEMENT) {
+                patch.data.PLACEMENT.vnode.deinit(allocator);
+            }
+        }
+        patches.deinit(allocator);
+    }
+
+    // Sibling inputs must not be replaced when a conditional fragment gains content.
+    for (patches.items) |patch| {
+        if (patch.type == .REPLACE) {
+            try testing.expect(patch.data.REPLACE.old_vnode_id != input_name_id);
+            try testing.expect(patch.data.REPLACE.old_vnode_id != input_id_id);
+        }
+    }
+
+    try testing.expectEqual(input_name_id, tree.vtree.children.items[2].id);
+    try testing.expectEqual(input_id_id, tree.vtree.children.items[3].id);
+}
+
+test "for-loop fragment deletes all keyed children" {
+    const allocator = testing.allocator;
+
+    const item1 = zx.Component{ .element = .{ .tag = .li, .attributes = &[_]zx.Element.Attribute{.{ .name = "key", .value = "1" }}, .children = &[_]zx.Component{.{ .text = "a" }} } };
+    const item2 = zx.Component{ .element = .{ .tag = .li, .attributes = &[_]zx.Element.Attribute{.{ .name = "key", .value = "2" }}, .children = &[_]zx.Component{.{ .text = "b" }} } };
+    const item3 = zx.Component{ .element = .{ .tag = .li, .attributes = &[_]zx.Element.Attribute{.{ .name = "key", .value = "3" }}, .children = &[_]zx.Component{.{ .text = "c" }} } };
+
+    const list_frag = zx.Component{ .element = .{ .tag = .fragment, .children = &[_]zx.Component{ item1, item2, item3 } } };
+    const empty_frag = zx.Component{ .element = .{ .tag = .fragment, .children = null } };
+
+    const comp1 = zx.Component{ .element = .{ .tag = .ul, .children = &[_]zx.Component{list_frag} } };
+    const comp2 = zx.Component{ .element = .{ .tag = .ul, .children = &[_]zx.Component{empty_frag} } };
+
+    var tree = VDOMTree.init(allocator, comp1);
+    defer tree.deinit(allocator);
+
+    var patches = try tree.diffWithComponent(allocator, comp2);
+    defer patches.deinit(allocator);
+
+    var deletions: usize = 0;
+    for (patches.items) |patch| {
+        if (patch.type == .DELETION) deletions += 1;
+    }
+    try testing.expectEqual(@as(usize, 3), deletions);
+}
+
+test "conditional fragment placement into empty slot" {
+    const allocator = testing.allocator;
+
+    const empty_frag = zx.Component{ .element = .{ .tag = .fragment, .children = null } };
+    const welcome_p = zx.Component{ .element = .{ .tag = .p, .children = &[_]zx.Component{.{ .text = "Welcome" }} } };
+    const msg_p = zx.Component{ .element = .{ .tag = .p, .children = &[_]zx.Component{.{ .text = "msg" }} } };
+
+    const comp1 = zx.Component{ .element = .{ .tag = .form, .children = &[_]zx.Component{ empty_frag, msg_p } } };
+
+    const cond_frag = zx.Component{ .element = .{ .tag = .fragment, .children = &[_]zx.Component{welcome_p} } };
+    const comp2 = zx.Component{ .element = .{ .tag = .form, .children = &[_]zx.Component{ cond_frag, msg_p } } };
+
+    var tree = VDOMTree.init(allocator, comp1);
+    defer tree.deinit(allocator);
+
+    const fragment_id = tree.vtree.children.items[0].id;
+
+    var patches = try tree.diffWithComponent(allocator, comp2);
+    defer {
+        for (patches.items) |patch| {
+            if (patch.type == .PLACEMENT) patch.data.PLACEMENT.vnode.deinit(allocator);
+        }
+        patches.deinit(allocator);
+    }
+
+    try testing.expectEqual(@as(usize, 1), patches.items.len);
+    try testing.expectEqual(.PLACEMENT, patches.items[0].type);
+    try testing.expectEqual(fragment_id, patches.items[0].data.PLACEMENT.parent_id);
+    try testing.expectEqual(@as(usize, 0), patches.items[0].data.PLACEMENT.index);
+}
+
+test "if-without-else fragment to element uses placement not replace" {
+    const allocator = testing.allocator;
+
+    const empty_frag = zx.Component{ .element = .{ .tag = .fragment, .children = null } };
+    const welcome_p = zx.Component{ .element = .{ .tag = .p, .children = &[_]zx.Component{
+        .{ .text = "Welcome back, " },
+        .{ .text = "Alice" },
+        .{ .text = "!" },
+    } } };
+    const msg_p = zx.Component{ .element = .{ .tag = .p, .children = &[_]zx.Component{.{ .text = "Please log in." }} } };
+    const input_name = zx.Component{ .element = .{ .tag = .input, .attributes = &[_]zx.Element.Attribute{.{ .name = "name", .value = "name" }} } };
+
+    const comp1 = zx.Component{ .element = .{ .tag = .form, .children = &[_]zx.Component{ empty_frag, msg_p, input_name } } };
+    const comp2 = zx.Component{ .element = .{ .tag = .form, .children = &[_]zx.Component{ welcome_p, msg_p, input_name } } };
+
+    var tree = VDOMTree.init(allocator, comp1);
+    defer tree.deinit(allocator);
+
+    const fragment_id = tree.vtree.children.items[0].id;
+    const msg_p_id = tree.vtree.children.items[1].id;
+
+    var patches = try tree.diffWithComponent(allocator, comp2);
+    defer {
+        for (patches.items) |patch| {
+            switch (patch.type) {
+                .PLACEMENT => patch.data.PLACEMENT.vnode.deinit(allocator),
+                .REPLACE => patch.data.REPLACE.new_vnode.deinit(allocator),
+                else => {},
+            }
+        }
+        patches.deinit(allocator);
+    }
+
+    for (patches.items) |patch| {
+        try testing.expect(patch.type != .REPLACE);
+    }
+
+    var saw_deletion = false;
+    var saw_placement = false;
+    for (patches.items) |patch| {
+        if (patch.type == .DELETION and patch.data.DELETION.vnode_id == fragment_id) saw_deletion = true;
+        if (patch.type == .PLACEMENT and patch.data.PLACEMENT.index == 0) saw_placement = true;
+    }
+    try testing.expect(saw_deletion);
+    try testing.expect(saw_placement);
+    try testing.expectEqual(msg_p_id, tree.vtree.children.items[1].id);
+}

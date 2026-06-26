@@ -29,7 +29,7 @@ pub const Row = struct {
 };
 
 fn random(max: usize) usize {
-    const io = std.Io.Threaded.global_single_threaded.io();
+    const io = zx.io();
     var buffer: [1]u8 = undefined;
     std.Io.random(io, &buffer);
     return @mod(buffer[0], max);
@@ -66,3 +66,5 @@ pub fn buildData(allocator: std.mem.Allocator, count: usize) !std.ArrayList(Row)
 pub fn resetIdCounter() void {
     id_counter = 1;
 }
+
+const zx = @import("zx");

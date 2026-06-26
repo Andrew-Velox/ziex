@@ -29,6 +29,7 @@ pub fn build(b: *std.Build) !void {
 
     exe.root_module.addOptions("build_options", build_options);
     var ziex_b = try ziex.init(b, exe, .{
+        .cli = .{ .optimize = optimize },
         .client = .{
             .jsglue_href = switch (platform) {
                 .chromium => "/pages/assets/_/main.js",
@@ -64,11 +65,9 @@ pub fn build(b: *std.Build) !void {
 
     // Step: zig build chromium
     const chromium_step = b.step("chromium", "Build chromium extension");
-    const chromium_build = b.addSystemCommand(&.{ b.graph.zig_exe, "build", "-Dplatform=chromium" });
     const chromium_export = b.addRunArtifact(ziex_b.cli.exe);
-    chromium_export.addArgs(&.{ "export", "--outdir" });
+    chromium_export.addArgs(&.{ "export", "--build-args", "-Dplatform=chromium", "--outdir" });
     chromium_export.addDirectoryArg(b.path("../chromium/pages"));
-    chromium_export.step.dependOn(&chromium_build.step);
 
     const chromium_zip = b.addSystemCommand(&.{ "zip", "-r" });
     chromium_zip.setCwd(b.path("../chromium"));

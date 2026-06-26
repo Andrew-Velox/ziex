@@ -15,6 +15,8 @@ test {
     _ = @import("core/cache.zig");
     _ = @import("core/kv.zig");
     _ = @import("core/style.zig");
+    _ = @import("cli/lsp.zig");
+    _ = @import("cli/dev.zig");
 }
 
 pub const std_options = std.Options{

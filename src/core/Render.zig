@@ -1395,6 +1395,7 @@ fn renderParenthesizedBody(
     var is_control_flow = false;
 
     // Find the content inside the parentheses
+    var fallback_node: ?ts.Node = null;
     var i: u32 = 0;
     while (i < child_count) : (i += 1) {
         const child = node.child(i) orelse continue;
@@ -1409,9 +1410,18 @@ fn renderParenthesizedBody(
                 content_node = child;
                 break;
             },
-            else => {},
+            else => {
+                // Skip the surrounding parentheses (anonymous "(" / ")" nodes)
+                // and remember the first real expression as a fallback.
+                if (fallback_node == null and child.isNamed()) {
+                    fallback_node = child;
+                }
+            },
         }
     }
+
+    // No control-flow/HTML body found: render the plain expression as is
+    if (content_node == null) content_node = fallback_node;
 
     // Check for multiline
     const content_start = if (content_node) |c| c.startByte() else node.startByte();

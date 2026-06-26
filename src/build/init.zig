@@ -11,21 +11,25 @@ pub fn init(b: *std.Build, exe: *std.Build.Step.Compile, options: InitOptions) !
     const optimize = exe.root_module.optimize;
     const wasm_target = b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .freestanding, .abi = .none });
 
+    const ziex_lsp = b.option(bool, "ziex-lsp", "Enable `zig build zx -- lsp`, used by code editors whenz `zx` cli is not in PATH") orelse false;
+
     const zx_dep = b.dependencyFromBuildZig(build_zig, .{
         .optimize = optimize,
         .target = target,
         .@"exclude-core-lang" = true, // Users don't need parser/transpiler
+        .@"feature-sqlite" = if (options.app != null and options.app.?.features.sqlite != null) true else null,
+        .@"feature-postgres" = if (options.app != null and options.app.?.features.postgres != null) true else null,
     });
 
     const zx_host_dep = b.dependencyFromBuildZig(build_zig, .{
         .optimize = options.cli.optimize, // Always in release mode for faster transpilation
         // No target = host target, so zx CLI can execute during build
-        .@"exclude-lsp" = true, // Skip LSP for faster build-time transpilation
     });
 
     // Full CLI dep (includes LSP) for the `zig build zx` step
     const zx_full_dep = b.dependencyFromBuildZig(build_zig, .{
         .optimize = options.cli.optimize,
+        .lsp = ziex_lsp,
     });
 
     const zx_wasm_dep = b.dependencyFromBuildZig(build_zig, .{
@@ -280,6 +284,7 @@ pub fn initInner(
     zx_options.addOption([]const u8, "cli_command", cli_command_opt orelse "--");
     zx_options.addOption(bool, "introspect", b.option(bool, "introspect", "Print Ziex app metadata and exit") orelse false);
     zx_options.addOption(bool, "feat_sqlite_server", if (opts.features.sqlite) |s| s.server != null else false);
+    zx_options.addOption(bool, "feat_pg_server", if (opts.features.postgres) |s| s.server != null else false);
     zx_options.addOption(bool, "feat_kv_server", if (opts.features.kv) |k| k.server != null else false);
     zx_options.addOption(bool, "feat_kv_client", if (opts.features.kv) |k| k.client != null else false);
     zx_options.addOption(bool, "feat_cache_server", if (opts.features.cache) |c| c.server != null else false);
@@ -287,12 +292,12 @@ pub fn initInner(
     zx_module.addOptions("zx_options", zx_options);
 
     // --- Dirs Setup --- //
-    const static_lazypath: LazyPath = if (opts.static_path) |p| p else .{ .cwd_relative = b.pathJoin(&.{ b.install_path, "static" }) };
+    const static_lazypath = b.graph.path(.install_prefix, "static");
     const assetsdir = static_lazypath.path(b, "assets");
 
     // --- ZX Transpilation ---
     const transpile_cmd = getZxRun(b, zx_exe, opts);
-    transpile_cmd.setName("zx transpile");
+    transpile_cmd.setName("translate-zx");
     transpile_cmd.addArg("transpile");
     transpile_cmd.addDirectoryArg(opts.site_path);
     // transpile_cmd.addArg("--verbose");
@@ -307,8 +312,9 @@ pub fn initInner(
     }
     // Always generate inlined sourcemaps so dev mode can remap errors to .zx files
     transpile_cmd.addArgs(&.{ "--map", "inline" });
-    const cache_path_arg = b.pathJoin(&.{ b.cache_root.path orelse ".zig-cache", "zx_transpile" });
-    transpile_cmd.addArgs(&.{ "--cache-dir", cache_path_arg });
+    // TODO: Instead of using named zx_transpile path, figoure out a way to use persistant outputDirectoryArg
+    transpile_cmd.addArgs(&.{"--cache-dir"});
+    transpile_cmd.addDirectoryArg(b.graph.path(.local_cache, "zx_transpile"));
     transpile_cmd.expectExitCode(0);
 
     const zxjs_default_href = "/assets/_/main.js";
@@ -318,9 +324,10 @@ pub fn initInner(
     // --- Static Directory Setup --- //
     {
         // Install public directory into static (only if the directory exists)
-        const public_abs_path = opts.site_path.path(b, "public").getPath(b);
+        // TODO: LazyPath.getPath(b) alternative for zig 0.17, using relative path for now
+        const public_path = b.fmt("{f}", .{opts.site_path.path(b, "public")});
 
-        if (std.Io.Dir.accessAbsolute(b.graph.io, public_abs_path, .{})) |_| {
+        if (std.Io.Dir.cwd().access(b.graph.io, public_path, .{})) |_| {
             const install_static = b.addInstallDirectory(.{
                 .source_dir = opts.site_path.path(b, "public"),
                 .install_dir = .prefix,
@@ -330,8 +337,9 @@ pub fn initInner(
         } else |_| {}
 
         // Also install the generated assets into static/assets (only if the directory exists)
-        const assets_abs_path = opts.site_path.path(b, "assets").getPath(b);
-        if (std.Io.Dir.accessAbsolute(b.graph.io, assets_abs_path, .{})) |_| {
+        // TODO: LazyPath.getPath(b) alternative for zig 0.17, using relative path for now
+        const assets_path = b.fmt("{f}", .{opts.site_path.path(b, "assets")});
+        if (std.Io.Dir.cwd().access(b.graph.io, assets_path, .{})) |_| {
             const install_assets = b.addInstallDirectory(.{
                 .source_dir = opts.site_path.path(b, "assets"),
                 .install_dir = .prefix,
@@ -413,7 +421,8 @@ pub fn initInner(
     // --- ZX Watch Invalidator ---
     // Use directory-level watch input so `zig build --watch` picks up changes.
     // Cache invalidation for non-watch builds is handled by the dep file (--dep-file).
-    _ = try transpile_cmd.step.addDirectoryWatchInput(opts.site_path);
+    // TODO: ste.addDirectoryWatchInput alternative for zig 0.17, for now check if watcher works without it
+    // _ = try transpile_cmd.step.addDirectoryWatchInput(opts.site_path);
 
     // --- ZX Site Main Executable --- //
     var user_imports = std.array_list.Managed(std.Build.Module.Import).init(b.allocator);
@@ -466,9 +475,8 @@ pub fn initInner(
         break :blk resolved.result.cpu.arch == host.cpu.arch and
             resolved.result.os.tag == host.os.tag;
     } else true;
-    const is_official_build_runner = @hasDecl(@import("root"), "printErrorMessages");
 
-    if (is_official_build_runner and can_introspect_exe and !is_dev_build) {
+    if (can_introspect_exe and !is_dev_build) {
         const introspect_src = try genIntrospectRoot(b, zx_module.owner, exe.root_module, target);
 
         const introspect_root = b.createModule(.{
@@ -573,7 +581,7 @@ pub fn initInner(
         );
         const zx_cmd = getZxRun(b, zx_full_exe, opts);
         zx_step.dependOn(&zx_cmd.step);
-        if (b.args) |args| zx_cmd.addArgs(args);
+        zx_cmd.addPassthruArgs();
     }
 
     // --- Steps: Serve --- //
@@ -583,7 +591,7 @@ pub fn initInner(
         serve_cmd.step.dependOn(b.getInstallStep());
         serve_cmd.step.dependOn(&transpile_cmd.step);
         serve_step.dependOn(&serve_cmd.step);
-        if (b.args) |args| serve_cmd.addArgs(args);
+        serve_cmd.addPassthruArgs();
     }
 
     // --- Steps: Dev --- //
@@ -593,10 +601,11 @@ pub fn initInner(
             "dev",
             "--binpath",
         });
-        dev_cmd.addArg(b.pathJoin(&.{ b.exe_dir, exe.out_filename }));
+
+        dev_cmd.addFileArg(b.graph.path(.install_bin, exe.out_filename));
         const dev_step = b.step(dev_step_name, "Run the Ziex app in development mode");
         dev_step.dependOn(&dev_cmd.step);
-        if (b.args) |args| dev_cmd.addArgs(args);
+        dev_cmd.addPassthruArgs();
     }
 
     // --- Steps: Export --- //
@@ -605,7 +614,7 @@ pub fn initInner(
         export_cmd.addArgs(&.{"export"});
         const export_step = b.step(export_step_name, "Export the Ziex app for static hosting");
         export_step.dependOn(&export_cmd.step);
-        if (b.args) |args| export_cmd.addArgs(args);
+        export_cmd.addPassthruArgs();
     }
 
     // --- Steps: Bundle --- //
@@ -614,7 +623,7 @@ pub fn initInner(
         bundle_cmd.addArgs(&.{"bundle"});
         const bundle_step = b.step(bundle_step_name, "Bundle the Ziex app for production deployment");
         bundle_step.dependOn(&bundle_cmd.step);
-        if (b.args) |args| bundle_cmd.addArgs(args);
+        bundle_cmd.addPassthruArgs();
     }
 
     return .{

@@ -11,16 +11,16 @@ pub fn coerceProps(comptime TargetType: type, props: anytype) TargetType {
         @compileError("Target type must be a struct");
     }
 
-    const fields = TargetInfo.@"struct".fields;
+    const target_struct = TargetInfo.@"struct";
     var result: TargetType = undefined;
 
-    inline for (fields) |field| {
-        if (@hasField(@TypeOf(props), field.name)) {
-            @field(result, field.name) = @field(props, field.name);
-        } else if (field.defaultValue()) |default_value| {
-            @field(result, field.name) = default_value;
+    inline for (target_struct.field_names, target_struct.field_types, target_struct.field_attrs) |field_name, field_type, field_attr| {
+        if (@hasField(@TypeOf(props), field_name)) {
+            @field(result, field_name) = @field(props, field_name);
+        } else if (field_attr.defaultValue(field_type)) |default_value| {
+            @field(result, field_name) = default_value;
         } else {
-            @compileError(std.fmt.comptimePrint("Missing required attribute `{s}` in Component `{s}`", .{ field.name, @typeName(TargetType) }));
+            @compileError(std.fmt.comptimePrint("Missing required attribute `{s}` in Component `{s}`", .{ field_name, @typeName(TargetType) }));
         }
     }
 
@@ -35,7 +35,7 @@ pub fn propsSerializerJson(comptime Props: type, allocator: std.mem.Allocator, p
     const type_info = @typeInfo(Props);
 
     if (type_info != .@"struct") return .{ .ptr = null, .writeFn = null };
-    if (type_info.@"struct".fields.len == 0) return .{ .ptr = null, .writeFn = null };
+    if (type_info.@"struct".field_names.len == 0) return .{ .ptr = null, .writeFn = null };
     if (!comptime isSerializable(Props)) return .{ .ptr = null, .writeFn = null };
 
     const props_copy = allocator.create(Props) catch return .{ .ptr = null, .writeFn = null };
@@ -63,7 +63,7 @@ pub fn propsSerializer(comptime Props: type, allocator: std.mem.Allocator, props
     const type_info = @typeInfo(Props);
 
     if (type_info != .@"struct") return .{ .ptr = null, .writeFn = null };
-    if (type_info.@"struct".fields.len == 0) return .{ .ptr = null, .writeFn = null };
+    if (type_info.@"struct".field_types.len == 0) return .{ .ptr = null, .writeFn = null };
     if (!comptime isSerializable(Props)) {
         return .{ .ptr = null, .writeFn = null };
     }
@@ -92,15 +92,15 @@ pub fn MergedPropsType(comptime BaseType: type, comptime OverrideType: type) typ
         @compileError("MergedPropsType expects struct types");
     }
 
-    const base_fields = base_info.@"struct".fields;
-    const override_fields = override_info.@"struct".fields;
+    const base = base_info.@"struct";
+    const override = override_info.@"struct";
 
     // Count unique fields (override fields replace base fields with same name)
-    comptime var field_count = base_fields.len;
-    inline for (override_fields) |of| {
+    comptime var field_count = base.field_names.len;
+    inline for (override.field_names) |of_name| {
         comptime var found = false;
-        inline for (base_fields) |bf| {
-            if (std.mem.eql(u8, bf.name, of.name)) {
+        inline for (base.field_names) |bf_name| {
+            if (std.mem.eql(u8, bf_name, of_name)) {
                 found = true;
                 break;
             }
@@ -108,61 +108,46 @@ pub fn MergedPropsType(comptime BaseType: type, comptime OverrideType: type) typ
         if (!found) field_count += 1;
     }
 
-    // Build the combined fields array
-    comptime var fields: [field_count]std.builtin.Type.StructField = undefined;
+    comptime var field_names: [field_count][:0]const u8 = undefined;
+    comptime var field_types: [field_count]type = undefined;
+    comptime var field_attrs: [field_count]std.builtin.Type.Struct.FieldAttributes = undefined;
     comptime var idx: usize = 0;
 
-    // Add base fields (unless overridden)
-    inline for (base_fields) |bf| {
-        comptime var overridden = false;
-        inline for (override_fields) |of| {
-            if (std.mem.eql(u8, bf.name, of.name)) {
-                overridden = true;
-                break;
-            }
-        }
-        if (overridden) {
-            // Use override field's type
-            inline for (override_fields) |of| {
-                if (std.mem.eql(u8, bf.name, of.name)) {
-                    fields[idx] = of;
-                    break;
-                }
-            }
-        } else {
-            fields[idx] = bf;
-        }
-        idx += 1;
-    }
-
-    // Add new fields from override
-    inline for (override_fields) |of| {
+    // Add base fields (using override's type/attrs when overridden)
+    inline for (base.field_names, base.field_types, base.field_attrs) |bf_name, bf_type, bf_attr| {
         comptime var found = false;
-        inline for (base_fields) |bf| {
-            if (std.mem.eql(u8, bf.name, of.name)) {
+        inline for (override.field_names, override.field_types, override.field_attrs) |of_name, of_type, of_attr| {
+            if (std.mem.eql(u8, bf_name, of_name)) {
+                field_names[idx] = bf_name;
+                field_types[idx] = of_type;
+                field_attrs[idx] = of_attr;
                 found = true;
                 break;
             }
         }
         if (!found) {
-            fields[idx] = of;
-            idx += 1;
+            field_names[idx] = bf_name;
+            field_types[idx] = bf_type;
+            field_attrs[idx] = bf_attr;
         }
+        idx += 1;
     }
 
-    // Extract field names, types, and attributes for @Struct
-    comptime var field_names: [field_count][]const u8 = undefined;
-    comptime var field_types: [field_count]type = undefined;
-    comptime var field_attrs: [field_count]std.builtin.Type.StructField.Attributes = undefined;
-
-    inline for (fields, 0..) |f, i| {
-        field_names[i] = f.name;
-        field_types[i] = f.type;
-        field_attrs[i] = .{
-            .@"align" = f.alignment,
-            .@"comptime" = f.is_comptime,
-            .default_value_ptr = f.default_value_ptr,
-        };
+    // Add new fields from override
+    inline for (override.field_names, override.field_types, override.field_attrs) |of_name, of_type, of_attr| {
+        comptime var found = false;
+        inline for (base.field_names) |bf_name| {
+            if (std.mem.eql(u8, bf_name, of_name)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            field_names[idx] = of_name;
+            field_types[idx] = of_type;
+            field_attrs[idx] = of_attr;
+            idx += 1;
+        }
     }
 
     return @Struct(.auto, null, &field_names, &field_types, &field_attrs);
@@ -195,8 +180,8 @@ fn isSerializableImpl(comptime T: type, comptime visited: []const type) bool {
         .array => |arr| isSerializableImpl(arr.child, new_visited),
         .optional => |opt| isSerializableImpl(opt.child, new_visited),
         .@"struct" => |s| blk: {
-            for (s.fields) |field| {
-                if (!isSerializableImpl(field.type, new_visited)) break :blk false;
+            for (s.field_types) |field_type| {
+                if (!isSerializableImpl(field_type, new_visited)) break :blk false;
             }
             break :blk true;
         },

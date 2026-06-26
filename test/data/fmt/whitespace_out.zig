@@ -1,5 +1,5 @@
 pub fn FmtWhitespace(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.init();
+    var _zx = @import("zx").x.init(.{ .src = @src() });
     return _zx.ele(
         .div,
         .{

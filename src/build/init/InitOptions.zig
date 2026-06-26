@@ -68,6 +68,16 @@ pub const AppOptions = struct {
             server: ?SqliteServerOptions = null,
         };
 
+        /// Enable Postgres database client, available through `zx.Db.Postgres`.
+        pub const PostgresOptions = struct {
+            pub const PostgresServerOptions = struct {
+                pub const enabled: PostgresServerOptions = .{};
+            };
+            pub const enabled: PostgresOptions = .{ .server = .enabled };
+
+            server: ?PostgresServerOptions = null,
+        };
+
         /// Filesystem-backed key/value store, exposed at runtime as `zx.kv`.
         pub const KvOptions = struct {
             pub const KvServerOptions = struct {
@@ -96,6 +106,7 @@ pub const AppOptions = struct {
         pub const default = FeatureOptions{};
 
         sqlite: ?SqliteOptions = null,
+        postgres: ?PostgresOptions = null,
         kv: ?KvOptions = null,
         cache: ?CacheOptions = null,
     };

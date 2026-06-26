@@ -72,10 +72,8 @@ pub fn ComponentCtx(comptime PropsType: type) type {
         _internal: Internal = .{},
 
         pub const Internal = struct {
-            instance_id: u16 = 0,
             component_id: []const u8 = "",
             state_idx: u32 = 0,
-            handler_idx: u32 = 0,
         };
 
         pub fn state(self: *Self, comptime T: type, initial: T) reactivity.StateInstance(T) {
@@ -90,14 +88,14 @@ pub fn ComponentCtx(comptime PropsType: type) type {
                 .pointer => |p| p.child,
                 else => @compileError("sbind: expected a function"),
             };
-            const params = @typeInfo(HandlerFnType).@"fn".params;
+            const params = @typeInfo(HandlerFnType).@"fn".param_types;
 
-            comptime if (!(params.len == 1 and params[0].type.? == *ServerEvent.Stateful))
+            comptime if (!(params.len == 1 and params[0].? == *ServerEvent.Stateful))
                 @compileError("sbind: handler must be fn(*zx.server.Event.Stateful) void");
 
             const alloc = if (zx.platform.role == .client) zx.allocator else self.allocator;
             const bound_states = zx.EventHandler.buildStates(alloc, states);
-            return zx.EventHandler.serverSS(handler, alloc, &self._internal.handler_idx, bound_states);
+            return zx.EventHandler.serverSS(handler, alloc, bound_states);
         }
 
         pub fn bind(self: *Self, comptime handler: anytype) zx.EventHandler {
@@ -109,7 +107,7 @@ pub fn ComponentCtx(comptime PropsType: type) type {
                 .pointer => |p| p.child,
                 else => @compileError(BindSignMsg ++ @typeName(HandlerType)),
             };
-            const params = @typeInfo(FnType).@"fn".params;
+            const params = @typeInfo(FnType).@"fn".param_types;
 
             return switch (FnType) {
                 // Client
@@ -117,22 +115,22 @@ pub fn ComponentCtx(comptime PropsType: type) type {
                 fn (*ClientEvent.Stateful) void => zx.EventHandler.clientS(handler, alloc, self._internal.component_id),
 
                 // Server
-                fn (*ServerEvent.Stateful) void => zx.EventHandler.serverS(handler, alloc, self._internal.component_id, self._internal.state_idx, &self._internal.handler_idx),
-                fn (*ServerEvent) void => zx.EventHandler.server(handler, alloc, &self._internal.handler_idx),
+                fn (*ServerEvent.Stateful) void => zx.EventHandler.serverS(handler, alloc, self._internal.component_id, self._internal.state_idx),
+                fn (*ServerEvent) void => zx.EventHandler.server(handler, alloc),
 
                 // Server Actions
-                fn (*ActionContext.Stateful) void => zx.EventHandler.actionStateful(handler, alloc, self._internal.component_id, self._internal.state_idx, &self._internal.handler_idx),
+                fn (*ActionContext.Stateful) void => zx.EventHandler.actionStateful(handler, alloc, self._internal.component_id, self._internal.state_idx),
                 fn (ActionContext, *StateContext) void => actionBind(handler, alloc, self),
                 fn (*ActionContext) void => actionBind(handler, alloc, self),
 
                 else => blk: {
-                    if (comptime params.len == 1 and params[0].type.? == *ServerEvent) {
-                        break :blk zx.EventHandler.server(handler, alloc, &self._internal.handler_idx);
+                    if (comptime params.len == 1 and params[0] == *ServerEvent) {
+                        break :blk zx.EventHandler.server(handler, alloc);
                     }
                     if (comptime params.len == 2 and
-                        @typeInfo(params[0].type.?) == .@"struct" and
-                        params[0].type.? != ActionContext and
-                        params[1].type.? == *StateContext)
+                        @typeInfo(params[0].?) == .@"struct" and
+                        params[0] != ActionContext and
+                        params[1] == *StateContext)
                     {
                         break :blk actionBind(handler, alloc, self);
                     }
@@ -144,10 +142,10 @@ pub fn ComponentCtx(comptime PropsType: type) type {
 }
 
 fn actionBind(comptime handler: anytype, alloc: Allocator, ctx: anytype) zx.EventHandler {
-    const params = @typeInfo(@TypeOf(handler)).@"fn".params;
-    const arg0 = params[0].type.?;
+    const params = @typeInfo(@TypeOf(handler)).@"fn".param_types;
+    const arg0 = params[0].?;
 
-    if (comptime params.len == 2 and params[1].type.? == *StateContext and
+    if (comptime params.len == 2 and params[1] == *StateContext and
         (arg0 == ActionContext or @typeInfo(arg0) == .@"struct"))
     {
         const FormActionWrapper = struct {
@@ -163,15 +161,13 @@ fn actionBind(comptime handler: anytype, alloc: Allocator, ctx: anytype) zx.Even
             }
         };
         const bound = reactivity.collectStateBoundEntries(alloc, ctx._internal.component_id, ctx._internal.state_idx);
-        ctx._internal.handler_idx += 1;
-        const h_id = ctx._internal.handler_idx;
         const ec = alloc.create(zx.EventHandler.Context) catch @panic("OOM");
-        ec.* = .{ .handler_id = h_id, .bound_states = bound };
+        // handler_id is stamped later in `x.Context.attr` from the attribute @src().
+        ec.* = .{ .handler_id = 0, .bound_states = bound };
         return zx.EventHandler{
             .callback = &zx.EventHandler.actionHandler,
             .context = @ptrCast(ec),
             .action_fn = &FormActionWrapper.wrap,
-            .handler_id = h_id,
             .bound_states = bound,
         };
     }

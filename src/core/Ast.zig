@@ -6,7 +6,7 @@ pub fn fmt(allocator: std.mem.Allocator, source: [:0]const u8) !FmtResult {
     var parser_result = try Parser.parse(arena, source, .zx);
     defer parser_result.deinit(arena);
 
-    var diagnostics = try Validate.validate(allocator, &parser_result);
+    var diagnostics = try check.validate(allocator, &parser_result);
     errdefer diagnostics.deinit();
 
     if (diagnostics.hasErrors()) {
@@ -23,7 +23,7 @@ pub const FmtResult = struct {
     /// Formatted source, or `null` when `diagnostics` contains errors.
     source: ?[:0]const u8,
     /// Populated when the source has syntax errors; empty otherwise.
-    diagnostics: Validate.DiagnosticList,
+    diagnostics: check.DiagnosticList,
 
     pub fn deinit(self: *FmtResult, allocator: std.mem.Allocator) void {
         if (self.source) |s| allocator.free(s);
@@ -59,7 +59,7 @@ pub fn parse(gpa: std.mem.Allocator, zx_source: [:0]const u8, options: ParseOpti
     var parse_result = try Parser.parse(arena, zx_source, options.lang);
     defer parse_result.deinit(arena);
 
-    var diagnostics = try Validate.validate(gpa, &parse_result);
+    var diagnostics = try check.validate(gpa, &parse_result);
     errdefer diagnostics.deinit();
 
     const render_result = try parse_result.renderAlloc(arena, .{ .mode = .zig, .sourcemap = options.map.enabled(), .path = options.path });
@@ -101,7 +101,7 @@ pub const ParseResult = struct {
     zig_source: [:0]const u8,
     client_components: std.ArrayList(ClientComponentMetadata),
     sourcemap: ?sourcemap.SourceMap = null,
-    diagnostics: Validate.DiagnosticList,
+    diagnostics: check.DiagnosticList,
 
     pub fn deinit(self: *ParseResult, allocator: std.mem.Allocator) void {
         self.zig_ast.deinit(allocator);
@@ -122,9 +122,10 @@ pub const ParseResult = struct {
 
 pub const ClientComponentMetadata = Parser.ClientComponentMetadata;
 pub const SourceMap = sourcemap.SourceMap;
+pub const check = @import("Ast/check.zig");
+
 const log = std.log.scoped(.ast);
 
 const std = @import("std");
 const Parser = @import("Parse.zig");
-const Validate = @import("Validate.zig");
 const sourcemap = @import("sourcemap.zig");

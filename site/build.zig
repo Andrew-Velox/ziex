@@ -18,10 +18,10 @@ pub fn build(b: *std.Build) !void {
     const wasm_target = b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .wasi });
     const wasm_optimize: std.builtin.OptimizeMode = .ReleaseSmall;
 
-    const playground_dep = b.dependency("playground", .{});
-    const zls_dep = playground_dep.builder.dependency("zls", .{ .target = wasm_target, .optimize = wasm_optimize });
+    // const playground_dep = b.dependency("playground", .{});
+    // const zls_dep = playground_dep.builder.dependency("zls", .{ .target = wasm_target, .optimize = wasm_optimize });
     const zx_wasm_dep = b.dependency("ziex", .{ .target = wasm_target, .optimize = wasm_optimize });
-    const zig_dep = playground_dep.builder.dependency("zig", .{
+    const zig_dep = b.dependency("zig", .{
         .target = wasm_target,
         .optimize = wasm_optimize,
         .@"version-string" = @as([]const u8, "0.16.0"),
@@ -42,19 +42,19 @@ pub fn build(b: *std.Build) !void {
     compiler_rt_step.dependOn(&b.addInstallArtifact(lib_compiler_rt, .{ .dest_dir = .{ .override = .prefix } }).step);
 
     const zx_exe = zx_wasm_dep.artifact("zx");
-    const zls_exe = b.addExecutable(.{
-        .name = "zls",
-        .root_module = b.createModule(.{
-            .root_source_file = playground_dep.path("src/zls.zig"),
-            .target = wasm_target,
-            .optimize = wasm_optimize,
-            .imports = &.{
-                .{ .name = "zls", .module = zls_dep.module("zls") },
-            },
-        }),
-    });
-    zls_exe.entry = .disabled;
-    zls_exe.rdynamic = true;
+    // const zls_exe = b.addExecutable(.{
+    //     .name = "zls",
+    //     .root_module = b.createModule(.{
+    //         .root_source_file = playground_dep.path("src/zls.zig"),
+    //         .target = wasm_target,
+    //         .optimize = wasm_optimize,
+    //         .imports = &.{
+    //             .{ .name = "zls", .module = zls_dep.module("zls") },
+    //         },
+    //     }),
+    // });
+    // zls_exe.entry = .disabled;
+    // zls_exe.rdynamic = true;
     const zig_exe = zig_dep.artifact("zig");
 
     // -- zig.tar.gz
@@ -80,7 +80,7 @@ pub fn build(b: *std.Build) !void {
     run_zx_tar.addArg("src");
 
     const playground_assets = b.addNamedWriteFiles("playground_assets");
-    _ = playground_assets.addCopyFile(zls_exe.getEmittedBin(), "zls.wasm");
+    // _ = playground_assets.addCopyFile(zls_exe.getEmittedBin(), "zls.wasm");
     _ = playground_assets.addCopyFile(zig_exe.getEmittedBin(), b.fmt("zig-{s}.wasm", .{ziex.info.minimum_zig_version}));
     _ = playground_assets.addCopyFile(zx_exe.getEmittedBin(), b.fmt("zx-{s}.wasm", .{ziex.info.version}));
     _ = playground_assets.addCopyFile(lib_compiler_rt.getEmittedBin(), "libcompiler_rt.a");
@@ -93,7 +93,7 @@ pub fn build(b: *std.Build) !void {
         .install_subdir = "static/assets/playground",
     });
 
-    b.getInstallStep().dependOn(compiler_rt_step);
+    // b.getInstallStep().dependOn(compiler_rt_step);
 
     // -- Steps: pg - installs playground assets --- //
     const pg_step = b.step("pg", "Install playground assets");
@@ -121,12 +121,13 @@ pub fn build(b: *std.Build) !void {
             // .copy_embedded_sources = true,
             .features = .{
                 .sqlite = .enabled,
+                // .postgres = .enabled,
                 .kv = .enabled,
                 .cache = .enabled,
             },
         },
         .client = .{
-            .jsglue_href = "/assets/_/main.js",
+            .jsglue_href = "/assets/_/main-dev.js",
             .jsglue_install_subdir = "pkg/ziex",
         },
         .cli = .{ .optimize = optimize },
@@ -212,7 +213,7 @@ pub fn build(b: *std.Build) !void {
         },
     });
 
-    const install_main_js = b.addInstallFile(site_scripts.dir.path(b, "client.js"), "static/assets/_/main.js");
+    const install_main_js = b.addInstallFile(site_scripts.dir.path(b, "client.js"), "static/assets/_/main-dev.js");
     const install_docs_js = b.addInstallFile(site_scripts.dir.path(b, "docs.js"), "static/assets/docs.js");
     const install_home_js = b.addInstallFile(site_scripts.dir.path(b, "home.js"), "static/assets/home.js");
     b.default_step.dependOn(&install_main_js.step);
@@ -252,6 +253,15 @@ pub fn build(b: *std.Build) !void {
         .install_subdir = "static/assets/playground",
     });
     b.default_step.dependOn(&install_playground_scripts.step);
+
+    const branding_dep = b.dependency("branding", .{});
+    const install_branding = b.addInstallDirectory(.{
+        .source_dir = branding_dep.path("."),
+        .install_dir = .prefix,
+        .install_subdir = "static/assets/branding",
+        .include_extensions = &.{ "webp", "svg", "png", "gif" },
+    });
+    b.default_step.dependOn(&install_branding.step);
 }
 
 const bunjs = @import("bunjs");

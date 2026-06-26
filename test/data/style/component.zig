@@ -5,13 +5,13 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
         .padding_top = .px(10),
         .width = .px(100),
     };
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
             .allocator = allocator,
             .attributes = _zx.attrs(.{
-                _zx.attr("style", style),
+                _zx.attr(@src(), "style", style),
             }),
             .children = &.{
                 _zx.txt(" Hello"),

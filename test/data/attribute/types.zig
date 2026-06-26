@@ -9,7 +9,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
     const optional_null: ?[]const u8 = null;
     const enum_val = InputType.text;
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .form,
         .{
@@ -19,8 +19,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "text"),
-                            _zx.attr("data-string", string_val),
+                            _zx.attr(@src(), "type", "text"),
+                            _zx.attr(@src(), "data-string", string_val),
                         }),
                     },
                 ),
@@ -28,8 +28,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "number"),
-                            _zx.attr("value", int_val),
+                            _zx.attr(@src(), "type", "number"),
+                            _zx.attr(@src(), "value", int_val),
                         }),
                     },
                 ),
@@ -37,8 +37,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "range"),
-                            _zx.attr("step", float_val),
+                            _zx.attr(@src(), "type", "range"),
+                            _zx.attr(@src(), "step", float_val),
                         }),
                     },
                 ),
@@ -46,8 +46,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "checkbox"),
-                            _zx.attr("disabled", bool_true),
+                            _zx.attr(@src(), "type", "checkbox"),
+                            _zx.attr(@src(), "disabled", bool_true),
                         }),
                     },
                 ),
@@ -55,8 +55,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "checkbox"),
-                            _zx.attr("disabled", bool_false),
+                            _zx.attr(@src(), "type", "checkbox"),
+                            _zx.attr(@src(), "disabled", bool_false),
                         }),
                     },
                 ),
@@ -64,8 +64,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "text"),
-                            _zx.attr("data-user", optional_val),
+                            _zx.attr(@src(), "type", "text"),
+                            _zx.attr(@src(), "data-user", optional_val),
                         }),
                     },
                 ),
@@ -73,8 +73,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "text"),
-                            _zx.attr("data-user", optional_null),
+                            _zx.attr(@src(), "type", "text"),
+                            _zx.attr(@src(), "data-user", optional_null),
                         }),
                     },
                 ),
@@ -82,7 +82,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", enum_val),
+                            _zx.attr(@src(), "type", enum_val),
                         }),
                     },
                 ),

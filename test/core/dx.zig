@@ -113,6 +113,192 @@ test "sm > lookup returns null for unmapped position" {
     try testing.expectEqual(@as(?sourcemap.Mapping, null), result);
 }
 
+/// Build a DecodedMap directly from a slice of mappings (bypassing VLQ) so
+/// lookup behaviour can be tested in isolation. Mappings must already be in
+/// generated order, as the transpiler emits them.
+fn decodedFrom(allocator: std.mem.Allocator, mappings: []const sourcemap.Mapping) !sourcemap.DecodedMap {
+    var builder = sourcemap.Builder.init(allocator);
+    defer builder.deinit();
+    for (mappings) |m| try builder.addMapping(m);
+    var sm = try builder.build();
+    defer sm.deinit(allocator);
+    return sm.decode(allocator);
+}
+
+test "sm > generatedToSource clamps extrapolation at next segment" {
+    const allocator = testing.allocator;
+
+    // Generated line 0 has two segments:
+    //   gen col 0  (the token "abc")     -> source 0:0
+    //   gen col 10 (an injected token)   -> source 5:0
+    // A query at gen col 7 (inside "abc...") must extrapolate from the first
+    // segment but must NOT bleed past col 10 into the injected segment.
+    var decoded = try decodedFrom(allocator, &.{
+        .{ .generated_line = 0, .generated_column = 0, .source_line = 0, .source_column = 0 },
+        .{ .generated_line = 0, .generated_column = 10, .source_line = 5, .source_column = 0 },
+    });
+    defer decoded.deinit();
+
+    // Inside the first segment: extrapolated by the in-segment offset.
+    const at7 = decoded.generatedToSource(0, 7).?;
+    try testing.expectEqual(@as(i32, 0), at7.source_line);
+    try testing.expectEqual(@as(i32, 7), at7.source_column);
+
+    // At col 9 (last column before the boundary) the extrapolation is clamped
+    // so it stays within the first segment instead of jumping to source 5:x.
+    const at9 = decoded.generatedToSource(0, 9).?;
+    try testing.expectEqual(@as(i32, 0), at9.source_line);
+    try testing.expect(at9.source_column < 10);
+
+    // At the boundary itself we land on the second segment.
+    const at10 = decoded.generatedToSource(0, 10).?;
+    try testing.expectEqual(@as(i32, 5), at10.source_line);
+    try testing.expectEqual(@as(i32, 0), at10.source_column);
+}
+
+test "sm > generatedToSource duplicate generated position is deterministic" {
+    const allocator = testing.allocator;
+
+    // Open and close tags both map to the same generated token (the element
+    // name). Emission order matches the transpiler: close tag first, then the
+    // genuinely-following segment. The owning lookup must resolve the duplicate
+    // without crashing and without extrapolating into a later segment.
+    var decoded = try decodedFrom(allocator, &.{
+        .{ .generated_line = 3, .generated_column = 4, .source_line = 4, .source_column = 8 }, // </main>
+        .{ .generated_line = 3, .generated_column = 4, .source_line = 2, .source_column = 8 }, // <main>
+        .{ .generated_line = 3, .generated_column = 9, .source_line = 2, .source_column = 25 },
+    });
+    defer decoded.deinit();
+
+    const at4 = decoded.generatedToSource(3, 4).?;
+    // Resolves to one of the two source positions at that generated column.
+    try testing.expect((at4.source_line == 2 and at4.source_column == 8) or
+        (at4.source_line == 4 and at4.source_column == 8));
+
+    // A query between the duplicate and the next real segment must clamp at
+    // col 9 and not overshoot.
+    const at6 = decoded.generatedToSource(3, 6).?;
+    try testing.expect(at6.source_column < 25 or at6.source_line != 2);
+}
+
+test "sm > generatedToSource does not extrapolate across generated lines" {
+    const allocator = testing.allocator;
+
+    var decoded = try decodedFrom(allocator, &.{
+        .{ .generated_line = 0, .generated_column = 0, .source_line = 0, .source_column = 0 },
+        .{ .generated_line = 2, .generated_column = 0, .source_line = 9, .source_column = 4 },
+    });
+    defer decoded.deinit();
+
+    // A query on generated line 2 must use line-2's mapping, not extrapolate
+    // from line 0.
+    const m = decoded.generatedToSource(2, 3).?;
+    try testing.expectEqual(@as(i32, 9), m.source_line);
+    try testing.expectEqual(@as(i32, 7), m.source_column); // 4 + (3 - 0)
+}
+
+test "sm > sourceToGenerated clamps extrapolation at next segment" {
+    const allocator = testing.allocator;
+
+    // Source line 0 has two tokens that map to far-apart generated locations.
+    var decoded = try decodedFrom(allocator, &.{
+        .{ .generated_line = 0, .generated_column = 0, .source_line = 0, .source_column = 0 },
+        .{ .generated_line = 7, .generated_column = 0, .source_line = 0, .source_column = 10 },
+    });
+    defer decoded.deinit();
+
+    // Inside the first source token.
+    const at3 = decoded.sourceToGenerated(0, 3).?;
+    try testing.expectEqual(@as(i32, 0), at3.generated_line);
+    try testing.expectEqual(@as(i32, 3), at3.generated_column);
+
+    // Just before the next source token (col 9): clamped within the first
+    // segment, must not jump toward generated line 7.
+    const at9 = decoded.sourceToGenerated(0, 9).?;
+    try testing.expectEqual(@as(i32, 0), at9.generated_line);
+    try testing.expect(at9.generated_column < 10);
+
+    // The second source token maps to its own generated location.
+    const at10 = decoded.sourceToGenerated(0, 10).?;
+    try testing.expectEqual(@as(i32, 7), at10.generated_line);
+    try testing.expectEqual(@as(i32, 0), at10.generated_column);
+}
+
+test "sm > sourceToGenerated prefers earliest generated position on tie" {
+    const allocator = testing.allocator;
+
+    // Same source position duplicated to two generated locations. The earliest
+    // generated position must be chosen for stability.
+    var decoded = try decodedFrom(allocator, &.{
+        .{ .generated_line = 2, .generated_column = 5, .source_line = 1, .source_column = 0 },
+        .{ .generated_line = 9, .generated_column = 0, .source_line = 1, .source_column = 0 },
+    });
+    defer decoded.deinit();
+
+    const m = decoded.sourceToGenerated(1, 0).?;
+    try testing.expectEqual(@as(i32, 2), m.generated_line);
+    try testing.expectEqual(@as(i32, 5), m.generated_column);
+}
+
+test "sm > e2e error position maps back to correct zx token" {
+    const allocator = testing.allocator;
+
+    // A real transpile: pick a token in the generated Zig, map it back, and
+    // confirm it lands on the matching token in the original .zx source.
+    const source =
+        \\pub fn Page(allocator: zx.Allocator) zx.Component {
+        \\    const greeting = "hi";
+        \\    return (
+        \\        <main @allocator={allocator}>
+        \\            <p>{greeting}</p>
+        \\        </main>
+        \\    );
+        \\}
+    ;
+    const source_z = try allocator.dupeSentinel(u8, source, 0);
+    defer allocator.free(source_z);
+
+    var result = try zx.Ast.parse(allocator, source_z, .{ .map = .inlined });
+    defer result.deinit(allocator);
+
+    var decoded = try (result.sourcemap orelse return error.NoSourceMap).decode(allocator);
+    defer decoded.deinit();
+
+    const zig = result.zx_source;
+
+    // Find "greeting" in the generated Zig where it is referenced inside the
+    // expression (not the `const greeting` declaration). The reference appears
+    // after an "_zx.expr(" wrapper.
+    const expr_pos = std.mem.indexOf(u8, zig, "_zx.expr(greeting") orelse {
+        // Fallback: any "greeting" after the declaration line.
+        return error.TokenNotFound;
+    };
+    const greeting_pos = expr_pos + "_zx.expr(".len;
+    const gen_lc = offsetToLineCol(zig, greeting_pos);
+
+    const mapped = decoded.generatedToSource(gen_lc.line, gen_lc.column).?;
+    // The expression `{greeting}` lives on source line 4 (0-based).
+    try testing.expectEqual(@as(i32, 4), mapped.source_line);
+
+    // And the mapped source offset should land on the "greeting" token.
+    const src_off = lineColToOffset(source, mapped.source_line, mapped.source_column).?;
+    try testing.expect(std.mem.startsWith(u8, source[src_off..], "greeting"));
+}
+
+/// Convert a byte offset to a 0-based (line, column).
+fn offsetToLineCol(source: []const u8, offset: usize) struct { line: i32, column: i32 } {
+    var line: i32 = 0;
+    var col: i32 = 0;
+    var i: usize = 0;
+    while (i < offset and i < source.len) : (i += 1) {
+        if (source[i] == '\n') {
+            line += 1;
+            col = 0;
+        } else col += 1;
+    }
+    return .{ .line = line, .column = col };
+}
+
 test "sm > e2e simple element transpilation" {
     const allocator = testing.allocator;
 

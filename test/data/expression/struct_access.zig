@@ -2,7 +2,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
     const user = User{ .name = "Alice", .age = 25 };
     const product = Product{ .title = "Book", .price = 29.99 };
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -30,7 +30,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .div,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", "product"),
+                            _zx.attr(@src(), "class", "product"),
                         }),
                         .children = &.{
                             _zx.ele(

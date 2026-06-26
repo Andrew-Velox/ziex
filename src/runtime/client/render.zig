@@ -3,6 +3,8 @@ const vdom = @import("../core/vdom.zig");
 
 pub const RenderOptions = struct {
     base_path: ?[]const u8 = base_path,
+    dom_parent_id: ?u64 = null,
+    marker: ?Document.CommentMarker = null,
 };
 
 pub const VDOMTree = vdom;
@@ -51,13 +53,30 @@ pub fn applyPatches(
             },
             .PLACEMENT => {
                 const data = &patch.data.PLACEMENT;
+                const dom_parent_id = resolveDomParentId(client, data.parent_id);
 
-                _ = try createPlatformNodes(allocator, data.vnode, client, options);
+                const resolved = try vdom.resolveComponent(allocator, data.vnode.component, data.vnode.owner_component_id, 0);
+                const placed_is_fragment = resolved == .element and resolved.element.tag == .fragment;
 
-                if (data.reference_id) |ref_id| {
-                    ext._ib(data.parent_id, data.vnode.id, ref_id);
-                } else {
-                    ext._ac(data.parent_id, data.vnode.id);
+                const create_options = RenderOptions{
+                    .base_path = options.base_path,
+                    .dom_parent_id = if (placed_is_fragment) dom_parent_id else null,
+                    .marker = null,
+                };
+                _ = try createPlatformNodes(allocator, data.vnode, client, create_options);
+
+                if (!placed_is_fragment) {
+                    const ref_id = data.reference_id orelse blk: {
+                        if (vnodeIsFragment(client, data.parent_id)) {
+                            break :blk findFragmentInsertReference(client, data.parent_id, data.index);
+                        }
+                        break :blk findChildInsertReference(client, data.parent_id, data.index);
+                    };
+                    if (ref_id) |reference_id| {
+                        ext._ib(dom_parent_id, data.vnode.id, reference_id);
+                    } else {
+                        ext._ac(dom_parent_id, data.vnode.id);
+                    }
                 }
 
                 if (client.getVElementById(data.parent_id)) |parent_vnode| {
@@ -68,7 +87,10 @@ pub fn applyPatches(
             .DELETION => {
                 const data = patch.data.DELETION;
 
-                ext._rc(data.parent_id, data.vnode_id);
+                if (!vnodeIsFragment(client, data.vnode_id)) {
+                    const dom_parent_id = resolveDomParentId(client, data.parent_id);
+                    ext._rc(dom_parent_id, data.vnode_id);
+                }
 
                 if (client.getVElementById(data.vnode_id)) |vnode| {
                     client.unregisterVElement(vnode);
@@ -86,10 +108,22 @@ pub fn applyPatches(
             },
             .REPLACE => {
                 const data = &patch.data.REPLACE;
+                const dom_parent_id = resolveDomParentId(client, data.parent_id);
 
                 _ = try createPlatformNodes(allocator, data.new_vnode, client, options);
 
-                ext._rpc(data.parent_id, data.new_vnode.id, data.old_vnode_id);
+                if (vnodeIsFragment(client, data.old_vnode_id)) {
+                    const ref_id = findFragmentInsertReference(client, data.old_vnode_id, 0);
+                    if (ref_id) |reference_id| {
+                        ext._ib(dom_parent_id, data.new_vnode.id, reference_id);
+                    } else {
+                        ext._ac(dom_parent_id, data.new_vnode.id);
+                    }
+                } else if (vnodeIsFragment(client, data.new_vnode.id)) {
+                    ext._rc(dom_parent_id, data.old_vnode_id);
+                } else {
+                    ext._rpc(dom_parent_id, data.new_vnode.id, data.old_vnode_id);
+                }
 
                 if (client.getVElementById(data.old_vnode_id)) |old_vnode| {
                     client.unregisterVElement(old_vnode);
@@ -108,11 +142,13 @@ pub fn applyPatches(
             },
             .MOVE => {
                 const data = patch.data.MOVE;
+                const dom_parent_id = resolveDomParentId(client, data.parent_id);
 
-                if (data.reference_id) |ref_id| {
-                    ext._ib(data.parent_id, data.vnode_id, ref_id);
+                const ref_id = data.reference_id orelse findFragmentInsertReference(client, data.parent_id, data.new_index);
+                if (ref_id) |reference_id| {
+                    ext._ib(dom_parent_id, data.vnode_id, reference_id);
                 } else {
-                    ext._ac(data.parent_id, data.vnode_id);
+                    ext._ac(dom_parent_id, data.vnode_id);
                 }
 
                 if (client.getVElementById(data.parent_id)) |parent_vnode| {
@@ -139,6 +175,7 @@ pub fn applyPatches(
 /// are serialised, sent as `__$states`, and the response updates those states.
 const FormActionCtx = struct {
     vnode_id: u64,
+    action_id: u32 = 1,
     bound_states: []const zx.EventHandler.Bound = &.{},
 };
 
@@ -175,7 +212,7 @@ fn formActionCallback(ctx: *anyopaque, event: zx.client.Event) void {
     event.preventDefault();
 
     if (form_ctx.bound_states.len == 0) {
-        ext._submitFormAction(form_ctx.vnode_id);
+        ext._submitFormAction(form_ctx.vnode_id, form_ctx.action_id);
         return;
     }
 
@@ -197,31 +234,50 @@ fn formActionCallback(ctx: *anyopaque, event: zx.client.Event) void {
         alloc.destroy(cb_ctx);
         return;
     };
-    ext._submitFormActionAsync(form_ctx.vnode_id, states_json.ptr, states_json.len, fetch_id);
+    ext._submitFormActionAsync(form_ctx.vnode_id, form_ctx.action_id, states_json.ptr, states_json.len, fetch_id);
 }
 
-/// Build DOM nodes for a VNode subtree and register every node in the JS
-pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anytype, options: RenderOptions) anyerror!Document.HTMLNode {
+/// Build DOM nodes for a VNode subtree and register every node in the JS registry.
+/// Returns null for fragment roots (children are mounted individually).
+pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anytype, options: RenderOptions) anyerror!?Document.HTMLNode {
     if (!is_wasm) return .{ .text = Document.HTMLText.init(allocator, {}) };
 
     const resolved_component = try vdom.resolveComponent(allocator, vnode.component, vnode.owner_component_id, 0);
 
-    const node: Document.HTMLNode = switch (resolved_component) {
+    const node: ?Document.HTMLNode = switch (resolved_component) {
         .none => blk: {
             const ref_id = ext._ct("".ptr, 0, vnode.id);
-            break :blk .{ .text = htmlTextFromRef(allocator, ref_id) };
+            const n: Document.HTMLNode = .{ .text = htmlTextFromRef(allocator, ref_id) };
+            try attachCreatedNodeIfNeeded(n, vnode.id, options);
+            break :blk n;
         },
         .text => |t| blk: {
             const ref_id = ext._ct(t.ptr, t.len, vnode.id);
-            break :blk .{ .text = htmlTextFromRef(allocator, ref_id) };
+            const n: Document.HTMLNode = .{ .text = htmlTextFromRef(allocator, ref_id) };
+            try attachCreatedNodeIfNeeded(n, vnode.id, options);
+            break :blk n;
         },
         .element => |elem| blk: {
+            if (elem.tag == .fragment) {
+                client.registerVElement(vnode);
+                const child_options = RenderOptions{
+                    .base_path = options.base_path,
+                    .dom_parent_id = options.dom_parent_id,
+                    .marker = null,
+                };
+                for (vnode.children.items) |child| {
+                    _ = try createPlatformNodes(allocator, child, client, child_options);
+                }
+                break :blk null;
+            }
+
             const ref_id = ext._ce(@intFromEnum(elem.tag), vnode.id);
 
             if (elem.attributes) |attrs| {
                 var has_action_handler = false;
                 var has_method = false;
                 var form_bound_states: []const zx.EventHandler.Bound = &.{};
+                var form_action_id: u32 = 1;
 
                 for (attrs) |attr| {
                     if (std.mem.eql(u8, attr.name, "key")) continue;
@@ -229,6 +285,7 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
                         if (handler.action_fn != null) {
                             has_action_handler = true;
                             form_bound_states = handler.bound_states;
+                            form_action_id = handler.handler_id;
                         }
                         continue;
                     }
@@ -272,7 +329,7 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
                 if (elem.tag == .form and has_action_handler) {
                     const Client = @import("Client.zig");
                     if (allocator.create(FormActionCtx) catch null) |form_ctx| {
-                        form_ctx.* = .{ .vnode_id = vnode.id, .bound_states = form_bound_states };
+                        form_ctx.* = .{ .vnode_id = vnode.id, .action_id = form_action_id, .bound_states = form_bound_states };
                         client.registerHandler(vnode.id, Client.EventType.submit, zx.EventHandler{
                             .callback = &formActionCallback,
                             .context = @ptrCast(form_ctx),
@@ -297,15 +354,34 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
                 }
                 const raw = aw.written();
                 ext._srh(vnode.id, raw.ptr, raw.len);
-                break :blk .{ .element = htmlElementFromRef(allocator, ref_id) };
+                const n: Document.HTMLNode = .{ .element = htmlElementFromRef(allocator, ref_id) };
+                try attachCreatedNodeIfNeeded(n, vnode.id, options);
+                break :blk n;
             }
 
             for (vnode.children.items) |child| {
-                _ = try createPlatformNodes(allocator, child, client, options);
-                ext._ac(vnode.id, child.id);
+                const resolved_child = try vdom.resolveComponent(allocator, child.component, child.owner_component_id, 0);
+                const child_options = RenderOptions{
+                    .base_path = options.base_path,
+                    .dom_parent_id = null,
+                    .marker = null,
+                };
+                if (resolved_child == .element and resolved_child.element.tag == .fragment) {
+                    const frag_options = RenderOptions{
+                        .base_path = options.base_path,
+                        .dom_parent_id = vnode.id,
+                        .marker = null,
+                    };
+                    _ = try createPlatformNodes(allocator, child, client, frag_options);
+                } else {
+                    _ = try createPlatformNodes(allocator, child, client, child_options);
+                    ext._ac(vnode.id, child.id);
+                }
             }
 
-            break :blk .{ .element = htmlElementFromRef(allocator, ref_id) };
+            const n: Document.HTMLNode = .{ .element = htmlElementFromRef(allocator, ref_id) };
+            try attachCreatedNodeIfNeeded(n, vnode.id, options);
+            break :blk n;
         },
         .component_csr => |csr| blk: {
             // CSR islands: plain <div id="..." data-name="..."> placeholder.
@@ -317,8 +393,7 @@ pub fn createPlatformNodes(allocator: zx.Allocator, vnode: *VNode, client: anyty
         .component_fn => unreachable,
     };
 
-    // Register VElement for event delegation (id_to_velement, handler_registry).
-    client.registerVElement(vnode);
+    if (node) |_| client.registerVElement(vnode);
     return node;
 }
 
@@ -357,4 +432,114 @@ fn setAttrOrProp(vnode_id: u64, name: []const u8, val: []const u8) void {
     } else {
         ext._sa(vnode_id, name.ptr, name.len, val.ptr, val.len);
     }
+}
+
+fn attachCreatedNodeIfNeeded(node: Document.HTMLNode, vnode_id: u64, options: RenderOptions) !void {
+    if (options.dom_parent_id != null or options.marker != null) {
+        try attachCreatedNode(node, vnode_id, options);
+    }
+}
+
+fn attachCreatedNode(node: Document.HTMLNode, vnode_id: u64, options: RenderOptions) !void {
+    if (options.dom_parent_id) |parent_id| {
+        ext._ac(parent_id, vnode_id);
+    } else if (options.marker) |marker| {
+        try marker.insertContent(node);
+    }
+}
+
+fn resolveDomParentId(client: anytype, parent_vnode_id: u64) u64 {
+    if (client.getVElementById(parent_vnode_id)) |parent| {
+        if (parent.component == .element and parent.component.element.tag == .fragment) {
+            var vtrees_iter = client.vtrees.iterator();
+            while (vtrees_iter.next()) |entry| {
+                if (findDomParentInSubtree(entry.value_ptr.vtree, parent_vnode_id, null)) |id| return id;
+            }
+        }
+    }
+    return parent_vnode_id;
+}
+
+fn vnodeIsFragment(client: anytype, vnode_id: u64) bool {
+    if (client.getVElementById(vnode_id)) |vnode| {
+        return vnode.component == .element and vnode.component.element.tag == .fragment;
+    }
+    return false;
+}
+
+fn findDomParentInSubtree(node: *VNode, target_id: u64, dom_ancestor: ?u64) ?u64 {
+    const dom_here: ?u64 = if (node.component == .element and node.component.element.tag != .fragment)
+        node.id
+    else
+        dom_ancestor;
+
+    if (node.id == target_id) return dom_here;
+
+    for (node.children.items) |child| {
+        const next_ancestor: ?u64 = if (node.component == .element and node.component.element.tag != .fragment)
+            node.id
+        else
+            dom_ancestor;
+        if (findDomParentInSubtree(child, target_id, next_ancestor)) |found| return found;
+    }
+    return null;
+}
+
+fn firstDomNodeId(vnode: *VNode) ?u64 {
+    switch (vnode.component) {
+        .element => |elem| {
+            if (elem.tag == .fragment) {
+                for (vnode.children.items) |child| {
+                    if (firstDomNodeId(child)) |id| return id;
+                }
+                return null;
+            }
+            return vnode.id;
+        },
+        .text => return vnode.id,
+        else => return null,
+    }
+}
+
+/// When inserting into a fragment vnode, DOM nodes must be placed before the
+/// fragment's next sibling (e.g. conditional `{if ...}` before the following `<p>`).
+fn findFragmentInsertReference(client: anytype, fragment_id: u64, insert_index: usize) ?u64 {
+    var vtrees_iter = client.vtrees.iterator();
+    while (vtrees_iter.next()) |entry| {
+        if (findFragmentInsertReferenceInSubtree(entry.value_ptr.vtree, fragment_id, insert_index)) |id| return id;
+    }
+    return null;
+}
+
+fn findFragmentInsertReferenceInSubtree(parent: *VNode, fragment_id: u64, insert_index: usize) ?u64 {
+    for (parent.children.items, 0..) |child, i| {
+        if (child.id == fragment_id) {
+            if (insert_index < child.children.items.len) {
+                if (firstDomNodeId(child.children.items[insert_index])) |id| return id;
+            }
+            if (i + 1 < parent.children.items.len) {
+                return firstDomNodeId(parent.children.items[i + 1]);
+            }
+            return null;
+        }
+        if (findFragmentInsertReferenceInSubtree(child, fragment_id, insert_index)) |id| return id;
+    }
+    return null;
+}
+
+/// Find the DOM node to insert before when placing a child at `insert_index` in `parent_id`.
+fn findChildInsertReference(client: anytype, parent_id: u64, insert_index: usize) ?u64 {
+    if (client.getVElementById(parent_id)) |parent| {
+        if (insert_index < parent.children.items.len) {
+            const at_slot = parent.children.items[insert_index];
+            if (vnodeIsFragment(client, at_slot.id)) {
+                if (insert_index + 1 < parent.children.items.len) {
+                    return firstDomNodeId(parent.children.items[insert_index + 1]);
+                }
+                return null;
+            }
+            return firstDomNodeId(at_slot);
+        }
+    }
+    return null;
 }

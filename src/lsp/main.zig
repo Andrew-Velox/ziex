@@ -8,6 +8,7 @@ const zls = @import("zls");
 const lsp = zls.lsp;
 const core_lang = @import("core_lang");
 const zx_info = @import("zx_info");
+const html_hover = @import("html_hover.zig");
 
 const ByteRange = struct {
     start: usize,
@@ -355,7 +356,7 @@ pub const Handler = struct {
         return try filtered.toOwnedSlice(arena);
     }
 
-    fn publishZxDiagnostics(handler: *Handler, uri: []const u8, diag_list: core_lang.Validate.DiagnosticList) !void {
+    fn publishZxDiagnostics(handler: *Handler, uri: []const u8, diag_list: core_lang.Ast.check.DiagnosticList) !void {
         var aa = std.heap.ArenaAllocator.init(handler.allocator);
         defer aa.deinit();
         const arena = aa.allocator();
@@ -596,6 +597,23 @@ pub const Handler = struct {
         return offset;
     }
 
+    /// Convert a byte offset in `source` to an LSP Position (line/character).
+    /// Mirrors `positionToOffset`: character is treated as a byte column, which
+    /// matches for ASCII (the common case for tag/attribute names).
+    fn offsetToPosition(source: []const u8, offset: u32) lsp.types.flat.Position {
+        var line: u32 = 0;
+        var line_start: usize = 0;
+        const limit = @min(offset, source.len);
+        var i: usize = 0;
+        while (i < limit) : (i += 1) {
+            if (source[i] == '\n') {
+                line += 1;
+                line_start = i + 1;
+            }
+        }
+        return .{ .line = line, .character = @intCast(limit - line_start) };
+    }
+
     /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_didSave
     pub fn @"textDocument/didSave"(
         handler: *Handler,
@@ -651,8 +669,41 @@ pub const Handler = struct {
         arena: std.mem.Allocator,
         params: lsp.types.flat.HoverParams,
     ) ?lsp.types.flat.Hover {
+        // For .zx files, first try HTML element/attribute hover docs. If the
+        // cursor isn't on an HTML tag/attribute name, fall through to ZLS.
+        if (isZxUri(params.textDocument.uri)) {
+            if (handler.htmlHover(arena, params)) |hover| return hover;
+        }
+
         const mapped = handler.remapUri(lsp.types.flat.HoverParams, params);
         return handler.zls.sendRequestSync(arena, "textDocument/hover", mapped) catch null;
+    }
+
+    /// Returns HTML element/attribute documentation when the cursor is over an
+    /// HTML tag name or attribute name in a `.zx` document, otherwise null.
+    fn htmlHover(
+        handler: *Handler,
+        arena: std.mem.Allocator,
+        params: lsp.types.flat.HoverParams,
+    ) ?lsp.types.flat.Hover {
+        const state = handler.zx_files.get(params.textDocument.uri) orelse return null;
+        const offset = positionToOffset(state.source, params.position) orelse return null;
+
+        const result = html_hover.hover(arena, state.source, @intCast(offset)) catch return null;
+        const hover = result orelse return null;
+
+        return .{
+            .contents = .{
+                .MarkupContent = .{
+                    .kind = .markdown,
+                    .value = hover.markdown,
+                },
+            },
+            .range = .{
+                .start = offsetToPosition(state.source, hover.start_byte),
+                .end = offsetToPosition(state.source, hover.end_byte),
+            },
+        };
     }
 
     /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_completion

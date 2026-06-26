@@ -3,6 +3,9 @@ const zx = @import("../../root.zig");
 const registry = @import("registry.zig");
 const render = @import("render.zig");
 
+const EventHandler = zx.EventHandler;
+const Constants = EventHandler.Constants;
+
 pub const PageFn = *const fn (zx.PageContext, ?*const anyopaque, ?*const anyopaque) anyerror!zx.Component;
 
 pub const DispatchResult = union(enum) {
@@ -18,30 +21,27 @@ pub const DispatchResult = union(enum) {
     page_error: anyerror,
 };
 
-/// Returns true if the request is a server action request.
-/// Checks for the x-zx-action header (JS fetch) or __$action in the form body (no-JS form POST).
-pub fn isActionRequest(request: zx.server.Request) bool {
-    if (request.headers.has("x-zx-action")) return true;
-    const body = request.text() orelse return false;
-    const ct = request.headers.get("content-type") orelse "";
-    return std.mem.indexOf(u8, body, "__$action=") != null or
-        (std.mem.indexOf(u8, ct, "multipart/form-data") != null and
-            std.mem.indexOf(u8, body, "name=\"__$action\"") != null);
-}
-
-fn parseActionId(request: zx.server.Request) u32 {
-    if (request.headers.get("x-zx-action")) |raw| {
-        return std.fmt.parseInt(u32, raw, 10) catch 1;
-    }
-
+fn parseActionId(request: zx.server.Request) !u32 {
     const content_type = request.headers.get("content-type") orelse "";
-    if (std.mem.indexOf(u8, content_type, "multipart/form-data") != null) {
-        const raw = request.multiFormData().getValue("__$action") orelse return 1;
-        return std.fmt.parseInt(u32, raw, 10) catch 1;
-    }
+    const is_multipart = std.mem.indexOf(u8, content_type, "multipart/form-data") != null;
 
-    const raw = request.formData().get("__$action") orelse return 1;
-    return std.fmt.parseInt(u32, raw, 10) catch 1;
+    const action_id = blk: {
+        // Multi-part Form
+        if (is_multipart) if (request.multiFormData().getValue(Constants.action_form_name)) |raw|
+            break :blk try std.fmt.parseInt(u32, raw, 10);
+
+        // Form
+        if (request.formData().get(Constants.action_form_name)) |raw|
+            break :blk try std.fmt.parseInt(u32, raw, 10);
+
+        // Client Form
+        if (request.headers.get(Constants.action_header_name)) |raw|
+            break :blk try std.fmt.parseInt(u32, raw, 10);
+
+        return error.NotServerAction;
+    };
+
+    return action_id;
 }
 
 fn serializeStateOutputs(sc: anytype, allocator: std.mem.Allocator) !?[]u8 {
@@ -50,6 +50,8 @@ fn serializeStateOutputs(sc: anytype, allocator: std.mem.Allocator) !?[]u8 {
     return aw.written();
 }
 
+/// it is used to register the action handler in cases where they are not in the memory,
+/// this is always true for statless hosting platform like Cloudflare worker
 fn slowPathRender(
     page_fn: PageFn,
     pagectx: zx.PageContext,
@@ -82,61 +84,39 @@ pub fn dispatchAction(
     state_ptr: ?*const anyopaque,
     base_path: ?[]const u8,
 ) !DispatchResult {
-    if (!isActionRequest(request)) return .not_triggered;
+    const action_id = parseActionId(request) catch return .not_triggered;
+    const is_progressive = request.headers.has(Constants.action_header_name);
+    const mfd = request.multiFormData();
 
-    const is_js = request.headers.has("x-zx-action");
-    const action_id = parseActionId(request);
-
-    // TODO: cleanup
-    // const sr = request.multiFormData().getValue("__$states") orelse "null";
-
-    // std.debug.print("IsJS: {}\nStates: {s}", .{ is_js, sr });
-
-    // Parse state inputs for stateful actions.
-    // JS path (X-ZX-Action header): states are the entire JSON body.
-    // Form path (_submitFormActionAsync): states are in the __$states multipart field.
-    const action_inputs: ?[]const []const u8 = if (false) blk: {
-        const body_text = request.text() orelse break :blk null;
-        break :blk zx.util.zxon.parse([]const []const u8, arena, body_text, .{}) catch null;
-    } else blk: {
-        const states_raw = request.multiFormData().getValue("__$states") orelse break :blk null;
-        break :blk zx.util.zxon.parse([]const []const u8, arena, states_raw, .{}) catch null;
+    const action_states: ?[]const []const u8 = blk: {
+        break :blk zx.util.zxon.parse(
+            []const []const u8,
+            arena,
+            mfd.getValue(Constants.states_form_name) orelse break :blk null,
+            .{},
+        ) catch null;
     };
 
-    if (registry.get(route_path, action_id)) |action_fn| {
-        var action_ctx = zx.server.Action{
-            .request = request,
-            .response = response,
-            .allocator = allocator,
-            .arena = arena,
-            ._internal = .{ .inputs = action_inputs },
-        };
-        action_fn(&action_ctx);
-        const body = if (action_ctx._internal.state_ctx) |sc| try serializeStateOutputs(sc, allocator) else null;
-        return if (is_js) .{ .ok = .{ .body = body } } else .ok_native;
-    }
-
-    // Slow path: render the page to populate the registry, then retry.
-    if (page_fn) |pfn| {
+    var action_fn = registry.get(route_path, action_id);
+    if (action_fn == null) if (page_fn) |pfn| {
         if (slowPathRender(pfn, pagectx, route_path, arena, app_ptr, state_ptr, base_path)) |err| {
             return .{ .page_error = err };
         }
-    }
+    };
+    action_fn = registry.get(route_path, action_id);
 
-    if (registry.get(route_path, action_id)) |action_fn| {
+    if (action_fn) |af| {
         var action_ctx = zx.server.Action{
             .request = request,
             .response = response,
             .allocator = allocator,
             .arena = arena,
-            ._internal = .{ .inputs = action_inputs },
+            ._internal = .{ .inputs = action_states },
         };
-        action_fn(&action_ctx);
+        af(&action_ctx);
         const body = if (action_ctx._internal.state_ctx) |sc| try serializeStateOutputs(sc, allocator) else null;
-        return if (is_js) .{ .ok = .{ .body = body } } else .ok_native;
-    }
-
-    return .not_found;
+        return if (is_progressive) .{ .ok = .{ .body = body } } else .ok_native;
+    } else return .not_found;
 }
 
 /// Dispatches a server event request. Performs a fast-path registry lookup and falls back
@@ -153,38 +133,27 @@ pub fn dispatchServerEvent(
     state_ptr: ?*const anyopaque,
     base_path: ?[]const u8,
 ) !DispatchResult {
-    if (!request.headers.has("x-zx-server-event")) return .not_triggered;
-
+    if (!request.headers.has(Constants.event_header_name)) return .not_triggered;
     const payload = zx.util.zxon.parse(zx.EventHandler.Payload, arena, request.text() orelse return .not_found, .{}) catch return .not_found;
 
-    if (registry.getEvent(route_path, payload.handler_id)) |event_fn| {
-        var event_ctx = zx.server.Event{
-            .allocator = allocator,
-            .arena = arena,
-            ._internal = .{ .payload = payload },
-        };
-        event_fn(&event_ctx);
-        const body = if (event_ctx._internal.state_ctx) |sc| try serializeStateOutputs(sc, allocator) else null;
-        return .{ .ok = .{ .body = body } };
-    }
-
-    // Slow path: render the page to populate the registry, then retry.
-    if (page_fn) |pfn| {
+    // TODO: get the handler_id from header instead, currently the id in header is not accurate
+    const handler_id = payload.handler_id;
+    var event_fn = registry.getEvent(route_path, handler_id);
+    if (event_fn == null) if (page_fn) |pfn| {
         if (slowPathRender(pfn, pagectx, route_path, arena, app_ptr, state_ptr, base_path)) |err| {
             return .{ .page_error = err };
         }
-    }
+    };
+    event_fn = registry.getEvent(route_path, handler_id);
 
-    if (registry.getEvent(route_path, payload.handler_id)) |event_fn| {
+    if (event_fn) |ef| {
         var event_ctx = zx.server.Event{
             .allocator = allocator,
             .arena = arena,
             ._internal = .{ .payload = payload },
         };
-        event_fn(&event_ctx);
+        ef(&event_ctx);
         const body = if (event_ctx._internal.state_ctx) |sc| try serializeStateOutputs(sc, allocator) else null;
         return .{ .ok = .{ .body = body } };
-    }
-
-    return .not_found;
+    } else return .not_found;
 }

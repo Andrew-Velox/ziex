@@ -64,7 +64,7 @@ const Message = struct { text: []const u8, username: []const u8 };
 
 /// Socket data with fixed-size buffer so username bytes are embedded in struct
 const SocketData = struct {
-    buf: [32]u8 = [_]u8{0} ** 32,
+    buf: [32]u8 = @splat(0),
     len: usize = 0,
 
     pub fn username(self: *const SocketData) []const u8 {

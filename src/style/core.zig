@@ -132,64 +132,62 @@ pub fn formatValue(value: anytype, w: anytype) std.Io.Writer.Error!void {
             if (tag == .none) return;
         }
 
-        inline for (info.fields) |f| {
-            if (tag == @field(info.tag_type.?, f.name)) {
-                if (comptime std.mem.eql(u8, f.name, "hex_")) {
-                    try w.print("#{x:0>6}", .{@field(value, f.name)});
+        inline for (
+            comptime std.meta.fieldNames(@TypeOf(value)),
+        ) |field_name| {
+            if (tag == @field(info.tag_type.?, field_name)) {
+                if (comptime std.mem.eql(u8, field_name, "hex_")) {
+                    try w.print("#{x:0>6}", .{@field(value, field_name)});
                     return;
                 }
-                if (comptime f.type == Color) {
-                    try @field(value, f.name).format(w);
-                    return;
-                }
-                if (comptime std.mem.eql(u8, f.name, "raw_")) {
-                    try w.writeAll(@field(value, f.name));
-                    return;
-                }
-
-                if (comptime std.mem.eql(u8, f.name, "percent_")) {
-                    try formatShorthand(@field(value, f.name), "%", w);
-                    return;
-                }
-                if (comptime std.mem.eql(u8, f.name, "px_")) {
-                    try formatShorthand(@field(value, f.name), "px", w);
-                    return;
-                }
-                if (comptime std.mem.eql(u8, f.name, "em_")) {
-                    try formatShorthand(@field(value, f.name), "em", w);
-                    return;
-                }
-                if (comptime std.mem.eql(u8, f.name, "rem_")) {
-                    try formatShorthand(@field(value, f.name), "rem", w);
+                if (comptime std.mem.eql(u8, field_name, "raw_")) {
+                    try w.writeAll(@field(value, field_name));
                     return;
                 }
 
-                if (comptime std.mem.eql(u8, f.name, "calc_")) {
+                if (comptime std.mem.eql(u8, field_name, "percent_")) {
+                    try formatShorthand(@field(value, field_name), "%", w);
+                    return;
+                }
+                if (comptime std.mem.eql(u8, field_name, "px_")) {
+                    try formatShorthand(@field(value, field_name), "px", w);
+                    return;
+                }
+                if (comptime std.mem.eql(u8, field_name, "em_")) {
+                    try formatShorthand(@field(value, field_name), "em", w);
+                    return;
+                }
+                if (comptime std.mem.eql(u8, field_name, "rem_")) {
+                    try formatShorthand(@field(value, field_name), "rem", w);
+                    return;
+                }
+
+                if (comptime std.mem.eql(u8, field_name, "calc_")) {
                     try w.writeAll("calc(");
-                    try @field(value, f.name).format(w);
+                    try @field(value, field_name).format(w);
                     try w.writeAll(")");
                     return;
                 }
 
-                if (comptime std.mem.eql(u8, f.name, "vh_")) {
-                    try w.print("{d}vh", .{@field(value, f.name)});
+                if (comptime std.mem.eql(u8, field_name, "vh_")) {
+                    try w.print("{d}vh", .{@field(value, field_name)});
                     return;
                 }
-                if (comptime std.mem.eql(u8, f.name, "vw_")) {
-                    try w.print("{d}vw", .{@field(value, f.name)});
+                if (comptime std.mem.eql(u8, field_name, "vw_")) {
+                    try w.print("{d}vw", .{@field(value, field_name)});
                     return;
                 }
-                if (comptime std.mem.eql(u8, f.name, "vmin_")) {
-                    try w.print("{d}vmin", .{@field(value, f.name)});
+                if (comptime std.mem.eql(u8, field_name, "vmin_")) {
+                    try w.print("{d}vmin", .{@field(value, field_name)});
                     return;
                 }
-                if (comptime std.mem.eql(u8, f.name, "vmax_")) {
-                    try w.print("{d}vmax", .{@field(value, f.name)});
+                if (comptime std.mem.eql(u8, field_name, "vmax_")) {
+                    try w.print("{d}vmax", .{@field(value, field_name)});
                     return;
                 }
 
                 // Keywords
-                try formatKebab(f.name, w);
+                try formatKebab(field_name, w);
                 return;
             }
         }

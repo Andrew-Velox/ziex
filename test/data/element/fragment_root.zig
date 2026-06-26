@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .fragment,
         .{
@@ -7,6 +7,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
             .children = &.{
                 _zx.cmp(
                     FragmentComponent,
+                    .{ .src = @src() },
                     .{ .name = "FragmentComponent" },
                     .{},
                 ),
@@ -16,7 +17,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 }
 
 fn FragmentComponent(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .fragment,
         .{

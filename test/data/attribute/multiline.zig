@@ -2,7 +2,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
     const class_name = "container";
     const is_active = true;
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
@@ -12,9 +12,9 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .section,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", class_name),
-                            _zx.attr("id", "main"),
-                            _zx.attr("data-active", is_active),
+                            _zx.attr(@src(), "class", class_name),
+                            _zx.attr(@src(), "id", "main"),
+                            _zx.attr(@src(), "data-active", is_active),
                         }),
                         .children = &.{
                             _zx.ele(
@@ -32,9 +32,9 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("type", "text"),
-                            _zx.attr("class", "input"),
-                            _zx.attr("placeholder", "Enter text"),
+                            _zx.attr(@src(), "type", "text"),
+                            _zx.attr(@src(), "class", "input"),
+                            _zx.attr(@src(), "placeholder", "Enter text"),
                         }),
                     },
                 ),
@@ -42,8 +42,8 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .button,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", "btn"),
-                            _zx.attr("id", "submit"),
+                            _zx.attr(@src(), "class", "btn"),
+                            _zx.attr(@src(), "id", "submit"),
                         }),
                         .children = &.{
                             _zx.txt("Submit"),

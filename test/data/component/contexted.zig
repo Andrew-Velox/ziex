@@ -1,5 +1,5 @@
 pub fn Page(allocator: zx.Allocator) zx.Component {
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -7,6 +7,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
             .children = &.{
                 _zx.cmp(
                     Wrapper,
+                    .{ .src = @src() },
                     .{ .name = "Wrapper" },
                     .{ .children = _zx.ele(.fragment, .{ .children = &.{
                         _zx.ele(
@@ -21,6 +22,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                 ),
                 _zx.cmp(
                     Card,
+                    .{ .src = @src() },
                     .{ .name = "Card" },
                     .{ .children = _zx.ele(.fragment, .{ .children = &.{
                         _zx.ele(
@@ -40,13 +42,13 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 
 /// Component using ComponentContext (void props, children only)
 pub fn Wrapper(ctx: *zx.ComponentContext) zx.Component {
-    var _zx = @import("zx").x.allocInit(ctx.allocator);
+    var _zx = @import("zx").x.allocInit(ctx.allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
             .allocator = ctx.allocator,
             .attributes = _zx.attrs(.{
-                _zx.attr("class", "wrapper"),
+                _zx.attr(@src(), "class", "wrapper"),
             }),
             .children = &.{
                 _zx.expr(ctx.children),
@@ -57,13 +59,13 @@ pub fn Wrapper(ctx: *zx.ComponentContext) zx.Component {
 
 /// Another component using ComponentContext
 fn Card(ctx: *zx.ComponentContext) zx.Component {
-    var _zx = @import("zx").x.allocInit(ctx.allocator);
+    var _zx = @import("zx").x.allocInit(ctx.allocator, .{ .src = @src() });
     return _zx.ele(
         .article,
         .{
             .allocator = ctx.allocator,
             .attributes = _zx.attrs(.{
-                _zx.attr("class", "card"),
+                _zx.attr(@src(), "class", "card"),
             }),
             .children = &.{
                 _zx.expr(ctx.children),

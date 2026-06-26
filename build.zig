@@ -1,6 +1,5 @@
 const std = @import("std");
 const initlib = @import("src/build/init.zig");
-
 const build_zon = @import("build.zig.zon");
 
 /// Options for initializing
@@ -13,7 +12,9 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exclude_lsp = b.option(bool, "exclude-lsp", "Exclude the LSP server to speed up builds") orelse false;
+    const enable_lsp = b.option(bool, "lsp", "Enabled zx lsp") orelse false;
+    const enable_sqlite = b.option(bool, "feature-sqlite", "Enabled sqlite support") orelse false;
+    const enable_postgres = b.option(bool, "feature-postgres", "Enabled postgres support") orelse false;
     const exclude_core_lang = b.option(bool, "exclude-core-lang", "Exclude core language tools (Ast/Parse/sourcemap) - only needed by CLI") orelse false;
     const version = b.option([]const u8, "version", "Version to embed in the binary") orelse build_zon.version;
 
@@ -35,7 +36,6 @@ pub fn build(b: *std.Build) !void {
     const tree_sitter_dep = b.dependency("tree_sitter", .{ .target = target, .optimize = optimize });
     const tree_sitter_zx_dep = b.dependency("tree_sitter_zx", .{ .target = target, .optimize = optimize, .@"build-shared" = false });
     const tree_sitter_mdzx_dep = b.dependency("tree_sitter_mdzx", .{ .target = target, .optimize = optimize, .@"build-shared" = false });
-    const adapters_dep = b.dependency("adapters", .{ .target = target, .optimize = optimize });
 
     // --- Features Module --- //
     const zx_core_lang_mod = b.addModule("zx_core_lang", .{ .root_source_file = b.path("src/core/root.zig"), .target = target, .optimize = optimize });
@@ -54,7 +54,15 @@ pub fn build(b: *std.Build) !void {
     // Imports (zx)
     {
         if (!is_client) {
-            mod.addImport("zqlite", adapters_dep.module("zqlite"));
+            if (enable_sqlite) {
+                const db_sqlite_dep = b.lazyDependency("db_sqlite", .{ .target = target, .optimize = optimize });
+                if (db_sqlite_dep) |a| mod.addImport("zqlite", a.module("zqlite"));
+            }
+            if (enable_postgres) {
+                const db_postgres_dp = b.lazyDependency("db_postgres", .{ .target = target, .optimize = optimize });
+                if (db_postgres_dp) |a| mod.addImport("db_postgres", a.module("postgres"));
+            }
+
             mod.addImport("httpz", httpz_dep.module("httpz"));
         }
 
@@ -85,14 +93,14 @@ pub fn build(b: *std.Build) !void {
     };
 
     const exe_build_options = b.addOptions();
-    exe_build_options.addOption(bool, "exclude_lsp", exclude_lsp);
+    exe_build_options.addOption(bool, "enable_lsp", enable_lsp);
 
     const exe = b.addExecutable(.{ .name = "zx", .root_module = b.createModule(exe_rootmod_opts) });
     exe.root_module.addOptions("build_options", exe_build_options);
     exe.root_module.addAnonymousImport("app_template", .{ .root_source_file = b.path("templates/Template.zig") });
-    if (!exclude_lsp) {
-        const zls_dep = b.dependency("zls", .{ .target = target, .optimize = optimize });
-        exe.root_module.addImport("zls", zls_dep.module("zls"));
+    if (enable_lsp) {
+        // const zls_dep = b.lazyDependency("zls", .{ .target = target, .optimize = optimize });
+        // if (zls_dep) |zls| exe.root_module.addImport("zls", zls.module("zls"));
     }
     b.installArtifact(exe);
 
@@ -102,16 +110,16 @@ pub fn build(b: *std.Build) !void {
         const run_cmd = b.addRunArtifact(exe);
         run_step.dependOn(&run_cmd.step);
         run_cmd.step.dependOn(b.getInstallStep());
-        if (b.args) |args| run_cmd.addArgs(args);
+        run_cmd.addPassthruArgs();
     }
 
     // --- Steps: Test --- //
     {
-        const mod_tests = b.addTest(.{ .root_module = mod });
-        const run_mod_tests = b.addRunArtifact(mod_tests);
-
-        const exe_tests = b.addTest(.{ .root_module = exe.root_module });
-        const run_exe_tests = b.addRunArtifact(exe_tests);
+        const mode_test = b.createModule(.{ .root_source_file = b.path("src/root.zig") });
+        if (b.lazyDependency("db_sqlite", .{})) |ad| mode_test.addImport("zqlite", ad.module("zqlite"));
+        mode_test.addOptions("zx_info", options);
+        mode_test.addOptions("zx_module_options", zx_module_options);
+        mode_test.addImport("zx_core_lang", zx_core_lang_mod);
 
         const testing_mod = b.createModule(.{
             .root_source_file = b.path("test/main.zig"),
@@ -119,7 +127,16 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "cli_options", .module = cli_options_dev.createModule() },
-                .{ .name = "zx", .module = mod },
+                .{ .name = "zx", .module = mode_test },
+                .{ .name = "html_hover", .module = b.createModule(.{
+                    .root_source_file = b.path("src/lsp/html_hover.zig"),
+                    .imports = &.{
+                        .{ .name = "core_lang", .module = zx_core_lang_mod },
+                    },
+                }) },
+                .{ .name = "builder", .module = b.createModule(.{
+                    .root_source_file = b.path("src/cli/dev/Builder.zig"),
+                }) },
             },
         });
         const testing_mod_tests = b.addTest(.{
@@ -130,8 +147,6 @@ pub fn build(b: *std.Build) !void {
         test_run.step.dependOn(b.getInstallStep());
 
         const test_step = b.step("test", "Run tests");
-        test_step.dependOn(&run_mod_tests.step);
-        test_step.dependOn(&run_exe_tests.step);
         test_step.dependOn(&test_run.step);
 
         const transpile_only = b.addExecutable(.{
@@ -156,7 +171,7 @@ pub fn build(b: *std.Build) !void {
         const e2e_cmd = b.addSystemCommand(&.{ "npx", "playwright", "test" });
         e2e_cmd.setCwd(b.path("test/e2e"));
         e2e_step.dependOn(&e2e_cmd.step);
-        if (b.args) |args| e2e_cmd.addArgs(args);
+        e2e_cmd.addPassthruArgs();
     }
 
     // --- Steps: Dev (Runs dev step for site/) --- //
@@ -165,7 +180,7 @@ pub fn build(b: *std.Build) !void {
         const dev_cmd = b.addSystemCommand(&.{ b.graph.zig_exe, "build", "dev" });
         dev_cmd.setCwd(b.path("site"));
         dev_step.dependOn(&dev_cmd.step);
-        if (b.args) |args| dev_cmd.addArgs(args);
+        dev_cmd.addPassthruArgs();
     }
 
     // --- Steps: Site (Runs build step for site/) --- //
@@ -174,7 +189,7 @@ pub fn build(b: *std.Build) !void {
         const site_cmd = b.addSystemCommand(&.{ b.graph.zig_exe, "build" });
         site_cmd.setCwd(b.path("site"));
         site_step.dependOn(&site_cmd.step);
-        if (b.args) |args| site_cmd.addArgs(args);
+        site_cmd.addPassthruArgs();
     }
 
     // --- Steps: CSS Generator --- //
@@ -191,7 +206,7 @@ pub fn build(b: *std.Build) !void {
         });
         const css_gen_run = b.addRunArtifact(css_gen_exe);
 
-        if (b.build_root.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
+        if (b.root.root_dir.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
             const sync_cmd = b.addSystemCommand(&.{ "./tools/syncvendor", "webref" });
             css_gen_run.step.dependOn(&sync_cmd.step);
         }
@@ -213,12 +228,34 @@ pub fn build(b: *std.Build) !void {
         });
         const events_gen_run = b.addRunArtifact(events_gen_exe);
 
-        if (b.build_root.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
+        if (b.root.root_dir.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
             const sync_cmd = b.addSystemCommand(&.{ "./tools/syncvendor", "webref" });
             events_gen_run.step.dependOn(&sync_cmd.step);
         }
 
         events_gen_step.dependOn(&events_gen_run.step);
+    }
+
+    // --- Steps: HTML Docs Generator --- //
+    {
+        const html_docs_gen_step = b.step("htmldocsgen", "Generate HTML element/attribute docs from webref");
+
+        const html_docs_gen_exe = b.addExecutable(.{
+            .name = "htmldocsgen",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("tools/codegen/html_docs.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        const html_docs_gen_run = b.addRunArtifact(html_docs_gen_exe);
+
+        if (b.root.root_dir.handle.access(b.graph.io, "vendor/webref", .{})) |_| {} else |_| {
+            const sync_cmd = b.addSystemCommand(&.{ "./tools/syncvendor", "webref" });
+            html_docs_gen_run.step.dependOn(&sync_cmd.step);
+        }
+
+        html_docs_gen_step.dependOn(&html_docs_gen_run.step);
     }
 
     // --- Steps: Sync Benchmark --- //
@@ -235,6 +272,7 @@ pub fn build(b: *std.Build) !void {
         });
         const syncbench_run = b.addRunArtifact(syncbench_exe);
         syncbench_step.dependOn(&syncbench_run.step);
+        syncbench_run.addPassthruArgs();
     }
 
     // --- ZX Releases (Cross-compilation targets for all platforms) --- //
@@ -291,9 +329,9 @@ pub fn build(b: *std.Build) !void {
             release_exe.root_module.addOptions("build_options", release_exe_build_options);
             release_exe.root_module.addAnonymousImport("app_template", .{ .root_source_file = b.path("templates/Template.zig") });
 
-            if (!exclude_lsp) {
-                const zls_dep = b.dependency("zls", .{ .target = target, .optimize = .ReleaseSafe });
-                release_exe.root_module.addImport("zls", zls_dep.module("zls"));
+            if (enable_lsp) {
+                const zls_dep = b.lazyDependency("zls", .{ .target = target, .optimize = .ReleaseSafe });
+                if (zls_dep) |zls| release_exe.root_module.addImport("zls", zls.module("zls"));
             }
 
             const exe_ext = if (resolved_target.result.os.tag == .windows) ".exe" else "";
@@ -325,9 +363,7 @@ pub const TranslatedZx = @import("src/build/TranslatedZx.zig");
 /// The host transpiler CLI is resolved with the host target so it can execute
 /// during the build; it never enters the runtime module graph.
 pub fn addTranslateZx(b: *std.Build, opts: TranslatedZx.Options) *TranslatedZx {
-    const zx_host_dep = b.dependencyFromBuildZig(@This(), .{
-        .@"exclude-lsp" = true, // Skip LSP for faster build-time transpilation
-    });
+    const zx_host_dep = b.dependencyFromBuildZig(@This(), .{});
     return TranslatedZx.create(b, zx_host_dep.artifact("zx"), opts);
 }
 

@@ -30,7 +30,7 @@ test "in Component" {
     defer arena.deinit();
     const arena_allocator = arena.allocator();
 
-    var ctx = zx.x.allocInit(arena_allocator);
+    var ctx = zx.x.allocInit(arena_allocator, .{});
 
     const style: S = .{
         .color = .hex(0x0000ff),
@@ -39,8 +39,8 @@ test "in Component" {
 
     const comp = ctx.ele(.div, .{
         .attributes = &[_]zx.Element.Attribute{
-            ctx.attr("style", style).?,
-            ctx.attr("class", "my-div").?,
+            ctx.attr(@src(), "style", style).?,
+            ctx.attr(@src(), "class", "my-div").?,
         },
         .children = &[_]zx.Component{
             ctx.txt("Hello with style"),

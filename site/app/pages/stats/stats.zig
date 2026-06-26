@@ -58,7 +58,7 @@ pub fn collect(a: std.mem.Allocator, io: std.Io) !Stats {
     var total_lines: u64 = 0;
     var total_bytes: u64 = 0;
     var file_count: u64 = 0;
-    var lang_lines = [_]u64{0} ** CODE_EXTS.len;
+    var lang_lines: [CODE_EXTS.len]u64 = @splat(0);
     for (tracked) |rel| {
         const ext = std.fs.path.extension(rel);
         const li = extIndex(ext) orelse continue;

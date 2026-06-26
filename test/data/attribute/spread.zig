@@ -9,7 +9,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
         .value = "test@example.com",
     };
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .form,
         .{
@@ -20,11 +20,13 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
             .children = &.{
                 _zx.cmp(
                     Input,
+                    .{ .src = @src() },
                     .{ .name = "Input" },
                     input_props,
                 ),
                 _zx.cmp(
                     Input,
+                    .{ .src = @src() },
                     .{ .name = "Input" },
                     _zx.propsM(input_props, .{ .extra = "override" }),
                 ),
@@ -35,7 +37,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
 
 const InputProps = struct { value: []const u8, name: []const u8, extra: []const u8 = "" };
 fn Input(ctx: *zx.ComponentCtx(InputProps)) zx.Component {
-    var _zx = @import("zx").x.allocInit(ctx.allocator);
+    var _zx = @import("zx").x.allocInit(ctx.allocator, .{ .src = @src() });
     return _zx.ele(
         .div,
         .{
@@ -53,7 +55,7 @@ fn Input(ctx: *zx.ComponentCtx(InputProps)) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrsM(.{
-                            _zx.attr("type", "text"),
+                            _zx.attr(@src(), "type", "text"),
                             _zx.attrSpr(ctx.props),
                         }),
                     },
@@ -62,7 +64,7 @@ fn Input(ctx: *zx.ComponentCtx(InputProps)) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrsM(.{
-                            _zx.attr("extra", "override-by-spr"),
+                            _zx.attr(@src(), "extra", "override-by-spr"),
                             _zx.attrSpr(ctx.props),
                         }),
                     },
@@ -71,9 +73,9 @@ fn Input(ctx: *zx.ComponentCtx(InputProps)) zx.Component {
                     .input,
                     .{
                         .attributes = _zx.attrsM(.{
-                            _zx.attr("type", "text"),
+                            _zx.attr(@src(), "type", "text"),
                             _zx.attrSpr(ctx.props),
-                            _zx.attr("extra", "override-by-attr"),
+                            _zx.attr(@src(), "extra", "override-by-attr"),
                         }),
                     },
                 ),

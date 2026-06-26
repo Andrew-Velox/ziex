@@ -3,7 +3,7 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
     const is_active = true;
     const id = "main-content";
 
-    var _zx = @import("zx").x.allocInit(allocator);
+    var _zx = @import("zx").x.allocInit(allocator, .{ .src = @src() });
     return _zx.ele(
         .main,
         .{
@@ -13,15 +13,15 @@ pub fn Page(allocator: zx.Allocator) zx.Component {
                     .div,
                     .{
                         .attributes = _zx.attrs(.{
-                            _zx.attr("class", class_name),
-                            _zx.attr("id", id),
+                            _zx.attr(@src(), "class", class_name),
+                            _zx.attr(@src(), "id", id),
                         }),
                         .children = &.{
                             _zx.ele(
                                 .button,
                                 .{
                                     .attributes = _zx.attrs(.{
-                                        _zx.attr("class", if (is_active) "active" else "inactive"),
+                                        _zx.attr(@src(), "class", if (is_active) "active" else "inactive"),
                                     }),
                                     .children = &.{
                                         _zx.txt(" Click me"),

@@ -74,11 +74,8 @@ pub const VNode = struct {
                 }
 
                 if (element.children) |children| {
-                    // Flatten fragments: lift fragment children into this node's
-                    // children list (React-style - fragments produce no DOM node).
-                    const flat = try flattenComponents(allocator, children);
-                    try self.children.ensureTotalCapacity(allocator, flat.len);
-                    for (flat, 0..) |child, child_index| {
+                    try self.children.ensureTotalCapacity(allocator, children.len);
+                    for (children, 0..) |child, child_index| {
                         const child_vnode = try createFromComponent(allocator, child, owner_component_id, child_index);
                         self.children.appendAssumeCapacity(child_vnode);
                     }
@@ -292,6 +289,13 @@ pub fn diff(
                         return;
                     }
 
+                    if (new_element.tag == .fragment) {
+                        old_vnode.component = resolved_component;
+                        old_vnode.key = VNode.extractKey(resolved_component);
+                        try reconcileChildren(allocator, old_vnode, resolved_component, old_vnode, patches);
+                        return;
+                    }
+
                     old_vnode.component = resolved_component;
                     old_vnode.key = VNode.extractKey(resolved_component);
 
@@ -365,7 +369,7 @@ pub fn resolveComponent(allocator: zx.Allocator, component: zx.Component, owner_
         switch (curr) {
             .component_fn => |comp_fn| {
                 const component_id = componentOwnerId(allocator, curr, owner_component_id, sibling_index);
-                comp_fn.setIdentity(component_id, @truncate(next_velement_id));
+                comp_fn.setComponentId(component_id);
                 curr = try comp_fn.call();
             },
             else => return curr,
@@ -389,59 +393,9 @@ fn concatRawText(allocator: zx.Allocator, children: ?[]const zx.Component) ![]co
     return aw.written();
 }
 
-fn flattenComponents(allocator: zx.Allocator, children: []const zx.Component) ![]const zx.Component {
-    var has_fragments = false;
-    for (children) |child| {
-        switch (child) {
-            .element => |elem| {
-                if (elem.tag == .fragment) {
-                    has_fragments = true;
-                    break;
-                }
-            },
-            else => {},
-        }
-    }
-    if (!has_fragments) return children;
-
-    const count = countFlattened(children);
-    const result = try allocator.alloc(zx.Component, count);
-    var idx: usize = 0;
-    flattenInto(children, result, &idx);
-    return result;
-}
-
-fn countFlattened(children: []const zx.Component) usize {
-    var count: usize = 0;
-    for (children) |child| {
-        switch (child) {
-            .element => |elem| {
-                if (elem.tag == .fragment) {
-                    count += if (elem.children) |fc| countFlattened(fc) else 0;
-                    continue;
-                }
-            },
-            else => {},
-        }
-        count += 1;
-    }
-    return count;
-}
-
-fn flattenInto(children: []const zx.Component, result: []zx.Component, idx: *usize) void {
-    for (children) |child| {
-        switch (child) {
-            .element => |elem| {
-                if (elem.tag == .fragment) {
-                    if (elem.children) |fc| flattenInto(fc, result, idx);
-                    continue;
-                }
-            },
-            else => {},
-        }
-        result[idx.*] = child;
-        idx.* += 1;
-    }
+fn componentIsFragment(component: zx.Component) bool {
+    if (component != .element) return false;
+    return component.element.tag == .fragment;
 }
 
 /// Reconcile children of a parent vnode. Mirrors React's reconcileChildrenArray.
@@ -473,7 +427,7 @@ fn reconcileChildren(
         const element = new_component.element;
         if (element.children) |children| break :blk children else break :blk &[_]zx.Component{};
     } else &[_]zx.Component{};
-    const new_children_slice = try flattenComponents(allocator, new_children_raw);
+    const new_children_slice = new_children_raw;
 
     var old_idx: usize = 0;
     var new_idx: usize = 0;
@@ -489,6 +443,29 @@ fn reconcileChildren(
         if (areComponentsSameType(old_child.component, resolved)) {
             try diff(allocator, old_child, resolved, parent, patches);
             last_placed_index = old_idx;
+        } else if (componentIsFragment(old_child.component) or componentIsFragment(resolved)) {
+            // Fragment↔element mismatches must not REPLACE — fragments have no DOM node.
+            try patches.append(allocator, Patch{
+                .type = .DELETION,
+                .data = .{ .DELETION = .{
+                    .vnode_id = old_child.id,
+                    .parent_id = parent.id,
+                } },
+            });
+            const new_vnode = try createVNodeFromComponent(
+                allocator,
+                resolved,
+                componentOwnerId(allocator, new_children_slice[new_idx], old_velement.owner_component_id, new_idx),
+            );
+            try patches.append(allocator, Patch{
+                .type = .PLACEMENT,
+                .data = .{ .PLACEMENT = .{
+                    .vnode = new_vnode,
+                    .parent_id = parent.id,
+                    .reference_id = null,
+                    .index = old_idx,
+                } },
+            });
         } else {
             try patches.append(allocator, Patch{
                 .type = .REPLACE,
@@ -652,15 +629,9 @@ fn reconcileChildren(
 }
 
 fn componentOwnerId(allocator: zx.Allocator, component: zx.Component, owner_component_id: []const u8, sibling_index: usize) []const u8 {
+    _ = sibling_index;
     return switch (component) {
-        .component_fn => |comp_fn| blk: {
-            const suffix = comp_fn.key orelse std.fmt.allocPrint(allocator, "#{d}", .{sibling_index}) catch break :blk owner_component_id;
-            break :blk std.fmt.allocPrint(allocator, "{s}/{s}:{s}", .{
-                owner_component_id,
-                comp_fn.name,
-                suffix,
-            }) catch owner_component_id;
-        },
+        .component_fn => |comp_fn| comp_fn.id.fmtShort(allocator, "c"),
         else => owner_component_id,
     };
 }

@@ -11,7 +11,7 @@ pub fn main(init: std.process.Init) !void {
 
     defer if (builtin.mode == .Debug) std.debug.assert(dbg.deinit() == .ok);
 
-    if (comptime (!build_options.exclude_lsp)) {
+    if (comptime build_options.enable_lsp) {
         var args = try init.minimal.args.iterateAllocator(allocator);
         defer args.deinit();
 
