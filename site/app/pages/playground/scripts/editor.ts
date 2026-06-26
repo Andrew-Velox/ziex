@@ -18,7 +18,8 @@ import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 import { createPlaygroundShareUrl, decodeFilesFromQuery } from "../../../scripts/playground_share";
 
-let client = createZlsClient(workerTransport(new Worker('/assets/playground/workers/zls.js')));
+// TODO: zls is not available for Zig 0.17 yet.
+// let client = createZlsClient(workerTransport(new Worker('/assets/playground/workers/zls.js')));
 const PLAYGROUND_NOTICE_STORAGE_KEY = "playground_feature_notice_dismissed_v1";
 
 
@@ -52,7 +53,8 @@ function createEditorState(filename: string, content: string) {
     ];
 
     if (filename.endsWith('.zig') || filename.endsWith('.zx') || filename.endsWith('.zon')) {
-        extensions.push(client.plugin(`file:///${filename}`, "zig"));
+    // TODO: zls is not available for Zig 0.17 yet.
+        // extensions.push(client.plugin(`file:///${filename}`, "zig"));
     }
 
     if (filename.endsWith(".zx") || filename.endsWith(".html")) {
@@ -387,7 +389,8 @@ function setupFeatureNotice() {
 
 window.addEventListener("DOMContentLoaded", async () => {
     setupFeatureNotice();
-    await client.initializing;
+    // TODO: zls is not available for Zig 0.17 yet.
+    // await client.initializing;
     let code = null;
     if (location.hash.startsWith("#data=")) {
         code = location.hash.slice(6);

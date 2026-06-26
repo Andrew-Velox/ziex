@@ -42,6 +42,8 @@ onmessage = (event) => {
 };
 
 (async () => {
+    // TODO: zls is not available for Zig 0.17 yet.
+    return;
     let libDirectory = await getLatestZigArchive();
 
     let args = ["zls.wasm"];
