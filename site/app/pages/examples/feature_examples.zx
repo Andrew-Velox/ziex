@@ -92,11 +92,11 @@ pub fn ControlWhileOptional(allocator: zx.Allocator) zx.Component {
 
 // --- Control Flow: while error capture ---
 pub fn ControlWhileError(allocator: zx.Allocator) zx.Component {
-    var first: bool = true;
+    var n: u32 = 1;
     return (
         <div @{allocator}>
-            {while (parseOnce(&first)) |value| (
-                <span>{value}</span>
+            {while (parseOnce(&n)) |value| (
+                <span>{value}<br/></span>
             ) else |err| (
                 <span>{@errorName(err)}</span>
             )}
@@ -104,10 +104,10 @@ pub fn ControlWhileError(allocator: zx.Allocator) zx.Component {
     );
 }
 
-fn parseOnce(first: *bool) !u32 {
-    if (first.*) {
-        first.* = false;
-        return 42;
+fn parseOnce(n: *u32) !u32 {
+    if (n.* < 100) {
+        n.* += 1;
+        return n.*;
     }
     return error.Done;
 }
@@ -121,7 +121,7 @@ pub fn CacheComponent(
 
 fn Slow(allocator: zx.Allocator) !zx.Component {
     try std.Io
-        .sleep(zx.io(), .fromNanoseconds(2000000000), .awake);
+        .sleep(zx.io(), .fromSeconds(2), .awake);
     return (<div @{allocator}>Slow</div>);
 }
 // --- Caching: page ---
@@ -129,7 +129,7 @@ pub fn Caching__Page(
     ctx: zx.PageContext,
 ) !zx.Component {
     try std.Io
-        .sleep(zx.io(), .fromNanoseconds(2000000000), .awake);
+        .sleep(zx.io(), .fromSeconds(2), .awake);
     return (
         <div @allocator={ctx.arena}>
             <h1>Expensive Page</h1>
