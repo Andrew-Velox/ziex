@@ -273,6 +273,7 @@ pub fn initInner(
     const address_opt = b.option([]const u8, "address", "Address to bind the Ziex server to");
     const rootdir_opt = b.option([]const u8, "rootdir", "Static root directory for the Ziex server");
     const cli_command_opt = b.option([]const u8, "cli-command", "Ziex CLI command mode for the app");
+    const is_dev_build = std.mem.eql(u8, cli_command_opt orelse "--", "dev");
 
     const zx_options = b.addOptions();
     zx_options.addOption(?[]const u8, "jsglue_href", opts.client.jsglue_href);
@@ -348,7 +349,7 @@ pub fn initInner(
             exe.step.dependOn(&install_assets.step);
         } else |_| {}
 
-        var local_zxjs_path: ?LazyPath = opts.ziex_js_dep.path("wasm/init.js");
+        var local_zxjs_path: ?LazyPath = opts.ziex_js_dep.path(if (is_dev_build) "wasm/init.dev.js" else "wasm/init.js");
 
         if (opts.client.jsglue_href) |jsglue_href| {
             const is_remote = std.mem.startsWith(u8, jsglue_href, "http://") or std.mem.startsWith(u8, jsglue_href, "https://");
@@ -466,7 +467,6 @@ pub fn initInner(
     b.installArtifact(exe);
 
     // --- Build-time App Metadata ---
-    const is_dev_build = std.mem.eql(u8, cli_command_opt orelse "--", "dev");
     // TODO: get rid of introspection, we should be able to generate the meta
     // needed from transpile and from build-config alone. We don't need to resolve pageoptions in
     // any cases

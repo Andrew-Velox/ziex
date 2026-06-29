@@ -24,7 +24,7 @@ const build_args_flag = zli.Flag{
     .shortcut = null,
     .description = "Additional arguments to pass to zig build (e.g., -Doptimize=ReleaseFast)",
     .type = .String,
-    .default_value = .{ .String = "" },
+    .default_value = .{ .String = "--release=small" },
 };
 
 fn @"export"(ctx: zli.CommandContext) !void {
