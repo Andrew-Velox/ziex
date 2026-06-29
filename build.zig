@@ -324,14 +324,15 @@ pub fn build(b: *std.Build) !void {
                     },
                 }),
             });
+            const release_enable_lsp = false; // TODO: enable lsp when zls is updated to latest zig 0.17
             const release_exe_build_options = b.addOptions();
-            release_exe_build_options.addOption(bool, "exclude_lsp", false);
+            release_exe_build_options.addOption(bool, "enable_lsp", release_enable_lsp);
             release_exe.root_module.addOptions("build_options", release_exe_build_options);
             release_exe.root_module.addAnonymousImport("app_template", .{ .root_source_file = b.path("templates/Template.zig") });
 
-            if (enable_lsp) {
-                const zls_dep = b.lazyDependency("zls", .{ .target = target, .optimize = .ReleaseSafe });
-                if (zls_dep) |zls| release_exe.root_module.addImport("zls", zls.module("zls"));
+            if (release_enable_lsp) {
+                // const zls_dep = b.lazyDependency("zls", .{ .target = target, .optimize = .ReleaseSafe });
+                // if (zls_dep) |zls| release_exe.root_module.addImport("zls", zls.module("zls"));
             }
 
             const exe_ext = if (resolved_target.result.os.tag == .windows) ".exe" else "";
