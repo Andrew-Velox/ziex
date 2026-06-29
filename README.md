@@ -8,35 +8,27 @@ Ziex combines the power and performance of Zig with the expressiveness and simpl
 
 **[Documentation →](https://ziex.dev/learn)**
 
-
 > **Note:** Most of the API and syntax are finalized and stable, and server-side rendering (SSR) features are production-ready, Ziex continues to evolve with ongoing improvements to client-side rendering and state management, see the [roadmap](#roadmap). You can start using the documented features today, as they are stable and unlikely to change. Areas still under development are not yet documented and will be added as they mature. See [versions](#versions) for Zig and Ziex versions compatibility.
-
 
 ## Getting Started
 
 ### 1. Installing CLI (optional)
 
-macOS/Linux
 ```bash
+# macOS/Linux
 curl -fsSL https://ziex.dev/install | bash
-```
-Windows
-```
+
+# Windows
 powershell -c "irm ziex.dev/install.ps1 | iex"
 ```
 
+
 ### 2. Initializing Project
+
 ```powershell
 zx init
 # or
 npm init ziex
-```
-
-### 3. Running Project
-```powershell
-zx dev
-# or
-npm run dev
 ```
 
 You will need [compatible](#versions) Zig version when using zx CLI or you can use the `Node` template from `npm init ziex`
@@ -159,6 +151,7 @@ const zx = @import("zx");
 </details>
 
 ## Features
+
 - **Declarative UI**: Declarative UI components using with full access to Zig's control flow.
 - **Full-Stack Capabilities**: Build both frontend and backend of web application.
 - **Fast**: Significantly faster at SSR than many other frameworks.
@@ -170,26 +163,27 @@ const zx = @import("zx");
 - **Developer Tooling**: CLI, hot reload, and editor extensions for the best DX.
 
 ## Versions
-| Zig         | Ziex                | Branch            | Status         |
-|-------------|---------------------|-------------------|----------------|
-| `0.17.x`    |                     | `main`            | Development    |
-| `0.16.x`    | `0.1.0-dev.1259`    | `zig-0.16`        | **Latest**     |
-| `0.15.x`    | `0.1.0-dev-1050`    | `zig-0.15`        | Latest (`Zig 0.15.x`)        |
 
+| Zig      | Ziex                                                                              | Branch     | Status      |
+| -------- | --------------------------------------------------------------------------------- | ---------- | ----------- |
+| `0.17.x` |                                                                                   | `main`     | Development |
+| `0.16.x` | [`0.1.0-dev.1259`](https://github.com/ziex-dev/ziex/releases/tag/v0.1.0-dev.1259) | `zig-0.16` | **Latest**  |
+| `0.15.x` | [`0.1.0-dev-1050`](https://github.com/ziex-dev/ziex/releases/tag/v0.1.0-dev.1050) | `zig-0.15` | Outdated    |
 
 ## Roadmap
-[Ziex 0.1.0](https://github.com/ziex-dev/ziex/milestone/2) is planned for release after `Zig 0.17.0` is available. You can view the [roadmap](https://github.com/ziex-dev/ziex/milestone) to learn more.
 
-The `0.1.0` release will indicate that Ziex is production-ready, with all major features fully implemented, and will receive patch releases for bug fixes.
+[Ziex 0.1.0](https://github.com/ziex-dev/ziex/milestone/2) is planned for release after `Zig 0.17.0` is available. You can view the [roadmap](https://github.com/ziex-dev/ziex/milestones) to learn more.
 
-The `1.0.0` release will signify long-term support for that major version, receiving bug fixes and minor updates.
+The [`0.1.0`](https://github.com/ziex-dev/ziex/milestone/2) release will indicate that Ziex is production-ready, with all major features fully implemented, and will receive patch releases for bug fixes.
+
+The [`1.0.0`](https://github.com/ziex-dev/ziex/milestone/6) release will signify long-term support for that major version, receiving bug fixes and minor updates.
 
 ## Editor Support
 
-* [VSCode](https://marketplace.visualstudio.com/items?itemName=ziex.ziex)/[VSCode Forks](https://open-vsx.org/extension/ziex/ziex)
-* [Neovim](/ide/neovim/)
-* [Helix](/ide/helix/)
-* [Zed](/ide/zed/)
+- [VSCode](https://marketplace.visualstudio.com/items?itemName=ziex.ziex)/[VSCode Forks](https://open-vsx.org/extension/ziex/ziex)
+- [Neovim](/ide/neovim/)
+- [Helix](/ide/helix/)
+- [Zed](/ide/zed/)
 
 ## Community
 
