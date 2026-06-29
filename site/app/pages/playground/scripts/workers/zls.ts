@@ -1,6 +1,8 @@
 import { WASI, PreopenDirectory, Fd, ConsoleStdout } from "@bjorn3/browser_wasi_shim";
 import { getLatestZigArchive, fetchWithCache } from "../utils";
 
+declare const ZLS_VERSION: string;
+
 class Stdio extends Fd {
     constructor() {
         super();
@@ -58,7 +60,7 @@ onmessage = (event) => {
     ];
     let wasii = new WASI(args, env, fds, { debug: false });
 
-    const response = await fetchWithCache("https://playground.zigtools.org/assets/zls-Cv7Q1mLZ.wasm");
+    const response = await fetchWithCache(`/assets/playground/zls-${ZLS_VERSION}.wasm`);
     const { instance: localInstance } = await WebAssembly.instantiateStreaming(response, {
         "wasi_snapshot_preview1": wasii.wasiImport,
     });

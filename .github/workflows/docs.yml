@@ -40,9 +40,6 @@ jobs:
         run: cd site && npm ci
 
       - name: Build Site
-        run: cd site && zig build -Doptimize=ReleaseSmall
-
-      - name: Export Site
         run: cd site && zig build zx -- export
 
       - name: Upload artifact

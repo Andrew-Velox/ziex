@@ -7,6 +7,8 @@ pub fn build(b: *std.Build) !void {
     // --- Target and Optimize from `zig build` arguments ---
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    // const id = std.mem.trim(u8, b.run(&.{ "git", "rev-parse", "--short", "HEAD" }), &.{'\n'});
+    const id = b.fmt("{d}", .{random(b.graph.io, 1000000)});
 
     // --- Deps --- //
     const ziex_dep = b.dependency("ziex", .{ .optimize = optimize, .target = target });
@@ -22,10 +24,11 @@ pub fn build(b: *std.Build) !void {
     // const zls_dep = playground_dep.builder.dependency("zls", .{ .target = wasm_target, .optimize = wasm_optimize });
     const zx_wasm_dep = b.dependency("ziex", .{ .target = wasm_target, .optimize = wasm_optimize });
     const zls_wasm_url = "https://playground.zigtools.org/assets/zls-Cv7Q1mLZ.wasm";
+    const zls_version = "0.16.0";
     const zig_dep = b.dependency("zig", .{
         .target = wasm_target,
         .optimize = wasm_optimize,
-        .@"version-string" = @as([]const u8, "0.16.0"),
+        .@"version-string" = @as([]const u8, ziex.info.minimum_zig_version),
         .@"no-lib" = true,
         .dev = "wasm",
     });
@@ -89,12 +92,12 @@ pub fn build(b: *std.Build) !void {
     // _ = playground_assets.addCopyFile(zls_exe.getEmittedBin(), "zls.wasm");
     const pg_get_zls = b.addSystemCommand(&.{ "curl", "-LSsf", zls_wasm_url, "-o" });
     pg_get_zls.expectExitCode(0);
-    _ = playground_assets.addCopyFile(pg_get_zls.addOutputFileArg("zls.wasm"), "zls.wasm");
+    _ = playground_assets.addCopyFile(pg_get_zls.addOutputFileArg("zls.wasm"), b.fmt("zls-{s}.wasm", .{zls_version}));
     _ = playground_assets.addCopyFile(zig_exe.getEmittedBin(), b.fmt("zig-{s}.wasm", .{ziex.info.minimum_zig_version}));
-    _ = playground_assets.addCopyFile(zx_exe.getEmittedBin(), b.fmt("zx-{s}.wasm", .{ziex.info.version}));
-    _ = playground_assets.addCopyFile(lib_compiler_rt.getEmittedBin(), "libcompiler_rt.a");
+    _ = playground_assets.addCopyFile(zx_exe.getEmittedBin(), b.fmt("zx-{s}-{s}.wasm", .{ ziex.info.version, id }));
+    _ = playground_assets.addCopyFile(lib_compiler_rt.getEmittedBin(), b.fmt("libcompiler_rt-{s}.a", .{ziex.info.minimum_zig_version}));
     _ = playground_assets.addCopyFile(zig_tar_gz, b.fmt("zig-{s}.tar.gz", .{ziex.info.minimum_zig_version}));
-    _ = playground_assets.addCopyFile(zx_tar_gz, b.fmt("zx-{s}.tar.gz", .{ziex.info.version}));
+    _ = playground_assets.addCopyFile(zx_tar_gz, b.fmt("zx-{s}-{s}.tar.gz", .{ ziex.info.version, id }));
 
     const install_pg = b.addInstallDirectory(.{
         .source_dir = playground_assets.getDirectory(),
@@ -247,11 +250,15 @@ pub fn build(b: *std.Build) !void {
             .define = &.{
                 .{
                     .key = "VERSION",
-                    .value = b.fmt("\"{s}\"", .{ziex.info.version}),
+                    .value = b.fmt("\"{s}-{s}\"", .{ ziex.info.version, id }),
                 },
                 .{
                     .key = "ZIG_VERSION",
                     .value = b.fmt("\"{s}\"", .{ziex.info.minimum_zig_version}),
+                },
+                .{
+                    .key = "ZLS_VERSION",
+                    .value = b.fmt("\"{s}\"", .{zls_version}),
                 },
             },
         },
@@ -272,6 +279,12 @@ pub fn build(b: *std.Build) !void {
         .include_extensions = &.{ "webp", "svg", "png", "gif" },
     });
     b.default_step.dependOn(&install_branding.step);
+}
+
+fn random(io: std.Io, max: usize) usize {
+    var buffer: [1]u8 = undefined;
+    std.Io.random(io, &buffer);
+    return @mod(buffer[0], max);
 }
 
 const bunjs = @import("bunjs");

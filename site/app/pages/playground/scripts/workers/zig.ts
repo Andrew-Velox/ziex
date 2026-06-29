@@ -13,7 +13,7 @@ async function run(files: { [filename: string]: string }) {
 
     const zxDirectory = await getZxArchive();
     const libDirectory = await getLatestZigArchive();
-    const libCompilerRt = await fetchWithCache(`/assets/playground/libcompiler_rt.a`);
+    const libCompilerRt = await fetchWithCache(`/assets/playground/libcompiler_rt-${ZIG_VERSION}.a`);
 
     // -fno-llvm -fno-lld is set explicitly to ensure the native WASM backend is
     // used in preference to LLVM. This may be removable once the non-LLVM
