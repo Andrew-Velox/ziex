@@ -31,7 +31,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: 0.17.0-dev.956+2dca73595
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -164,7 +164,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: 0.17.0-dev.956+2dca73595
 
       - name: Install Node Dependencies
         run: cd site && npm ci
