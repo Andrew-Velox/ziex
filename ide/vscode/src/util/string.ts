@@ -225,7 +225,7 @@ async function multilineSmartBackspace() {
   }
 }
 
-// ─── Copy from multiline string ────────────────────────────────────────
+// Copy from multiline string
 // Strips \\ prefixes from copied text so it pastes cleanly outside
 // multiline string blocks.  Falls through to built-in copy otherwise.
 async function copyFromMultilineString() {
@@ -276,7 +276,7 @@ async function copyFromMultilineString() {
   await vscode.env.clipboard.writeText(stripped);
 }
 
-// ─── Paste inside multiline string ─────────────────────────────────────
+// Paste inside multiline string
 // Reads clipboard, prefixes each line with \\, then inserts.
 // Only activates when the cursor is on a \\ line; otherwise falls through
 // to the built-in paste.

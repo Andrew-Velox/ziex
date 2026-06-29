@@ -19,7 +19,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { createPlaygroundShareUrl, decodeFilesFromQuery } from "../../../scripts/playground_share";
 
 // TODO: zls is not available for Zig 0.17 yet.
-// let client = createZlsClient(workerTransport(new Worker('/assets/playground/workers/zls.js')));
+let client = createZlsClient(workerTransport(new Worker('/assets/playground/workers/zls.js')));
 const PLAYGROUND_NOTICE_STORAGE_KEY = "playground_feature_notice_dismissed_v1";
 
 
@@ -54,7 +54,7 @@ function createEditorState(filename: string, content: string) {
 
     if (filename.endsWith('.zig') || filename.endsWith('.zx') || filename.endsWith('.zon')) {
     // TODO: zls is not available for Zig 0.17 yet.
-        // extensions.push(client.plugin(`file:///${filename}`, "zig"));
+        extensions.push(client.plugin(`file:///${filename}`, "zig"));
     }
 
     if (filename.endsWith(".zx") || filename.endsWith(".html")) {
@@ -390,7 +390,7 @@ function setupFeatureNotice() {
 window.addEventListener("DOMContentLoaded", async () => {
     setupFeatureNotice();
     // TODO: zls is not available for Zig 0.17 yet.
-    // await client.initializing;
+    await client.initializing;
     let code = null;
     if (location.hash.startsWith("#data=")) {
         code = location.hash.slice(6);
@@ -510,7 +510,7 @@ function updatePreviewStatus(emoji: string, label: string, stepId: string) {
     if (textEl) textEl.textContent = label;
 }
 
-// ─── Content hash (fast djb2 variant) ───────────────────────────────────────
+// Content hash (fast djb2 variant)
 function hashFiles(map: { [name: string]: string }): string {
     const s = JSON.stringify(Object.entries(map).sort(([a], [b]) => a.localeCompare(b)));
     let h = 5381;
@@ -518,7 +518,7 @@ function hashFiles(map: { [name: string]: string }): string {
     return (h >>> 0).toString(36);
 }
 
-// ─── In-memory LRU caches (max 8 entries each) ──────────────────────────────
+// In-memory LRU caches (max 8 entries each)
 const MAX_CACHE = 8;
 function cachePut<V>(cache: Map<string, V>, key: string, value: V) {
     if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value!);
@@ -534,7 +534,7 @@ interface CacheEntry<V> {
 const transpileCache = new Map<string, CacheEntry<{ [name: string]: string }>>();
 const buildCache = new Map<string, CacheEntry<unknown>>();
 
-// ─── Promisified transpile ───────────────────────────────────────────────────
+// Promisified transpile
 let transpile_start_time: number | null = null;
 function transpileZxFileAsync(zxName: string, zxContent: string): Promise<{ [filename: string]: string }> {
     return new Promise((resolve, reject) => {
@@ -557,7 +557,7 @@ function transpileZxFileAsync(zxName: string, zxContent: string): Promise<{ [fil
     });
 }
 
-// ─── Promisified build ───────────────────────────────────────────────────────
+// Promisified build
 let build_start_time = performance.now();
 function buildFilesAsync(filesMap: { [name: string]: string }): Promise<unknown> {
     return new Promise((resolve, reject) => {
@@ -575,7 +575,7 @@ function buildFilesAsync(filesMap: { [name: string]: string }): Promise<unknown>
     });
 }
 
-// ─── Run compiled binary ─────────────────────────────────────────────────────
+// Run compiled binary
 function runCompiled(compiled: unknown) {
     appendStatusStep('run', 'Running\u2026');
     updatePreviewStatus('', 'Running\u2026', 'run');
@@ -616,7 +616,7 @@ function runCompiled(compiled: unknown) {
     };
 }
 
-// ─── getCurrentFilesMap ──────────────────────────────────────────────────────
+// getCurrentFilesMap
 function getCurrentFilesMap(): { [filename: string]: string } {
     if (activeFileIndex !== -1 && editorView) {
         fileManager.updateContent(files[activeFileIndex].name, editorView.state.doc.toString());
@@ -628,14 +628,14 @@ function getCurrentFilesMap(): { [filename: string]: string } {
     return map;
 }
 
-// ─── Core pipeline (shared by Run click + silent prefetch) ───────────────────
+// Core pipeline (shared by Run click + silent prefetch)
 async function runTranspileAndBuild(visible: boolean): Promise<unknown | null> {
     let filesMap = getCurrentFilesMap();
     if (!filesMap['main.zig']) filesMap['main.zig'] = zigMainSource;
 
     const zxEntries = Object.entries(filesMap).filter(([n]) => n.endsWith('.zx'));
 
-    // ── Transpile ────────────────────────────────────────────────────────────
+    // Transpile
     const zxHash = hashFiles(Object.fromEntries(zxEntries));
     let transpiledFiles: { [name: string]: string } = {};
 
@@ -710,7 +710,7 @@ async function runTranspileAndBuild(visible: boolean): Promise<unknown | null> {
         }
     }
 
-    // ── Build ─────────────────────────────────────────────────────────────────
+    // Build
     const buildKey = hashFiles(filesMap);
     const buildHit = buildCache.get(buildKey);
     if (buildHit) {
@@ -787,7 +787,7 @@ outputsRun.addEventListener('click', async () => {
     runCompiled(compiled);
 });
 
-// ─── Background building on editor mouseleave ────────────────────────────────
+// Background building on editor mouseleave
 document.getElementById('pg-editor')?.addEventListener('mouseleave', () => {
     if (prefetchPromise) return; // already prefetching
 

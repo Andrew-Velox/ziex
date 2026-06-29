@@ -270,7 +270,6 @@ export class ZxBridge extends ZxBridgeCore {
                 _wsClose: (wsId: bigint, code: number, reasonPtr: number, reasonLen: number) => {
                     bridgeRef.current?.wsClose(wsId, code, reasonPtr, reasonLen);
                 },
-                // ── Direct DOM externs ──────────────────────────────────────────────────
                 _ce: (id: number, vnodeId: bigint): bigint => {
                     const tagName = TAG_NAMES[id] as string;
                     const el = id >= SVG_TAG_START_INDEX

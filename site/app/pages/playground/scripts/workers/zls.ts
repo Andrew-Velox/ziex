@@ -43,7 +43,7 @@ onmessage = (event) => {
 
 (async () => {
     // TODO: zls is not available for Zig 0.17 yet.
-    return;
+    // return;
     let libDirectory = await getLatestZigArchive();
 
     let args = ["zls.wasm"];
@@ -58,7 +58,7 @@ onmessage = (event) => {
     ];
     let wasii = new WASI(args, env, fds, { debug: false });
 
-    const response = await fetchWithCache("/assets/playground/zls.wasm");
+    const response = await fetchWithCache("https://playground.zigtools.org/assets/zls-Cv7Q1mLZ.wasm");
     const { instance: localInstance } = await WebAssembly.instantiateStreaming(response, {
         "wasi_snapshot_preview1": wasii.wasiImport,
     });

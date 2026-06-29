@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) !void {
     // const playground_dep = b.dependency("playground", .{});
     // const zls_dep = playground_dep.builder.dependency("zls", .{ .target = wasm_target, .optimize = wasm_optimize });
     const zx_wasm_dep = b.dependency("ziex", .{ .target = wasm_target, .optimize = wasm_optimize });
+    const zls_wasm_url = "https://playground.zigtools.org/assets/zls-Cv7Q1mLZ.wasm";
     const zig_dep = b.dependency("zig", .{
         .target = wasm_target,
         .optimize = wasm_optimize,
@@ -69,11 +70,16 @@ pub fn build(b: *std.Build) !void {
     run_zx_tar.has_side_effects = true;
     const zx_tar_gz = run_zx_tar.addOutputFileArg("zx.tar.gz");
     run_zx_tar.addArgs(&.{
-        "--exclude", "src/cli",
-        "--exclude", "src/lsp",
-        "--exclude", "src/tui",
-        "--exclude", "src/build",
-        "--exclude", "src/main.zig",
+        "--exclude",
+        "src/cli",
+        "--exclude",
+        "src/lsp",
+        "--exclude",
+        "src/tui",
+        "--exclude",
+        "src/build",
+        "--exclude",
+        "src/main.zig",
     });
     run_zx_tar.addArg("-C");
     run_zx_tar.addDirectoryArg(zx_wasm_dep.path("."));
@@ -81,6 +87,9 @@ pub fn build(b: *std.Build) !void {
 
     const playground_assets = b.addNamedWriteFiles("playground_assets");
     // _ = playground_assets.addCopyFile(zls_exe.getEmittedBin(), "zls.wasm");
+    const pg_get_zls = b.addSystemCommand(&.{ "curl", "-LSsf", zls_wasm_url, "-o" });
+    pg_get_zls.expectExitCode(0);
+    _ = playground_assets.addCopyFile(pg_get_zls.addOutputFileArg("zls.wasm"), "zls.wasm");
     _ = playground_assets.addCopyFile(zig_exe.getEmittedBin(), b.fmt("zig-{s}.wasm", .{ziex.info.minimum_zig_version}));
     _ = playground_assets.addCopyFile(zx_exe.getEmittedBin(), b.fmt("zx-{s}.wasm", .{ziex.info.version}));
     _ = playground_assets.addCopyFile(lib_compiler_rt.getEmittedBin(), "libcompiler_rt.a");
@@ -98,6 +107,7 @@ pub fn build(b: *std.Build) !void {
     // -- Steps: pg - installs playground assets --- //
     const pg_step = b.step("pg", "Install playground assets");
     pg_step.dependOn(&install_pg.step);
+    pg_step.dependOn(&pg_get_zls.step);
 
     // --- ZX App Executable --- //
     const app_exe = b.addExecutable(.{
