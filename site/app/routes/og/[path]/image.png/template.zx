@@ -1,0 +1,58 @@
+pub const OgTemplateProps = struct {
+    path: []const u8,
+    title: []const u8,
+    subtitle: []const u8,
+};
+
+pub fn Banner(allocator: zx.Allocator) zx.Component {
+    return (
+        <g @{allocator} id="Banner">
+            <path fill="#0c1117" d="M0 0h1100v208c0 37-30 67-67 67H0z" />
+            <g id="Container">
+                <g id="Ziex Text Logo">
+                    <text xml:space="preserve" id="Ziex" fill="#fff" font-family="Inter, sans-serif" font-size="70" font-weight="bold" letter-spacing="0" style="white-space:pre"><tspan x="100" y="139">Ziex</tspan></text>
+                </g>
+                <g id="Ziex Moto">
+                    <g id="Ziex Moto Text" font-family="Cousine, Courier New, Courier, monospace" font-size="22" letter-spacing="0">
+                        <text xml:space="preserve" fill="#569cd6" style="white-space:pre"><tspan x="100" y="182">const</tspan></text>
+                        <text xml:space="preserve" fill="#d4d4d4" style="white-space:pre"><tspan x="166" y="182"> </tspan><tspan x="219" y="182"> </tspan><tspan x="245" y="182"> </tspan><tspan x="351" y="182">(</tspan></text>
+                        <text xml:space="preserve" fill="#ce9178" style="white-space:pre"><tspan x="364" y="182">”speed”</tspan></text>
+                        <text xml:space="preserve" fill="#d4d4d4" style="white-space:pre"><tspan x="470" y="182">;</tspan></text>
+                        <text xml:space="preserve" fill="#ffd885" style="white-space:pre"><tspan x="259" y="182">@import</tspan></text>
+                        <text xml:space="preserve" fill="#fff" style="white-space:pre"><tspan x="457" y="182">)</tspan></text>
+                        <text xml:space="preserve" fill="#fff" style="white-space:pre"><tspan x="232" y="182">=</tspan></text>
+                        <text xml:space="preserve" fill="#4ade80" style="white-space:pre"><tspan x="179" y="182">web</tspan></text>
+                    </g>
+                </g>
+            </g>
+            <g id="Image (Ziex Logo)" fill="#4ade80" clip-path="url(#clip0_8_3)">
+                <path id="Vector" d="M963 78h-97v20h97z" />
+                <path id="Vector_2" d="m976 98-20-20h40z" />
+                <path id="Vector_3" d="m978 95-15-14-46 44 14 14z" />
+                <path id="Vector_4" d="m923 119 21 20h-42z" />
+                <path id="Vector_5" d="m949 150-20-19h41z" />
+                <path id="Vector_6" d="m952 148-15-14-46 44 15 14z" />
+                <path id="Vector_7" d="m891 177 20 20h-40z" />
+                <path id="Vector_8" d="m911 197-20-19h41z" />
+                <path id="Vector_9" d="M1000 177h-94v20h94z" />
+                <path id="Vector_10" d="M981 178v-20l19 20z" />
+                <path id="Vector_11" d="M885 97v20l-20-20z" />
+            </g>
+        </g>
+    );
+}
+
+pub fn OgTemplate(allocator: zx.Allocator, _: OgTemplateProps) zx.Component {
+    return (
+        <svg @allocator={allocator} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 1100 275">
+            <Banner />
+            <defs>
+                <clipPath id="clip0_8_3">
+                    <path fill="#fff" d="M865 78h135v120H865z" />
+                </clipPath>
+            </defs>
+        </svg>
+    );
+}
+
+const zx = @import("zx");

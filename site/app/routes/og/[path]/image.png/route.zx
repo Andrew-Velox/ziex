@@ -1,0 +1,76 @@
+pub fn GET(ctx: zx.RouteContext) !void {
+    const og_type = ctx.request.params.get("path") orelse "";
+    const og_data = getOgImageData(og_type);
+
+    if(builtin.cpu.arch.isWasm()) 
+        return try ctx.response.json(og_data, .{});
+
+    const og_template = OgTemplate(ctx.arena, og_data);
+    var aw = std.Io.Writer.Allocating.init(ctx.arena);
+
+    try og_template.render(&aw.writer, .{});
+    const svg_text = aw.written();
+    const png = try lunasvg.svgToPngAlloc(ctx.arena, svg_text, 1200, 630, 0x00000000);
+    // const png = try lunasvg.svgToPngAlloc(ctx.arena, svg_text, 1100, 275, 0x00000000);
+
+    ctx.response.text(png);
+    ctx.response.setContentType(.@"image/png");
+}
+
+fn getOgImageData(path: []const u8) OgTemplateProps {
+    for (og_images) |og_image| {
+        if (std.mem.eql(u8, og_image.path, path)) {
+            return og_image;
+        }
+    }
+    return default_og_image;
+}
+
+const default_og_image: OgTemplateProps = .{
+    .path = "",
+    .title = "Ziex",
+    .subtitle = zx.info.description,
+};
+const og_images = [_]OgTemplateProps{
+    default_og_image,
+    .{
+        .path = "playground",
+        .title = "Ziex Playground",
+        .subtitle = "Play with Ziex in your browser.",
+    },
+    .{
+        .path = "learn",
+        .title = "Ziex Docs",
+        .subtitle = "Learn Ziex with clear and concise example based documentation.",
+    },
+    .{
+        .path = "examples",
+        .title = "Ziex Examples",
+        .subtitle = "Explore Ziex with real-world examples.",
+    },
+    .{
+        .path = "reference",
+        .title = "Ziex Reference",
+        .subtitle = "",
+    },
+};
+
+fn staticParams(ctx: *zx.StaticContext) !void {
+    for (og_images) |og_image| {
+        try ctx.params.add(.{ .path = og_image.path });
+    }
+}
+
+pub const options = zx.RouteOptions{
+    .static = staticParams,
+};
+
+const template = @import("banner_template.zx");
+
+const OgTemplate = template.OgTemplate;
+const OgTemplateProps = template.OgTemplateProps;
+
+const zx = @import("zx");
+const std = @import("std");
+const builtin = @import("builtin");
+const lunasvg = @import("lunasvg");

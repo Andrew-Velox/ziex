@@ -105,8 +105,6 @@ pub fn build(b: *std.Build) !void {
         .install_subdir = "static/assets/playground",
     });
 
-    // b.getInstallStep().dependOn(compiler_rt_step);
-
     // -- Steps: pg - installs playground assets --- //
     const pg_step = b.step("pg", "Install playground assets");
     pg_step.dependOn(&install_pg.step);
@@ -124,7 +122,11 @@ pub fn build(b: *std.Build) !void {
 
     app_exe.root_module.addImport("tree_sitter", tree_sitter_dep.module("tree_sitter"));
     app_exe.root_module.addImport("tree_sitter_zx", tree_sitter_zx_dep.module("tree_sitter_zx"));
-    app_exe.step.dependOn(&install_pg.step); // Playground disabled
+    if (!target.result.cpu.arch.isWasm())
+        if (b.lazyDependency("lunasvg", .{ .optimize = optimize, .target = target })) |lunasvg|
+            app_exe.root_module.addImport("lunasvg", lunasvg.module("lunasvg"));
+
+    app_exe.step.dependOn(&install_pg.step);
 
     // --- ZX setup: wires dependencies and adds `zx`/`dev` build steps --- //
     var zx = try ziex.init(b, app_exe, .{

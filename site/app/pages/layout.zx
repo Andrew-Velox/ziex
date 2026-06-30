@@ -1,14 +1,12 @@
-const component = @import("component");
-const icon = @import("icon");
-const ui = @import("ui");
+const description = "A full-stack web framework for Zig. Write declarative UI components using familiar JSX patterns, transpiled to efficient Zig code.";
+const alt_description = "Ziex is a modern web framework for Zig. Build fast, reliable, and scalable web applications with Zig and ziex.";
+const title = "Ziex - Full-stack Web Framework for Zig";
+const site_url = zx.info.homepage;
+const keywords = "zig, zx, ziex, web framework, jsx, full-stack, ssr, ssg, wasm, components, server-side rendering, static site generation, zig web development, zig frameworks, zig tutorials, zig open source, zig web apps, zig SSR, zig SSG, zig WASM, zig cloud, zig hosting, zig deployment, zig frontend, zig backend, zig devtools, zig IDE, zig editor, zig playground, zig comparison, zig performance, zig reliability, zig security, zig async, zig concurrency, zig middleware, zig routing, zig template, zig spa, zig mpa, zig api, zig rest, zig graphql, zig docker, zig CI, zig CD, zig testing, zig lint, zig build, zig compile, zig package, zig module, zig dependency, zig version, zig release, zig changelog, zig community, zig forum, zig discord, zig github, zig git, zig code, zig software, zig examples, zig guide, zig docs, zig project, modern web, fast web, scalable web, open source web, developer tools, cloud hosting, web apps, frontend, backend";
 
 pub fn Layout(ctx: zx.LayoutContext, children: zx.Component) zx.Component {
     const path = ctx.request.pathname;
-    const description = "A full-stack web framework for Zig. Write declarative UI components using familiar JSX patterns, transpiled to efficient Zig code.";
-    const title = "Ziex - Full-stack Web Framework for Zig";
-    const site_url = zx.info.homepage;
-    const keywords = "zig, zx, ziex, web framework, jsx, full-stack, ssr, ssg, wasm, components, server-side rendering, static site generation, zig web development, zig frameworks, zig tutorials, zig open source, zig web apps, zig SSR, zig SSG, zig WASM, zig cloud, zig hosting, zig deployment, zig frontend, zig backend, zig devtools, zig IDE, zig editor, zig playground, zig comparison, zig performance, zig reliability, zig security, zig async, zig concurrency, zig middleware, zig routing, zig template, zig spa, zig mpa, zig api, zig rest, zig graphql, zig docker, zig CI, zig CD, zig testing, zig lint, zig build, zig compile, zig package, zig module, zig dependency, zig version, zig release, zig changelog, zig community, zig forum, zig discord, zig github, zig git, zig code, zig software, zig examples, zig guide, zig docs, zig project, modern web, fast web, scalable web, open source web, developer tools, cloud hosting, web apps, frontend, backend";
-    const js_href = std.fmt.allocPrint(ctx.arena, "/assets/docs.js?v={s}", .{zx.info.version}) catch unreachable;
+    const js_href = ctx.fmt("/assets/docs.js?v={s}", .{zx.info.version}) catch unreachable;
     const needs_js = !std.mem.eql(u8, path, "/") and !std.mem.startsWith(u8, path, "/playground");
 
     if (std.mem.eql(u8, path, "/overview") or
@@ -30,6 +28,8 @@ pub fn Layout(ctx: zx.LayoutContext, children: zx.Component) zx.Component {
     if (std.mem.startsWith(u8, path, "/r/")) {
         return (<fragment @allocator={ctx.arena}>{children}</fragment>);
     }
+
+    const og_image_url = getOgImageUrl(ctx) catch "https://ziex.dev/assets/ziex-og-image.png";
 
     return (
         <html lang="en" @allocator={ctx.arena}>
@@ -54,43 +54,39 @@ pub fn Layout(ctx: zx.LayoutContext, children: zx.Component) zx.Component {
                 <meta property="og:title" content={title} />
                 <meta property="og:description" content={description} />
                 <meta property="og:url" content={site_url} />
-                <meta property="og:site_name" content="ZX" />
+                <meta property="og:image" content={og_image_url} />
+                <meta property="og:site_name" content="Ziex" />
                 <meta property="og:locale" content="en_US" />
-
                 <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={title} />
-                <meta name="twitter:description" content={description} />
                 <meta name="twitter:creator" content="@aspect_dev" />
-                <meta property="og:title" content="Ziex - Zig Web Framework" />
-                <meta property="og:description" content="Ziex is a modern web framework for Zig. Build fast, reliable, and scalable web applications with Zig and ziex." />
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content="https://ziex.dev" />
-                <meta property="og:image" content="https://ziex.dev/assets/ziex-og-image.png" />
+
                 <script type="application/ld+json">
                     {std.json.Stringify.valueAlloc(ctx.arena,.{
                     .context = "https://schema.org",
                     .@"type" = "WebSite",
                     .name = "Ziex - Zig Web Framework",
                     .url = "https://ziex.dev",
-                    .description = "Ziex is a modern web framework for Zig. Build fast, reliable, and scalable web applications with Zig and ziex.",
+                    .description = alt_description,
                     .keywords = keywords,
                     }, .{}) catch null}
                 </script>
 
-                <GtmHead />
+                <tags.GtmHead />
 
                 <style @escaping={.none}>
                     {getCss(ctx)}
                 </style>
             </head>
             <body>
-                <div style="display:none">
-                    <component.icon.GitHub />
-                    <ui.icon.GitHub />
-                    <icon.GitHub />
-                </div>
+                {if (false) (
+                    <div style="display:none">
+                        <component.icon.GitHub />
+                        <ui.icon.GitHub />
+                        <icon.GitHub />
+                    </div>
+                )}
 
-                <GtmBody />
+                <tags.GtmBody />
                 {children}
             </body>
         </html>
@@ -109,7 +105,31 @@ fn getCss(ctx: zx.LayoutContext) []const u8 {
         @embedFile("../assets/docs.css");
 }
 
-const GtmHead = @import("components/tags.zx").GtmHead;
-const GtmBody = @import("components/tags.zx").GtmBody;
+const domain = zx.info.homepage;
+fn startsWith(path: []const u8, prefix: []const u8) bool {
+    return std.mem.startsWith(u8, path, prefix);
+}
+fn getOgImageUrl(ctx: zx.LayoutContext) ![]const u8 {
+    const path = ctx.request.pathname;
+
+    const og_type = p: {
+        if (startsWith(path, "/examples")) break :p "examples";
+        if (startsWith(path, "/playground")) break :p "playground";
+        if (startsWith(path, "/learn")) break :p "learn";
+        if (startsWith(path, "/reference")) break :p "reference";
+
+        return error.UnsupportedPath;
+    };
+
+    return try ctx.fmt("{s}/og/{s}/image.png", .{ domain, og_type });
+}
+
+const tags = @import("components/tags.zx");
+
+const component = @import("component");
+const icon = @import("icon");
+const ui = @import("ui");
+
+const app = @import("app");
 const zx = @import("zx");
 const std = @import("std");

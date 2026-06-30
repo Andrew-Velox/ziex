@@ -36,6 +36,10 @@ RUN cd site && zig build -Doptimize=ReleaseSmall
 
 # Run App
 FROM alpine:3.22.2
+
+# Fonts
+RUN apk add --no-cache font-inter font-croscore
+
 WORKDIR /app
 COPY --from=build /build/site/zig-out/bin/ziex_dev /app/ziex_dev
 COPY --from=build /build/site/zig-out/static /app/static

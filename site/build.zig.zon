@@ -21,6 +21,11 @@
             .url = "git+https://github.com/ziex-dev/branding.git#04a22af76e2198d06c429e4025f960f76d93bf9f",
             .hash = "N-V-__8AACJRHgCH8MXnlovqXGaz3lrGQkWP6HqE81M04zkV",
         },
+        .lunasvg = .{
+            .lazy = true,
+            .url = "git+https://github.com/nuhulabs/lunasvg.git#3a977d33d137795f04f3dd7df00298f1d1b729de",
+            .hash = "lunasvg-0.0.0-9mEwLqAcAABMUDN1zRkpqiP0vtANX3cPTcomKCm-9X6w",
+        },
     },
     .paths = .{
         "build.zig",
