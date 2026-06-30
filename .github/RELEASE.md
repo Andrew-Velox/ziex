@@ -5,9 +5,9 @@ Update or install the Ziex CLI using the following scripts.
 
 ##### Linux/macOS
 ```bash
-curl -fsSL https://ziex.dev/install | bash
+curl -fsSL https://ziex.dev/install | bash -s -- v$VERSION
 ```
 ##### Windows
 ```powershell
-powershell -c "irm ziex.dev/install.ps1 | iex"
+powershell -c "iex ""& {$(irm https://ziex.dev/install.ps1)} -Version 'v$VERSION'"""
 ```
