@@ -94,8 +94,8 @@ else
     echo "Generating changelog from $PREVIOUS_TAG to HEAD (v${CURRENT_VERSION})..." >&2
 fi
 
-# Read the base RELEASE.md
-BASE_CONTENT=$(cat .github/RELEASE.md)
+# Read the base RELEASE.md and substitute $VERSION with the actual version
+BASE_CONTENT=$(sed "s/\$VERSION/${CURRENT_VERSION}/g" .github/RELEASE.md)
 
 # Get repository owner and name for commit URLs
 REPO_OWNER="nurulhudaapon"
