@@ -12,7 +12,7 @@ pub fn Layout(ctx: zx.LayoutContext, children: zx.Component) zx.Component {
                 <div class="app-layout">
                     <aside class="sidebar">
                         <div class="sidebar-header">
-                            <span class="sidebar-logo">ZX</span><span class="sidebar-title-text">Ziex DevTools</span>
+                            <img src="https://ziex.dev/favicon.svg" alt="Ziex" class="sidebar-logo" /><span class="sidebar-title-text">Ziex DevTools</span>
                         </div>
                         <nav class="sidebar-nav">
                             {for (menu) |item| (

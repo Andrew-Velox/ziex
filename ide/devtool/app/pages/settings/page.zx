@@ -139,26 +139,6 @@ pub fn Page(ctx: zx.PageContext) zx.Component {
     );
 }
 
-pub fn NativeElementsSetting(
-    ctx: *zx.ComponentCtx(NativeElementsSettingProps),
-) zx.Component {
-    _ = data.loadSettings();
-    const checked = data.show_native_elements;
-    const track_class = if (checked) "settings-toggle-track settings-toggle-track-on" else "settings-toggle-track settings-toggle-track-off";
-    const knob_class = if (checked) "settings-toggle-knob settings-toggle-knob-on" else "settings-toggle-knob settings-toggle-knob-off";
-    return (
-        <button @allocator={ctx.allocator} onclick={handleNativeElementsToggle} class="settings-toggle-row">
-            <div class="settings-toggle-label">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"></path><path d="M8 6l-6 6 6 6"></path></svg>
-                <span class="settings-row-name">Show Native Elements</span>
-            </div>
-            <div class={track_class}>
-                <div class={knob_class}></div>
-            </div>
-        </button>
-    );
-}
-
 fn currentThemeIsDark() bool {
     _ = theme_storage_key;
     return data.loadThemeIsDark();
@@ -208,6 +188,26 @@ pub fn handleThemeToggle(_: zx.client.Event) void {
     data.saveThemeIsDark(dark);
     applyTheme(dark);
     zx.client.rerender();
+}
+
+pub fn NativeElementsSetting(
+    ctx: *zx.ComponentCtx(NativeElementsSettingProps),
+) zx.Component {
+    _ = data.loadSettings();
+    const checked = data.show_native_elements;
+    const track_class = if (checked) "settings-toggle-track settings-toggle-track-on" else "settings-toggle-track settings-toggle-track-off";
+    const knob_class = if (checked) "settings-toggle-knob settings-toggle-knob-on" else "settings-toggle-knob settings-toggle-knob-off";
+    return (
+        <button @allocator={ctx.allocator} onclick={handleNativeElementsToggle} class="settings-toggle-row">
+            <div class="settings-toggle-label">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"></path><path d="M8 6l-6 6 6 6"></path></svg>
+                <span class="settings-row-name">Show Native Elements</span>
+            </div>
+            <div class={track_class}>
+                <div class={knob_class}></div>
+            </div>
+        </button>
+    );
 }
 
 pub fn handleNativeElementsToggle(_: zx.client.Event) void {

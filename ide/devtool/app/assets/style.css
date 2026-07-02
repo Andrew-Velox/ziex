@@ -1022,14 +1022,16 @@ input:checked+.slider:before {
 }
 
 .native-toggle-btn {
-    background: none;
+    background: transparent;
     border-radius: 4px;
     cursor: pointer;
-    padding: 2px 6px;
-    display: flex;
+    padding: 4px;
+    display: inline-flex;
     align-items: center;
-    font-size: 11px;
-    gap: 4px;
+    justify-content: center;
+    line-height: 1;
+    transition: border-color 120ms ease, color 120ms ease;
+    user-select: none;
 }
 
 .native-toggle-btn > * {
@@ -1037,7 +1039,7 @@ input:checked+.slider:before {
 }
 
 .native-toggle-btn-on {
-    border: 1px solid var(--zx-border);
+    border: 1px solid var(--zx-primary);
     color: var(--zx-primary);
 }
 
@@ -1580,9 +1582,9 @@ label.state-item {
 }
 
 .sidebar-logo {
-  color: var(--zx-primary);
+  width: 24px;
+  height: 24px;
   min-width: 24px;
-  font-weight: 900;
   display: flex;
   justify-content: center;
 }
