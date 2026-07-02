@@ -1582,9 +1582,9 @@ label.state-item {
 }
 
 .sidebar-logo {
-  color: var(--zx-primary);
+  width: 24px;
+  height: 24px;
   min-width: 24px;
-  font-weight: 900;
   display: flex;
   justify-content: center;
 }
