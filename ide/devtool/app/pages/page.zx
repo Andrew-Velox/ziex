@@ -143,21 +143,19 @@ const icons = @import("./components/icons.zx");
 pub fn NativeToggle(
     ctx: *zx.ComponentCtx(NativeToggleProps),
 ) zx.Component {
-    const active = data.show_native_elements;
-    const btn_class = if (active) "native-toggle-btn native-toggle-btn-on" else "native-toggle-btn native-toggle-btn-off";
+    // Expand/collapse the entire component tree.
+    const collapsed = data.tree_collapsed;
+    const btn_class = if (collapsed) "native-toggle-btn native-toggle-btn-off" else "native-toggle-btn native-toggle-btn-on";
     return (
-        <button @allocator={ctx.allocator} onclick={handleToggleNative} class={btn_class} title="Toggle native elements">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"></path><path d="M8 6l-6 6 6 6"></path></svg>
+        <button @allocator={ctx.allocator} onclick={handleToggleNative} class={btn_class} title={if (collapsed) "Expand all" else "Collapse all"} aria-pressed={if (collapsed) "false" else "true"}>
+            {icons.Code(ctx.allocator)}
         </button>
     );
 }
 
 pub fn handleToggleNative(_: zx.client.Event) void {
-    data.show_native_elements = !data.show_native_elements;
+    data.tree_collapsed = !data.tree_collapsed;
     data.saveSettings();
-    // Refetch so payload matches the selected native-elements mode.
-    fetched = false;
-    fetch();
     zx.client.rerender();
 }
 
@@ -235,11 +233,12 @@ fn ComponentItem(allocator: zx.Allocator, props: ComponentItemProps) zx.Componen
         );
     }
 
-    // Native element with children: starts collapsed to avoid noisy trees
+    // Native element with children: expanded/collapsed per `data.tree_collapsed`.
     if (props.is_native) {
+        const toggle_checked = !data.tree_collapsed;
         return (
             <div @allocator={allocator} class={group_class}>
-                <input type="checkbox" id={dom_id} class="component-toggle" />
+                <input type="checkbox" id={dom_id} class="component-toggle" checked={toggle_checked} />
                 <div class={item_class} style={style_str}>
                     <label for={dom_id} class="component-toggle-label">
                         <span class="tree-arrow">{icons.ChevronRight(allocator)}</span>
@@ -260,11 +259,12 @@ fn ComponentItem(allocator: zx.Allocator, props: ComponentItemProps) zx.Componen
         );
     }
 
-    // Non-native component whose direct children are all user components: starts EXPANDED
+    // Non-native component whose direct children are all user components.
     if (!hasNativeChild(props.children)) {
+        const toggle_checked = !data.tree_collapsed;
         return (
             <div @allocator={allocator} class={group_class}>
-                <input type="checkbox" id={dom_id} class="component-toggle" checked />
+                <input type="checkbox" id={dom_id} class="component-toggle" checked={toggle_checked} />
                 <div class={item_class} style={style_str}>
                     <label for={dom_id} class="component-toggle-label">
                         <span class="tree-arrow">{icons.ChevronRight(allocator)}</span>
@@ -285,10 +285,11 @@ fn ComponentItem(allocator: zx.Allocator, props: ComponentItemProps) zx.Componen
         );
     }
 
-    // Non-native component that directly contains native children: starts collapsed
+    // Non-native component that directly contains native children.
+    const toggle_checked = !data.tree_collapsed;
     return (
         <div @allocator={allocator} class={group_class}>
-            <input type="checkbox" id={dom_id} class="component-toggle" />
+            <input type="checkbox" id={dom_id} class="component-toggle" checked={toggle_checked} />
             <div class={item_class} style={style_str}>
                 <label for={dom_id} class="component-toggle-label">
                     <span class="tree-arrow">{icons.ChevronRight(allocator)}</span>

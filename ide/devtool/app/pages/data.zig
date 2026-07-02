@@ -24,6 +24,7 @@ pub const Route = struct {
 pub const StateItem = zx.Component.Serializable.StateItem;
 
 const storage_key = "zx-devtool-show-native-elements";
+const tree_collapsed_key = "zx-devtool-tree-collapsed";
 pub const host_storage_key = "zx-devtool-host-v2";
 pub const path_storage_key = "zx-devtool-path-v1";
 const settings_namespace = "ide/devtool/settings";
@@ -31,6 +32,9 @@ const theme_storage_key = "zx-devtool-theme-dark";
 
 var _show_native_elements_loaded = false;
 pub var show_native_elements: bool = true;
+// Whether the entire component tree starts COLLAPSED in the tree UI.
+// Controlled by the sidebar expand/collapse toggle button.
+pub var tree_collapsed: bool = false;
 pub var host: []const u8 = "localhost:3000";
 pub var current_path: []const u8 = "/";
 
@@ -41,6 +45,7 @@ fn settingsKV() zx.Kv {
 pub fn loadSettings() bool {
     if (_show_native_elements_loaded) return true;
     show_native_elements = settingsKV().as(zx.allocator, storage_key, bool) catch null orelse true;
+    tree_collapsed = settingsKV().as(zx.allocator, tree_collapsed_key, bool) catch null orelse false;
     host = settingsKV().get(zx.allocator, host_storage_key) catch null orelse host;
     current_path = settingsKV().get(zx.allocator, path_storage_key) catch null orelse current_path;
     _show_native_elements_loaded = true;
@@ -49,6 +54,7 @@ pub fn loadSettings() bool {
 
 pub fn saveSettings() void {
     settingsKV().putAs(storage_key, show_native_elements, .{}) catch {};
+    settingsKV().putAs(tree_collapsed_key, tree_collapsed, .{}) catch {};
     settingsKV().put(host_storage_key, host, .{}) catch {};
 }
 
