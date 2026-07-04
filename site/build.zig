@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     // const id = std.mem.trim(u8, b.run(&.{ "git", "rev-parse", "--short", "HEAD" }), &.{'\n'});
-    const id = b.fmt("{d}", .{random(b.graph.io, 1000000)});
+    const id = b.fmt("{x:0>8}", .{randInt(b.graph.io, u64)});
 
     // --- Deps --- //
     const ziex_dep = b.dependency("ziex", .{ .optimize = optimize, .target = target });
@@ -80,8 +80,6 @@ pub fn build(b: *std.Build) !void {
         "--exclude",
         "src/tui",
         "--exclude",
-        "src/build",
-        "--exclude",
         "src/main.zig",
     });
     run_zx_tar.addArg("-C");
@@ -142,7 +140,7 @@ pub fn build(b: *std.Build) !void {
             },
         },
         .client = .{
-            .jsglue_href = "/assets/_/main-dev.js",
+            .jsglue_href = b.fmt("/assets/main.{s}.js", .{id}),
             .jsglue_install_subdir = "pkg/ziex",
         },
         .cli = .{ .optimize = optimize },
@@ -228,7 +226,7 @@ pub fn build(b: *std.Build) !void {
         },
     });
 
-    const install_main_js = b.addInstallFile(site_scripts.dir.path(b, "client.js"), "static/assets/_/main-dev.js");
+    const install_main_js = b.addInstallFile(site_scripts.dir.path(b, "client.js"), b.fmt("static/assets/main.{s}.js", .{id}));
     const install_docs_js = b.addInstallFile(site_scripts.dir.path(b, "docs.js"), "static/assets/docs.js");
     const install_home_js = b.addInstallFile(site_scripts.dir.path(b, "home.js"), "static/assets/home.js");
     b.default_step.dependOn(&install_main_js.step);
@@ -287,6 +285,12 @@ fn random(io: std.Io, max: usize) usize {
     var buffer: [1]u8 = undefined;
     std.Io.random(io, &buffer);
     return @mod(buffer[0], max);
+}
+
+fn randInt(io: std.Io, comptime T: type) T {
+    var x: T = undefined;
+    io.random(@ptrCast(&x));
+    return x;
 }
 
 const bunjs = @import("bunjs");

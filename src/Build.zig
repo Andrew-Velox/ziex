@@ -1,7 +1,8 @@
 const Build = @This();
 
 const element = @import("element.zig");
-const Tag = element.Tag;
+
+pub const Manifest = @import("build/Manifest.zig");
 
 pub const AddElementOptions = struct {
     pub const ElementDef = struct {

@@ -1,5 +1,3 @@
-const BIN_DIR = "zig-out" ++ std.fs.path.sep_str ++ "bin";
-
 /// Build-time emitted metadata, written alongside the installed binary as
 /// `<exe>.meta.zon`.
 pub const BuildMeta = struct {
@@ -39,7 +37,7 @@ pub const BuildMeta = struct {
 ///
 /// If `binpath` is given, looks for `<binpath>.meta.zon` next to it.
 /// Otherwise scans `zig-out/bin` for any `*.meta.zon` file.
-pub fn findprogram(io: std.Io, allocator: std.mem.Allocator, binpath: []const u8) !BuildMeta {
+pub fn findprogram(io: std.Io, allocator: std.mem.Allocator, binpath: []const u8, install_prefix: []const u8) !BuildMeta {
     if (!std.mem.eql(u8, binpath, "")) {
         const meta_path = try std.fmt.allocPrint(allocator, "{s}.meta.zon", .{binpath});
         defer allocator.free(meta_path);
@@ -49,7 +47,10 @@ pub fn findprogram(io: std.Io, allocator: std.mem.Allocator, binpath: []const u8
         return meta;
     }
 
-    var files = try std.Io.Dir.cwd().openDir(io, BIN_DIR, .{ .iterate = true });
+    const bin_dir = try std.fs.path.join(allocator, &.{ install_prefix, "bin" });
+    defer allocator.free(bin_dir);
+
+    var files = try std.Io.Dir.cwd().openDir(io, bin_dir, .{ .iterate = true });
     defer files.close(io);
 
     var entry_count: usize = 0;
@@ -59,7 +60,7 @@ pub fn findprogram(io: std.Io, allocator: std.mem.Allocator, binpath: []const u8
         entry_count += 1;
         if (!std.mem.endsWith(u8, entry.name, ".meta.zon")) continue;
 
-        const meta_path = try std.fs.path.join(allocator, &.{ BIN_DIR, entry.name });
+        const meta_path = try std.fs.path.join(allocator, &.{ bin_dir, entry.name });
         defer allocator.free(meta_path);
 
         log.debug("Reading meta: {s}", .{meta_path});
@@ -71,7 +72,7 @@ pub fn findprogram(io: std.Io, allocator: std.mem.Allocator, binpath: []const u8
 
         // Derive the binary path from the meta file path: strip ".meta.zon".
         const exe_basename = entry.name[0 .. entry.name.len - ".meta.zon".len];
-        const inferred_binpath = try std.fs.path.join(allocator, &.{ BIN_DIR, exe_basename });
+        const inferred_binpath = try std.fs.path.join(allocator, &.{ bin_dir, exe_basename });
         defer allocator.free(inferred_binpath);
         const resolved_binpath = try resolveBinPath(io, allocator, inferred_binpath);
         if (meta.binpath) |bp| allocator.free(bp);
@@ -219,6 +220,12 @@ pub fn getRunnablePath(io: std.Io, allocator: std.mem.Allocator, program_path: [
     } else {
         return program_path;
     }
+}
+
+pub fn randInt(io: std.Io, comptime T: type) T {
+    var x: T = undefined;
+    io.random(@ptrCast(&x));
+    return x;
 }
 
 // Re-export stdio capturing functionality for backward compatibility

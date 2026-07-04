@@ -6,8 +6,7 @@ const tree = @import("tree.zig");
 const Allocator = std.mem.Allocator;
 const Component = zx.Component;
 
-/// Structured injections produced by the build system.
-const injs: []const Build.AddElementOptions = @import("injections");
+const manifest: Build.Manifest.App = @import("manifest");
 
 pub fn inject(allocator: Allocator, page: *Component) void {
     const rendered = comptime .{
@@ -35,25 +34,22 @@ pub fn inject(allocator: Allocator, page: *Component) void {
     }
 }
 
-fn renderSlot(
-    comptime parent: Build.AddElementOptions.Parent,
-    comptime position: Build.AddElementOptions.Position,
-) []const u8 {
-    comptime var matching: []const Build.AddElementOptions = &.{};
-    inline for (injs) |inj| {
+fn renderSlot(comptime parent: Build.AddElementOptions.Parent, comptime position: Build.AddElementOptions.Position) []const u8 {
+    comptime var sorted_indices: [manifest.injections.len]usize = undefined;
+    comptime var match_count: usize = 0;
+    inline for (manifest.injections, 0..) |inj, i| {
         if (inj.parent == parent and inj.position == position) {
-            matching = matching ++ &[_]Build.AddElementOptions{inj};
+            sorted_indices[match_count] = i;
+            match_count += 1;
         }
     }
 
-    // Stable insertion sort by priority (lowest first). A stable sort keeps
-    // equal-priority injections in the order they were added.
-    comptime var sorted: [matching.len]Build.AddElementOptions = matching[0..matching.len].*;
+    comptime var sorted: [match_count]usize = sorted_indices[0..match_count].*;
     if (sorted.len > 1) {
         inline for (1..sorted.len) |i| {
             const key = sorted[i];
             comptime var j = i;
-            inline while (j > 0 and sorted[j - 1].priority > key.priority) : (j -= 1) {
+            inline while (j > 0 and manifest.injections[sorted[j - 1]].priority > manifest.injections[key].priority) : (j -= 1) {
                 sorted[j] = sorted[j - 1];
             }
             sorted[j] = key;
@@ -61,8 +57,8 @@ fn renderSlot(
     }
 
     comptime var str: []const u8 = "";
-    inline for (sorted) |inj| {
-        const comp = comptime toComponent(inj.element);
+    inline for (sorted) |idx| {
+        const comp = comptime toComponent(manifest.injections[idx].element);
         str = str ++ renderComponent(comp);
     }
     return str;

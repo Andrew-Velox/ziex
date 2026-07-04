@@ -30,15 +30,14 @@ pub fn build(b: *std.Build) !void {
     exe.root_module.addOptions("build_options", build_options);
     var ziex_b = try ziex.init(b, exe, .{
         .cli = .{ .optimize = optimize },
+        .app = .{
+            .base_path = switch (platform) {
+                .chromium => "/pages/",
+                else => null,
+            },
+        },
         .client = .{
-            .jsglue_href = switch (platform) {
-                .chromium => "/pages/assets/_/main.js",
-                else => "/assets/_/main.js",
-            },
-            .wasm_href = switch (platform) {
-                .chromium => "/pages/assets/_/main.wasm",
-                else => "/assets/_/main.wasm",
-            },
+            .jsglue_href = "/assets/app.js",
         },
     });
     ziex_b = ziex_b;
@@ -60,7 +59,7 @@ pub fn build(b: *std.Build) !void {
         },
     });
 
-    const install_main_js = b.addInstallFile(client_scripts.dir.path(b, "client.js"), "static/assets/_/main.js");
+    const install_main_js = b.addInstallFile(client_scripts.dir.path(b, "client.js"), "static/assets/app.js");
     b.default_step.dependOn(&install_main_js.step);
 
     // Step: zig build chromium

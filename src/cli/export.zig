@@ -27,15 +27,24 @@ const build_args_flag = zli.Flag{
     .default_value = .{ .String = "--release=small" },
 };
 
+const DEFAULT_CACHE_PREFIX = ".zig-cache";
+
 fn @"export"(ctx: zli.CommandContext) !void {
     const app = AppContext.from(&ctx);
     const io = app.io;
+
     const outdir = ctx.flag("outdir", []const u8);
     const binpath = ctx.flag("binpath", []const u8);
 
+    const tmpdir = try std.fmt.allocPrint(ctx.allocator, "{x}", .{util.randInt(io, u64)});
+    defer ctx.allocator.free(tmpdir);
+
+    const install_prefix = try std.fs.path.join(ctx.allocator, &.{ DEFAULT_CACHE_PREFIX, "tmp", tmpdir });
+    defer ctx.allocator.free(install_prefix);
+
     var build_argv = std.ArrayList([]const u8).empty;
     defer build_argv.deinit(ctx.allocator);
-    try build_argv.appendSlice(ctx.allocator, &.{ cli_options.zig_exe, "build", "-Dcli-command=export" });
+    try build_argv.appendSlice(ctx.allocator, &.{ cli_options.zig_exe, "build", "-p", install_prefix, "-Dcli-command=export" });
 
     var i_build_args = std.mem.splitSequence(u8, ctx.flag("build-args", []const u8), " ");
     while (i_build_args.next()) |arg| {
@@ -60,7 +69,7 @@ fn @"export"(ctx: zli.CommandContext) !void {
     }
 
     // TODO: upon upgrading to Zig 0.17 use the zig build --listen to get build configuration to find binary path
-    var app_meta = util.findprogram(io, ctx.allocator, binpath) catch |err| {
+    var app_meta = util.findprogram(io, ctx.allocator, binpath, install_prefix) catch |err| {
         if (err == error.FileNotFound or err == error.ProgramNotFound or err == error.EmptyBinDir) {
             try ctx.writer.print("Run \x1b[34mzig build\x1b[0m to build the ZX executable first!\n", .{});
             return;
@@ -73,14 +82,16 @@ fn @"export"(ctx: zli.CommandContext) !void {
     const port = DevServer.findFreePort(io) catch app_meta.port() orelse 3000;
     const port_str = try std.fmt.allocPrint(ctx.allocator, "{d}", .{port});
     defer ctx.allocator.free(port_str);
-    const appoutdir = app_meta.rootdir orelse "";
+    // const appoutdir = app_meta.rootdir orelse "";
     const host = app_meta.address() orelse "0.0.0.0";
 
     const environ_map = app.environ_map;
     try environ_map.put("ZIEX_INNER_PORT", port_str);
-    if (environ_map.get("ZIEX_ROOT_DIR") == null and appoutdir.len > 0) {
-        try environ_map.put("ZIEX_ROOT_DIR", appoutdir);
-    }
+    // if (environ_map.get("ZIEX_ROOT_DIR") == null and appoutdir.len > 0) {
+    //     try environ_map.put("ZIEX_ROOT_DIR", appoutdir);
+    // }
+
+    try environ_map.put("ZIEX_ROOT_DIR", install_prefix);
 
     var app_child = try std.process.spawn(io, .{
         .argv = &.{ app_meta.binpath.?, "--cli-command", "export" },
@@ -105,8 +116,11 @@ fn @"export"(ctx: zli.CommandContext) !void {
     //     else => {},
     // };
 
-    log.debug("Building static ZX site! binpath={s} rootdir={s}", .{ app_meta.binpath.?, appoutdir });
-    log.debug("Port: {d}, Outdir: {s}", .{ port, appoutdir });
+    const staticdir = try std.fs.path.join(ctx.allocator, &.{ install_prefix, "static" });
+    defer ctx.allocator.free(staticdir);
+
+    log.debug("Building static ZX site! binpath={s} rootdir={s}", .{ app_meta.binpath.?, install_prefix });
+    log.debug("Port: {d}, Outdir: {s}, Staticdir: {s}", .{ port, outdir, staticdir });
 
     const routes_owned = try ctx.allocator.alloc(Server.SerilizableAppMeta.Route, app_meta.routes.len);
     defer ctx.allocator.free(routes_owned);
@@ -179,21 +193,16 @@ fn @"export"(ctx: zli.CommandContext) !void {
         break;
     }
 
-    log.debug("Copying public directory! {s}", .{appoutdir});
+    log.debug("Copying public directory! {s}", .{outdir});
 
-    util.copydirs(io, ctx.allocator, appoutdir, &.{"."}, outdir, false, &printer) catch |err| {
+    util.copydirs(io, ctx.allocator, staticdir, &.{"."}, outdir, false, &printer) catch |err| {
         std.log.err("Failed to copy public directory: {any}", .{err});
         return err;
     };
 
-    // Delete {outdir}/.well-known/_zx if it exists
-    const assets_zx_path = try std.fs.path.join(ctx.allocator, &.{ outdir, ".well-known", "_zx" });
-    defer ctx.allocator.free(assets_zx_path);
-    std.Io.Dir.cwd().deleteTree(io, assets_zx_path) catch |err| switch (err) {
-        else => {},
+    std.Io.Dir.cwd().deleteTree(io, install_prefix) catch |err| {
+        log.warn("Failed to delete temp files: {any}", .{err});
     };
-
-    // printer.footer("", .{});
 }
 
 fn waitForServerRetry(io: std.Io) void {

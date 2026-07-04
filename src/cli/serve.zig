@@ -29,6 +29,7 @@ fn serve(ctx: zli.CommandContext) !void {
     const port_str = try std.fmt.allocPrint(ctx.allocator, "{d}", .{port});
     defer ctx.allocator.free(port_str);
     const binpath = ctx.flag("binpath", []const u8);
+    const install_prefix = "zig-out";
 
     var build_args = std.ArrayList([]const u8).empty;
     defer build_args.deinit(ctx.allocator);
@@ -47,7 +48,7 @@ fn serve(ctx: zli.CommandContext) !void {
 
     var system = try std.process.spawn(app.io, .{ .argv = build_args.items });
 
-    var program_meta = util.findprogram(app.io, ctx.allocator, binpath) catch |err| {
+    var program_meta = util.findprogram(app.io, ctx.allocator, binpath, install_prefix) catch |err| {
         log.debug("Error finding ZX executable! {any}\n", .{err});
         return;
     };

@@ -1,6 +1,7 @@
 const std = @import("std");
 const html_util = @import("../util/html.zig");
 const build_zig = @import("../../build.zig");
+const Manifest = @import("Manifest.zig");
 pub const InitOptions = @import("init/InitOptions.zig");
 
 const LazyPath = std.Build.LazyPath;
@@ -266,7 +267,6 @@ pub fn initInner(
 ) !Build {
     const target = exe.root_module.resolved_target;
     const optimize = exe.root_module.optimize;
-    const build_zon = @import("../../build.zig.zon");
 
     // --- ZX Options --- //
     const port_opt = b.option(u16, "port", "Port to run the Ziex server on");
@@ -318,10 +318,29 @@ pub fn initInner(
     transpile_cmd.addDirectoryArg(b.graph.path(.local_cache, "zx_transpile"));
     transpile_cmd.expectExitCode(0);
 
-    const zxjs_default_href = "/assets/_/main.js";
-    var zxjs_href = html_util.prefixPathWithBasePath(b.allocator, opts.base_path, opts.client.jsglue_href orelse zxjs_default_href);
-    const wasm_default_href = "/assets/_/main.wasm";
-    const wasm_href = html_util.prefixPathWithBasePath(b.allocator, opts.base_path, opts.client.wasm_href orelse wasm_default_href);
+    const asset_installer_exe = b.addExecutable(.{
+        .name = "asset_installer",
+        .root_module = b.createModule(.{
+            .root_source_file = zx_module.owner.path("src/build/init/asset_installer.zig"),
+            .target = zx_exe.root_module.resolved_target,
+            .optimize = optimize,
+            .imports = &.{
+                .{
+                    .name = "Build",
+                    .module = b.createModule(.{ .root_source_file = zx_module.owner.path("src/Build.zig") }),
+                },
+            },
+        }),
+    });
+
+    const app_wasm_href_stem = blk: {
+        const default = "/assets/_/app.wasm";
+        const href = opts.client.wasm_href orelse default;
+        const stem = wasmHrefStem(href);
+        break :blk html_util.prefixPathWithBasePath(b.allocator, opts.base_path, stem);
+    };
+    const prod_zxjs_href_stem = html_util.prefixPathWithBasePath(b.allocator, opts.base_path, "/assets/_/app");
+    const dev_zxjs_href_stem = html_util.prefixPathWithBasePath(b.allocator, opts.base_path, "/assets/_/app.dev");
     // --- Static Directory Setup --- //
     {
         // Install public directory into static (only if the directory exists)
@@ -348,26 +367,6 @@ pub fn initInner(
             });
             exe.step.dependOn(&install_assets.step);
         } else |_| {}
-
-        var local_zxjs_path: ?LazyPath = opts.ziex_js_dep.path(if (is_dev_build) "wasm/init.dev.js" else "wasm/init.js");
-
-        if (opts.client.jsglue_href) |jsglue_href| {
-            const is_remote = std.mem.startsWith(u8, jsglue_href, "http://") or std.mem.startsWith(u8, jsglue_href, "https://");
-            if (is_remote) {
-                local_zxjs_path = null;
-                zxjs_href = jsglue_href;
-            }
-        }
-
-        if (local_zxjs_path) |local_path| {
-            // Install jsglue (wasm/init.js) from ziex_js package to static/assets/_/main.js
-            const install_jsglue = b.addInstallFileWithDir(
-                local_path,
-                .prefix,
-                "static" ++ zxjs_default_href,
-            );
-            exe.step.dependOn(&install_jsglue.step);
-        }
     }
 
     // --- JS-Glue Package Install --- //
@@ -382,42 +381,42 @@ pub fn initInner(
     }
 
     // --- ZX Injections --- //
-    const version = opts.version orelse build_zon.version;
     const injections = try b.allocator.create(Injections);
     injections.* = .{};
     for (opts.element_injections) |inj| {
         injections.add(b, inj);
     }
-    // Inject wasm preload link tag into head
-    injections.add(b, .{
-        .parent = .head,
-        .position = .ending,
-        .element = .{
-            .tag = .link,
-            .attributes = &.{
-                .{ .name = "id", .value = "__$wasmlink" },
-                .{ .name = "rel", .value = "preload" },
-                .{ .name = "as", .value = "fetch" },
-                .{ .name = "href", .value = b.fmt("{s}?{s}", .{ wasm_href, version }) },
-                .{ .name = "crossorigin" },
+    if (opts.client.jsglue_href) |jsglue_href| {
+        const href = if (std.mem.startsWith(u8, jsglue_href, "http://") or std.mem.startsWith(u8, jsglue_href, "https://"))
+            jsglue_href
+        else
+            html_util.prefixPathWithBasePath(b.allocator, opts.base_path, jsglue_href);
+        injections.add(b, .{
+            .parent = .head,
+            .position = .ending,
+            .element = .{
+                .tag = .script,
+                .attributes = &.{
+                    .{ .name = "defer" },
+                    .{ .name = "src", .value = b.fmt("{s}", .{href}) },
+                },
             },
-        },
-    });
-    // Inject jsglue script tag via the build system
-    injections.add(b, .{
-        .parent = .head,
-        .position = .ending,
-        .element = .{
-            .tag = .script,
-            .attributes = &.{
-                .{ .name = "defer" },
-                .{ .name = "src", .value = b.fmt("{s}?{s}", .{ zxjs_href, version }) },
-            },
-        },
-    });
-    const injection_mod = b.createModule(try injections.getModOpts(b));
-    zx_module.addImport("injections", injection_mod);
-    zx_wasm_module.addImport("injections", injection_mod);
+        });
+    }
+
+    const manifest_seed = try injections.seedBuildInjections(b);
+    transpile_cmd.addArg("--build-injections");
+    transpile_cmd.addFileArg(manifest_seed);
+
+    transpile_cmd.addArg("--manifest");
+    const manifest_path = transpile_cmd.addOutputFileArg("app.zon");
+
+    const manifest_mod = b.createModule(.{ .root_source_file = manifest_path });
+    zx_module.addImport("manifest", manifest_mod);
+    exe.step.dependOn(&transpile_cmd.step);
+
+    const install_manifest = b.addInstallFileWithDir(manifest_path, .prefix, "manifest/app.zon");
+    install_manifest.step.dependOn(&transpile_cmd.step);
 
     // --- ZX Watch Invalidator ---
     // Use directory-level watch input so `zig build --watch` picks up changes.
@@ -445,7 +444,7 @@ pub fn initInner(
         }
     }
 
-    // Build imports for the "app" module (meta.zig needs access to zx and all other imports)
+    // Build imports for the "app" module (app.zig needs access to zx and all other imports)
     var meta_imports = std.array_list.Managed(std.Build.Module.Import).init(b.allocator);
     for (imports.items) |import| {
         try meta_imports.append(import);
@@ -454,7 +453,7 @@ pub fn initInner(
 
     // Inject the real generated app module into zx and directly into the user's root module
     const app_module = b.createModule(.{
-        .root_source_file = transpile_outdir.path(b, "meta.zig"),
+        .root_source_file = transpile_outdir.path(b, "app.zig"),
         .imports = meta_imports.items,
     });
     app_module.addImport("app", app_module);
@@ -517,6 +516,7 @@ pub fn initInner(
     wasm_exe.entry = .disabled;
     wasm_exe.export_memory = true;
     wasm_exe.rdynamic = true;
+    wasm_exe.root_module.strip = !is_dev_build;
 
     // Create a site-specific wasm module (same approach as server module)
     var wasm_imports = std.array_list.Managed(std.Build.Module.Import).init(b.allocator);
@@ -555,7 +555,7 @@ pub fn initInner(
     try wasm_meta_imports.append(.{ .name = "zx", .module = site_wasm_module });
 
     site_wasm_module.addAnonymousImport("zx_meta", .{
-        .root_source_file = transpile_outdir.path(b, "meta.zig"),
+        .root_source_file = transpile_outdir.path(b, "app.zig"),
         .imports = wasm_meta_imports.items,
     });
     site_wasm_module.addOptions("zx_options", zx_options);
@@ -563,15 +563,38 @@ pub fn initInner(
     wasm_exe.step.dependOn(&transpile_cmd.step);
 
     const wasm_binpath = wasm_exe.getEmittedBin();
-    const install_wasm = b.addInstallFileWithDir(
+    const zxjs_path = opts.ziex_js_dep.path(if (is_dev_build) "wasm/init.dev.js" else "wasm/init.js");
+    const zxjs_href_stem = if (is_dev_build) dev_zxjs_href_stem else prod_zxjs_href_stem;
+    const zxjs_file_stem = if (is_dev_build) "app.dev" else "app";
+    const uses_local_jsglue = opts.client.jsglue_href == null;
+
+    var js_asset_run: ?*std.Build.Step.Run = null;
+    if (uses_local_jsglue) {
+        js_asset_run = addStaticAssetRun(b, asset_installer_exe, &transpile_cmd.step, manifest_path, zxjs_path, zxjs_href_stem, zxjs_file_stem, ".js", "script", true);
+        js_asset_run.?.setName(b.fmt("install {s}client js glue{s} {s}", .{ colors.dim, colors.reset, exe.name }));
+        b.getInstallStep().dependOn(&js_asset_run.?.step);
+        exe.step.dependOn(&js_asset_run.?.step);
+        install_manifest.step.dependOn(&js_asset_run.?.step);
+    }
+
+    const wasm_asset_run = addStaticAssetRun(
+        b,
+        asset_installer_exe,
+        &transpile_cmd.step,
+        manifest_path,
         wasm_binpath,
-        .{ .custom = "static/assets/_" },
-        "main.wasm",
+        app_wasm_href_stem,
+        "app",
+        ".wasm",
+        "wasmlink",
+        !uses_local_jsglue,
     );
-
-    install_wasm.step.name = b.fmt("install {s}client{s} {s}", .{ colors.dim, colors.reset, exe.name });
-
-    b.default_step.dependOn(&install_wasm.step);
+    wasm_asset_run.setName(b.fmt("install {s}client wasm{s} {s}", .{ colors.dim, colors.reset, exe.name }));
+    wasm_asset_run.step.dependOn(&wasm_exe.step);
+    if (js_asset_run) |js| wasm_asset_run.step.dependOn(&js.step);
+    b.getInstallStep().dependOn(&wasm_asset_run.step);
+    exe.step.dependOn(&wasm_asset_run.step);
+    install_manifest.step.dependOn(&wasm_asset_run.step);
 
     // --- Steps: ZX (Root of ZX CLI) --- //
     {
@@ -642,6 +665,39 @@ pub fn initInner(
     };
 }
 
+fn wasmHrefStem(wasm_href: []const u8) []const u8 {
+    if (std.mem.endsWith(u8, wasm_href, ".wasm")) {
+        return wasm_href[0 .. wasm_href.len - ".wasm".len];
+    }
+    return wasm_href;
+}
+
+fn addStaticAssetRun(
+    b: *std.Build,
+    asset_exe: *std.Build.Step.Compile,
+    transpile_step: *std.Build.Step,
+    manifest_path: LazyPath,
+    src: LazyPath,
+    href_stem: []const u8,
+    file_stem: []const u8,
+    file_ext: []const u8,
+    injection_kind: []const u8,
+    clean_dest: bool,
+) *std.Build.Step.Run {
+    const run = b.addRunArtifact(asset_exe);
+    run.addFileArg(src);
+    run.addDirectoryArg(b.graph.path(.install_prefix, "static/assets/_"));
+    run.addArg(href_stem);
+    run.addFileArg(manifest_path);
+    run.addArg(file_stem);
+    run.addArg(file_ext);
+    run.addArg(injection_kind);
+    run.addArg(if (clean_dest) "clean" else "");
+    run.expectExitCode(0);
+    run.step.dependOn(transpile_step);
+    return run;
+}
+
 const Injections = struct {
     items: std.ArrayListUnmanaged(AddElementOptions) = .empty,
 
@@ -649,12 +705,12 @@ const Injections = struct {
         self.items.append(b.allocator, options) catch @panic("OOM");
     }
 
-    pub fn getModOpts(self: *Injections, b: *std.Build) !std.Build.Module.CreateOptions {
+    pub fn seedBuildInjections(self: *Injections, b: *std.Build) !std.Build.LazyPath {
         var aw = std.Io.Writer.Allocating.init(b.allocator);
         defer aw.deinit();
-        try std.zon.stringify.serializeArbitraryDepth(self.items.items, .{}, &aw.writer);
-        const file = b.addWriteFile("injections.zon", aw.written());
-        return .{ .root_source_file = file.getDirectory().path(b, "injections.zon") };
+        try std.zon.stringify.serializeArbitraryDepth(self.items.items, .{ .whitespace = true }, &aw.writer);
+        const manifest_wf = b.addWriteFiles();
+        return manifest_wf.add("build-injections.zon", aw.written());
     }
 };
 

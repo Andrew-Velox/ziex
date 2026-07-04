@@ -6,6 +6,7 @@ pub fn register(writer: *std.Io.Writer, reader: *std.Io.Reader, allocator: std.m
 
     try cmd.addFlag(outdir_flag);
     try cmd.addFlag(flag.binpath_flag);
+    try cmd.addFlag(flag.install_prefix_flag);
 
     return cmd;
 }
@@ -23,9 +24,10 @@ fn bundle(ctx: zli.CommandContext) !void {
     const io = app.io;
     const outdir = ctx.flag("outdir", []const u8);
     const binpath = ctx.flag("binpath", []const u8);
+    const install_prefix = ctx.flag("install-prefix", []const u8);
 
     // TODO: upon upgrading to Zig 0.17 use the zig build --listen to get build configuration to find binary path
-    var app_meta = util.findprogram(io, ctx.allocator, binpath) catch |err| {
+    var app_meta = util.findprogram(io, ctx.allocator, binpath, install_prefix) catch |err| {
         if (err == error.FileNotFound or err == error.ProgramNotFound or err == error.EmptyBinDir) {
             try ctx.writer.print("Run \x1b[34mzig build\x1b[0m to build the ZX executable first!\n", .{});
             return;
@@ -65,21 +67,6 @@ fn bundle(ctx: zli.CommandContext) !void {
     util.copydirs(io, ctx.allocator, appoutdir, &.{"."}, static_outdir, false, &printer) catch |err| {
         std.log.err("Failed to copy static directories: {any}", .{err});
         return err;
-    };
-
-    // Clean up old directories if they exist
-    const old_public = try std.fs.path.join(ctx.allocator, &.{ outdir, "public" });
-    const old_assets = try std.fs.path.join(ctx.allocator, &.{ outdir, "assets" });
-    defer ctx.allocator.free(old_public);
-    defer ctx.allocator.free(old_assets);
-    std.Io.Dir.cwd().deleteTree(io, old_public) catch {};
-    std.Io.Dir.cwd().deleteTree(io, old_assets) catch {};
-
-    // Delete {outdir}/.well-known/_zx if it exists
-    const assets_zx_path = try std.fs.path.join(ctx.allocator, &.{ outdir, ".well-known", "_zx" });
-    defer ctx.allocator.free(assets_zx_path);
-    std.Io.Dir.cwd().deleteTree(io, assets_zx_path) catch |err| switch (err) {
-        else => {},
     };
 
     printer.footer("Now run {s}\n\n{s}(cd {s} && ./{s}{s}", .{ tui.Printer.emoji("→"), tui.Colors.cyan, outdir, bin_name, tui.Colors.reset });
